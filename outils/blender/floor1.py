@@ -6,10 +6,10 @@
 #                                    [save=<file.blend>] [rendu=1] [out=<dossier>]
 #        blender -b -P floor1.py -- variante=blanc|blanc-grille|fantome|transparent|fil-de-fer [samples=96]
 #            (step 2: the white styles, each rendered in the two views of the map, top and 3D)
-#        blender -b -P floor1.py -- variante=fantome elements=1 [plans=bar,banquette,escalier,facade]
+#        blender -b -P floor1.py -- variante=fantome elements=1 [plans=bar,banquette,escalier,facade,rideau]
 #            (step 3: the fixed elements modelled from the photos: bar, booths, stair, glass blocks,
 #             rock garden, concierge desk, curtains; plans = close-ups in the solid white model)
-import bpy, bmesh, json, math, sys
+import bpy, bmesh, json, math, random, sys
 from pathlib import Path
 from mathutils import Vector
 
@@ -34,7 +34,7 @@ def P(x, y, z=0.0):
 # ---------------------------------------------------------------- scene
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
-for c in ('Plan', 'Coque', 'Sols', 'Vitrages', 'Paves', 'Tambours', 'Escalier'):
+for c in ('Plan', 'Coque', 'Sols', 'Vitrages', 'Traits-fins', 'Tambours', 'Escalier'):
     sc.collection.children.link(bpy.data.collections.new(c))
 
 
@@ -400,7 +400,7 @@ def paves(name, axe, c, travees, bas, top, ep=4.0):
         if u1 - u0 > 6:
             blocs(bm, axe, c - ep, c + ep, u0, u1, 0.06, H - 0.08, bas=bas, top=top)
     if len(bm.verts):
-        return mesh_obj(name + '-paves', bm, 'Paves', M_PAVE)
+        return mesh_obj(name + '-paves', bm, 'Traits-fins', M_PAVE)
     bm.free()
 
 
@@ -447,7 +447,7 @@ def bar():
     mesh_obj('bar-plateaux', bm, 'Bar', M_COMPTOIR)
     bm = bmesh.new()
     blocs(bm, 'x', 737.5, 745, 413, 1190, 0.10, 1.02, pas_u=0.2, pas_z=0.23)
-    mesh_obj('bar-facade-verre', bm, 'Paves', M_PAVE)
+    mesh_obj('bar-facade-verre', bm, 'Traits-fins', M_PAVE)
     # back bar
     bm = bmesh.new()
     bm_box(bm, 565, 422, 625, 488, 0.0, 2.196)          # tall units at both ends
@@ -464,7 +464,7 @@ def bar():
     mesh_obj('arriere-bar-plan', bm, 'Bar', M_COMPTOIR)
     bm = bmesh.new()
     blocs(bm, 'x', 425, 431, 640, 1095, 1.30, 1.74, pas_u=0.2, pas_z=0.22)   # band of glass cells
-    mesh_obj('arriere-bar-cases', bm, 'Paves', M_PAVE)
+    mesh_obj('arriere-bar-cases', bm, 'Traits-fins', M_PAVE)
 
 
 # ---- the booths (photos 17, 20, 23, 24, 26): in each drum a U banquette along the shell, a plinth, the seat
@@ -571,7 +571,6 @@ def escalier_detail():
 
 # ---- the rock garden (photos 4, 7, 30): a low curb round the gravel, a tall crystal-like rock and smaller stones
 def rocher(name, x, y, sx, sy, sz, seed, subdiv=2):
-    import random
     rnd = random.Random(seed)
     bm = bmesh.new()
     bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=1.0)
@@ -611,21 +610,69 @@ def accueil():
     mesh_obj('accueil', bm, 'Accueil', M_MEUBLE)
 
 
-# ---- curtains (the wavy lines of the plan, photos 4, 30): from the floor to the mezzanine slab
-def rideau(name, p0, p1, amp=6.0, onde=0.16):
+# ---- curtains (the wavy lines of the plan): heavy drapes hung from a ceiling track, down to 2 cm above the floor.
+#      One closes the alcove of the last drum (photo 10: the dark curtain at the end of the row of drums); in the
+#      entry, two stacks are drawn back at the two ends of one track (the architects' axonometry). The folds are
+#      soft and irregular, like the plan's squiggle, and open a little towards the hem.
+def rideau(name, p0, p1, amp, onde, graine):
+    """A drape from p0 to p1 (plan px): folds of mean wavelength `onde` (m) and amplitude `amp` (px)."""
     a, b = Vector(p0), Vector(p1)
     L = (b - a).length * PX
     t = (b - a).normalized(); nrm = Vector((-t.y, t.x))
-    k_ = max(8, int(L / onde * 8))
-    path = [P(*(a + (b - a) * (i / k_) + nrm * amp * math.sin(2 * math.pi * (i / k_) * L / onde))) for i in range(k_ + 1)]
-    sweep(name, path, [(-0.006, 0.02, False), (0.006, 0.02, True), (0.006, H - 0.06, False), (-0.006, H - 0.06, True)],
-          'Rideaux', M_RIDEAU)
+    rnd = random.Random(graine)
+    ondes = [(1.0, 1.0), (0.45, 2.1), (0.3, 0.47)]          # (weight, frequency factor): an irregular fold
+    phases = [rnd.uniform(0, math.tau) for _ in ondes]
+    tot = sum(w for w, _ in ondes)
+
+    def pli(u):
+        return sum(w * math.sin(math.tau * u * f / onde + ph) for (w, f), ph in zip(ondes, phases)) / tot
+    z0, z1 = 0.02, H - 0.07
+    nu, nz = max(16, int(L / onde * 12)), 10
+    e = 0.006 / PX                                          # half the thickness of the cloth, px
+    bm = bmesh.new()
+    faces = []
+    for cote in (1, -1):
+        g = []
+        for j in range(nz + 1):
+            z = z0 + (z1 - z0) * j / nz
+            ouv = 1.25 - 0.4 * j / nz                       # the folds open towards the hem
+            g.append([bm.verts.new(P(*(a + (b - a) * (i / nu) + nrm * (amp * ouv * pli(L * i / nu) + cote * e)), z))
+                      for i in range(nu + 1)])
+        faces.append(g)
+    av, ar = faces
+    for j in range(nz):
+        for i in range(nu):
+            bm.faces.new((av[j][i], av[j][i + 1], av[j + 1][i + 1], av[j + 1][i])).smooth = True
+            bm.faces.new((ar[j][i], ar[j + 1][i], ar[j + 1][i + 1], ar[j][i + 1])).smooth = True
+        for i in (0, nu):                                   # the side hems
+            bm.faces.new((av[j][i], av[j + 1][i], ar[j + 1][i], ar[j][i]))
+    for j in (0, nz):                                       # the head and the bottom hem
+        for i in range(nu):
+            bm.faces.new((av[j][i], ar[j][i], ar[j][i + 1], av[j][i + 1]))
+    o = mesh_obj(name, bm, 'Rideaux', M_RIDEAU)
+    coll('Traits-fins').objects.link(o)
+
+
+def tringle(name, p0, p1):
+    """The ceiling track, 3 cm wide, just above the head of the curtains (plan px, axis-aligned)."""
+    (x0, y0), (x1, y1) = p0, p1
+    w = 0.015 / PX
+    bm = bmesh.new()
+    if x0 == x1:
+        bm_box(bm, x0 - w, y0, x0 + w, y1, H - 0.06, H - 0.025)
+    else:
+        bm_box(bm, x0, y0 - w, x1, y0 + w, H - 0.06, H - 0.025)
+    mesh_obj(name, bm, 'Rideaux', M_CADRE)
 
 
 def rideaux():
-    rideau('rideau-accueil-a', (840, 2012), (840, 2100))
-    rideau('rideau-accueil-b', (840, 2255), (840, 2348))
-    rideau('rideau-salle', (455, 1878), (600, 1878))
+    # the alcove: y 1872 rather than the symbol's middle (1878), so the cloth passes between the hung rings
+    # of drums 3 and 4 (outer edges at y 1863.5 and 1878.7 where the curtain starts, x 455)
+    rideau('rideau-alcove', (455, 1872), (600, 1872), amp=3.5, onde=0.20, graine=7)
+    tringle('tringle-alcove', (455, 1872), (600, 1872))
+    rideau('rideau-accueil-a', (840, 2012), (840, 2100), amp=4.5, onde=0.12, graine=3)
+    rideau('rideau-accueil-b', (840, 2255), (840, 2348), amp=4.5, onde=0.12, graine=5)
+    tringle('tringle-accueil', (840, 2008), (840, 2352))
 
 
 def build_elements():
@@ -659,8 +706,8 @@ def separer(objs, cut, m_ghost=None):
         if m_ghost is not None:
             g = o.copy(); g.data = o.data.copy(); g.name = o.name + '-fantome'
             coll('Fantome').objects.link(g)
-            if any(c.name == 'Paves' for c in o.users_collection):
-                coll('Paves').objects.link(g)   # keeps the light block lines
+            if any(c.name == 'Traits-fins' for c in o.users_collection):
+                coll('Traits-fins').objects.link(g)   # keeps the thin light lines
             if min(zz) < cut:
                 couper(g, cut + 0.004, 'haut')
             g.data.materials.clear(); g.data.materials.append(m_ghost)
@@ -875,6 +922,7 @@ PLANS = {
     'banquette': ((690, 1313, 1.15), (410, 1313, 0.92), 26),   # photo 17, drum 2
     'escalier':  ((1000, 1830, 1.55), (1040, 2210, 0.95), 24),  # photo 4
     'facade':    ((930, 1250, 1.50), (1452, 1050, 1.30), 26),   # photos 8, 9
+    'rideau':    ((548, 1130, 1.30), (612, 1890, 1.10), 24, (1000, 1250)),   # photo 10, the alcove curtain
 }
 
 
@@ -949,18 +997,19 @@ def freestyle_lines(visible, hidden, thickness=1.0):
     sets = [('visibles', 'VISIBLE', visible, 1.15 * thickness)]
     if hidden:
         sets.append(('cachees', 'HIDDEN', hidden, 0.75 * thickness))
-    paves_ = 'Paves' in bpy.data.collections and len(bpy.data.collections['Paves'].all_objects) > 0
-    if paves_:                                  # glass blocks: thin light lines, so the grids don't fill the map
-        sets.append(('paves', 'VISIBLE', tuple(min(1.0, c_ + 0.30) for c_ in visible), 0.6 * thickness))
+    fins = 'Traits-fins' in bpy.data.collections and len(bpy.data.collections['Traits-fins'].all_objects) > 0
+    if fins:                                    # glass blocks and curtains: thin light lines, so the block grids
+        sets.append(('fins', 'VISIBLE', tuple(min(1.0, c_ + 0.30) for c_ in visible), 0.6 * thickness))
+        #                                         and the folds read as texture, not as walls
     for k, (nom, vis, col, ep) in enumerate(sets):
         ls = fs.linesets[k] if len(fs.linesets) > k else fs.linesets.new(nom)
         ls.select_by_visibility = True
         ls.visibility = vis
         ls.select_silhouette = ls.select_border = ls.select_crease = True
-        if paves_:
+        if fins:
             ls.select_by_collection = True
-            ls.collection = bpy.data.collections['Paves']
-            ls.collection_negation = 'INCLUSIVE' if nom == 'paves' else 'EXCLUSIVE'
+            ls.collection = bpy.data.collections['Traits-fins']
+            ls.collection_negation = 'INCLUSIVE' if nom == 'fins' else 'EXCLUSIVE'
         ls.linestyle = bpy.data.linestyles.new(nom)
         ls.linestyle.color = col
         ls.linestyle.thickness = ep
@@ -1064,8 +1113,9 @@ if ARGS.get('variante'):
             print('image', k)
     elif ARGS.get('plans'):
         for pl in ARGS['plans'].split(','):
-            (x0, y0, z0), (x1, y1, z1), lens = PLANS[pl]
-            render(f'plan-{pl}', camera(f'cam-{pl}', P(x0, y0, z0), P(x1, y1, z1), lens=lens), (1500, 1000))
+            (x0, y0, z0), (x1, y1, z1), lens, *res = PLANS[pl]
+            render(f'plan-{pl}', camera(f'cam-{pl}', P(x0, y0, z0), P(x1, y1, z1), lens=lens),
+                   res[0] if res else (1500, 1000))
     elif ELEMENTS:
         render(f'{nom}-dessus', cam_top, (2000, 1250))
         render(f'{nom}-3d', cam_3d, (2000, 1250))
