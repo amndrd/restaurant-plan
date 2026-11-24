@@ -8,7 +8,17 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (24/11/2026)
 
-**Étape 6 : les réglages, et l'espace du bar.** En attente de tes choix.
+**Étape 7 : la carte telle que choisie, en clair et en sombre.** En attente de ta validation.
+
+- **L'espace du bar :** la banquette jardinière (Z4) est maintenant dans le modèle, avec les tables 14 à 17. Les autres propositions sont retirées du script.
+- **Les réglages** sont dans la barre de commande, en bas à droite, en clair.
+- **La légende** se replie derrière son bouton, en bas à gauche, et s'ouvre vers le haut.
+- **Le bouton en haut à droite** passe la carte et l'interface en sombre. Le choix est gardé sur l'appareil.
+- **Les autres dessins** de réglages et de légende sont retirés de la carte.
+- **Les rendus :** les captures en clair et en sombre, et la vidéo, sont dans `rendus/9-carte-finale/`.
+- **La page :** `pages/7-carte-finale.png`.
+
+**Étape 6 : les réglages, et l'espace du bar.** Validée : Z4, R3 en clair, L1 repliable, avec un thème sombre en plus.
 
 - **Les réglages sont réduits à tes choix,** avec leur option par défaut :
   - le style : fantôme, avec transparent et fil de fer au choix ;
@@ -94,7 +104,8 @@ modele/         floor1-murs.json (les murs, poteaux et tambours lus sur le plan)
 rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variantes blanches et la vidéo du passage),
                 4-elements-fixes/ (les éléments fixes, en fantôme, en fil de fer et en vues rapprochées),
                 5-mobilier/ (le mobilier, les numéros des tables), 6-carte/ (les captures et la vidéo de la carte),
-                7-espace-du-bar/ (les propositions pour la place des mange-debout), 8-reglages-legende/
+                7-espace-du-bar/ (les propositions pour la place des mange-debout), 8-reglages-legende/,
+                9-carte-finale/ (la carte telle que choisie, en clair et en sombre, et la vidéo)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
@@ -121,17 +132,17 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `variante=blanc|blanc-grille|fantome|transparent|fil-de-fer` rend une variante blanche dans les deux vues ; avec `transition=1 images=36`, il rend les images du passage entre les deux vues ;
   - `elements=1` ajoute les éléments fixes de l'étape 3 (pavés de verre, escalier détaillé, bar, banquettes, jardin, accueil, rideaux) ; avec `variante=detail plans=bar,banquette,escalier,facade,rideau`, il rend les vues rapprochées ;
   - `mobilier=1` ajoute le mobilier de l'étape 4 et écrit `modele/floor1-tables.json` ; avec `variante=detail plans=salle,tabourets,tambour`, il rend les vues rapprochées ;
-  - `zone=Z1|Z2|Z3|Z4` construit une des propositions pour l'espace du bar, `zone=tous` les construit toutes (pour l'export) ; avec `variante=detail plans=zone`, il rend la vue rapprochée de l'espace ;
-  - `export=carte/modele/floor1-fantome.glb` (avec `variante=fantome mobilier=1 zone=tous`) ou `floor1-entier.glb` (avec `variante=fil-de-fer mobilier=1 zone=tous`) exporte le modèle de la carte. Chaque objet garde son rôle, le numéro de sa table et sa proposition. Il faut ensuite recopier `modele/floor1-tables.json` dans `carte/donnees/`.
+  - avec `variante=detail plans=zone`, il rend la vue rapprochée de la banquette jardinière, près du bar ;
+  - `export=carte/modele/floor1-fantome.glb` (avec `variante=fantome mobilier=1`) ou `floor1-entier.glb` (avec `variante=fil-de-fer mobilier=1`) exporte le modèle de la carte. Chaque objet garde son rôle et le numéro de sa table. Il faut ensuite recopier `modele/floor1-tables.json` dans `carte/donnees/`.
 - **Numéroter les tables :** `numeros_tables.py` pose le numéro de chaque table sur la vue du haut en fantôme.
-- **La carte :** `carte_captures.mjs` sert la carte, fait toutes les captures de `rendus/6-carte/`, puis la vidéo (`node outils/carte_captures.mjs video` pour la vidéo seule). Les réglages passent aussi par l'adresse de la carte : `?vue=3d&style=fil-de-fer&systeme=B&numeros=5&zone=Z4&ui=R2&legende=L3&heure=20:40&vitesse=0&fiche=6`.
+- **La carte :** `carte_captures.mjs` sert la carte, fait toutes les captures de `rendus/6-carte/`, puis la vidéo (`node outils/carte_captures.mjs video` pour la vidéo seule). Les réglages passent aussi par l'adresse de la carte : `?vue=3d&theme=sombre&style=fil-de-fer&systeme=B&numeros=5&legende=1&ouvert=style&heure=20:40&vitesse=0&fiche=6`.
 
   Le `.blend` n'est jamais enregistré à la main : c'est le script qui le refait.
 - **La recherche :**
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py` à `page_etape6.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py` à `page_etape7.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
