@@ -2,7 +2,7 @@
 // (right, on a click).
 import { ETATS, ALERTE, hhmm } from './service.js';
 
-const NOMS = { tambour: 'Tambour', table: 'Table', 'table haute': 'Table haute', salon: 'Salon' };
+const NOMS = { tambour: 'Tambour', table: 'Table', 'table haute': 'Table haute' };
 const STATUTS = { cuisine: 'En cuisine', pret: 'Prêt', servi: 'Servi' };
 
 export function nomTable(t) {

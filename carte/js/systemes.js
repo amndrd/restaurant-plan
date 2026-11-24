@@ -33,6 +33,7 @@ export class Systemes {
       // D: a light grey footprint under the occupied tables
       const halo = new THREE.Mesh(new THREE.ShapeGeometry(forme, 10).rotateX(-Math.PI / 2),
         new THREE.MeshLambertMaterial({ color: 0xe7e6e2, transparent: true, opacity: 0.92, depthWrite: false }));
+      halo.userData.clair = 0xe7e6e2; halo.userData.sombre = 0x2e2e31;
       halo.position.set(g.centre.x, 0.004, g.centre.z); halo.receiveShadow = true; halo.renderOrder = -1;
       // a 6 cm band around the footprint: the alerts, and the tables picked out from the legend
       const s = rondRect(w + 0.12, d + 0.12, r + 0.06);
@@ -46,8 +47,8 @@ export class Systemes {
       Object.assign(g, { halo, anneau, pick });
       const el = document.createElement('div');
       el.className = 'badge minuteur';
-      el.innerHTML = `<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="21" fill="#fff"/>
-        <circle cx="22" cy="22" r="17" fill="none" stroke="#ecebe8" stroke-width="4"/>
+      el.innerHTML = `<svg viewBox="0 0 44 44"><circle class="fond" cx="22" cy="22" r="21"/>
+        <circle class="rail" cx="22" cy="22" r="17" fill="none" stroke-width="4"/>
         <circle class="arc" cx="22" cy="22" r="17" fill="none" stroke-width="4" stroke-linecap="round"
           stroke-dasharray="0 107" transform="rotate(-90 22 22)"/></svg><b></b>`;
       el.hidden = true; calque.appendChild(el); g.badge = el;
@@ -80,6 +81,7 @@ export class Systemes {
       const t = service.tables.find(x => x.id === g.id);
       const etat = ETATS[t.etat], occupe = !['libre', 'reservee', 'debarrasser'].includes(t.etat);
       g.halo.visible = v === 'D' && t.etat !== 'libre';
+      g.halo.material.color.set(this.sombre ? g.halo.userData.sombre : g.halo.userData.clair);
       g.halo.material.depthTest = g.anneau.material.depthTest = !traverse;
       // the band: alert (pulsing red) or picked out from the legend (state colour)
       const surligne = !!this.surligne && (this.surligne === 'alerte' ? t.alerte : t.etat === this.surligne);

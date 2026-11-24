@@ -1,7 +1,7 @@
 // The interactive map of the room. Settings can also come from the address (for captures):
-//   ?vue=dessus|3d  style=fantome|transparent|fil-de-fer  systeme=C|B|D  numeros=3|5|0
-//   zone=Z1|Z2|Z3|Z4 (the layout between the bar and the room)  ui=R1|R2|R3  legende=L1|L2|L3  ouvert=<menu>
-//   heure=20:40  vitesse=0|1|30|120  fiche=<table>  cam=az,el,largeur,x,y,z  surligne=<state>
+//   ?vue=dessus|3d  style=fantome|transparent|fil-de-fer  systeme=C|B|D  numeros=3|5|0  theme=clair|sombre
+//   ouvert=style|systeme|numeros (a menu of the command bar)  legende=1 (unfolded)  surligne=<state>
+//   heure=20:40  vitesse=0|1|30|120  fiche=<table>  cam=az,el,largeur,x,y,z  nu=1 (the map alone)
 import * as THREE from 'three';
 import { Scene3D } from './scene.js';
 import { CameraCarte } from './camera.js';
@@ -23,8 +23,7 @@ const ETAGES = [
     tables: 'donnees/floor1-tables.json' },
 ];
 const BANQUETTES = { 49: 1, 114: 2, 306: 3, 413: 4 };   // drum (plan id) -> table
-const ZONE = P.get('zone') || '';
-if (P.get('nu')) document.body.classList.add('nu');     // the map alone, for the thumbnails of the settings
+if (P.get('nu')) document.body.classList.add('nu');     // the map alone, without the interface
 
 function groupes(modeles, tables) {
   const G = new Map();
@@ -39,7 +38,6 @@ function groupes(modeles, tables) {
     racine.traverse(o => {
       if (!o.isMesh) return;
       const ud = o.userData;
-      if (ud.variante && ud.variante !== ZONE) return;
       const mb = /^banquette-(\d+)-coussin/.exec(ud.noeud || '');
       if (mb && BANQUETTES[mb[1]]) { G.get(BANQUETTES[mb[1]]).banquette[cle].push(o); return; }
       if (ud.table === undefined || ud.table === 0 || ud.role === 'fantome' || ud.role === 'suspension') return;
@@ -68,10 +66,9 @@ function groupes(modeles, tables) {
 
 async function demarrer() {
   const e = ETAGES[0];
-  s3.zone = ZONE;
   const modeles = await s3.chargerEtage(0, e.fichiers);
   const donnees = await (await fetch(e.tables)).json();
-  const tables = [...donnees.tables, ...(donnees.variantes?.[ZONE]?.tables || [])];
+  const tables = donnees.tables;
   const G = groupes(modeles, tables);
 
   const [h, m] = (P.get('heure') || '20:10').split(':').map(Number);
@@ -82,6 +79,7 @@ async function demarrer() {
 
   // selection: a black band around the chosen table
   const choix = new THREE.Mesh(undefined, new THREE.MeshBasicMaterial({ color: 0x151515, transparent: true, opacity: 0.95, depthWrite: false }));
+  choix.renderOrder = 2;
   choix.visible = false; s3.scene.add(choix);
   const choisir = id => {
     const g = G.get(id);
@@ -103,10 +101,30 @@ async function demarrer() {
     if (cle === 'numeros') num.regler(v);
   };
   Object.entries(valeurs).forEach(([cle, v]) => appliquer(cle, v));
-  const reglages = new Reglages(P.get('ui') || 'R1', valeurs, appliquer);
-  const legende = new Legende(P.get('legende') || 'L1', service, sys);
+  const reglages = new Reglages(valeurs, appliquer);
+  const legende = new Legende(service, sys);
   if (P.get('ouvert')) reglages.ouvrir(P.get('ouvert'));
-  if (P.get('surligne')) legende.surligner?.(P.get('surligne'));
+  if (P.get('legende')) legende.ouvrir(true);
+  if (P.get('surligne')) { legende.ouvrir(true); legende.surligner(P.get('surligne')); }
+
+  // ---- the theme: light or dark, the interface and the map together; remembered on this device
+  const LUNE = '<svg viewBox="0 0 20 20"><path d="M15.5 12.6A6.5 6.5 0 0 1 7.4 4.5a6.5 6.5 0 1 0 8.1 8.1z" fill="currentColor"/></svg>';
+  const SOLEIL = '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3.6" fill="currentColor"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">' +
+    [0, 45, 90, 135, 180, 225, 270, 315].map(a => { const r = a * Math.PI / 180;
+      return `<path d="M${10 + 6 * Math.cos(r)} ${10 + 6 * Math.sin(r)}L${10 + 8 * Math.cos(r)} ${10 + 8 * Math.sin(r)}"/>`; }).join('') + '</g></svg>';
+  const bTheme = document.getElementById('theme');
+  const theme = t => {
+    document.body.classList.toggle('sombre', t === 'sombre');
+    s3.appliquerTheme(t);
+    sys.sombre = t === 'sombre';
+    choix.material.color.set(t === 'sombre' ? 0xf2f2f3 : 0x151515);
+    bTheme.innerHTML = t === 'sombre' ? SOLEIL : LUNE;
+    bTheme.title = t === 'sombre' ? 'Passer en clair' : 'Passer en sombre';
+    try { localStorage.setItem('carte-theme', t); } catch (e) { /* private mode */ }
+  };
+  let leTheme = P.get('theme') || (() => { try { return localStorage.getItem('carte-theme'); } catch (e) { return null; } })() || 'clair';
+  theme(leTheme);
+  bTheme.onclick = () => { leTheme = leTheme === 'sombre' ? 'clair' : 'sombre'; theme(leTheme); };
 
   let vitesse = Number(P.get('vitesse') ?? 30);
   const sv = document.getElementById('vitesse'), lecture = document.getElementById('lecture');
@@ -165,7 +183,7 @@ async function demarrer() {
   ui.maj();
   requestAnimationFrame(boucle);
   document.getElementById('chargement').classList.add('fini');
-  window.carte = { s3, cam, service, sys, num, ui, G, choisir, reglages, legende, hhmm, pret: true };
+  window.carte = { s3, cam, service, sys, num, ui, G, choisir, reglages, legende, theme, hhmm, pret: true };
 }
 
 demarrer().catch(err => {

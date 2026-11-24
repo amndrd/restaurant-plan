@@ -17,9 +17,8 @@ const CARTE = {           // provisional menu
   entree: ['Burrata, tomates anciennes', 'Tartare de daurade', 'Velouté de châtaigne', 'Œuf parfait, champignons'],
   plat: ['Risotto aux cèpes', 'Filet de bar, beurre blanc', 'Côte de veau, jus corsé', 'Gnocchis, sauge et parmesan',
     'Pluma ibérique, purée fumée'],
-  boisson: ['Spritz', 'Negroni', 'Verre de vin blanc', 'Verre de vin rouge', 'Eau pétillante', 'Bière pression'],
 };
-const EQUIPE = { tambour: 'Léa', table: 'Hugo', 'table haute': 'Inès', salon: 'Inès', bar: 'Inès' };
+const EQUIPE = { tambour: 'Léa', table: 'Hugo', 'table haute': 'Inès', bar: 'Inès' };
 const NOMS = ['Martin', 'Bernard', 'Dubois', 'Laurent', 'Moreau', 'Garcia', 'Roux', 'Fournier', 'Lambert', 'Bonnet'];
 
 function graine(a) {       // mulberry32
@@ -38,7 +37,6 @@ export class Service {
     const bar = tables.find(t => t.type === 'bar');
     this.bar = { ...bar, invites: 0, serveur: EQUIPE.bar };
     this.resas = this._reservations();
-    this.histoire = [];          // every 5 minutes: the guests in each state (the timeline of the legend L3)
     this.avancerJusqua(heure);
   }
 
@@ -46,7 +44,7 @@ export class Service {
   _choix(l) { return l[Math.floor(this.rnd() * l.length)]; }
 
   _reservations() {
-    const assises = this.tables.filter(t => t.type !== 'salon');
+    const assises = this.tables;
     const l = [];
     for (let k = 0; k < 7; k++) {
       const t = assises[Math.floor(this.rnd() * assises.length)];
@@ -74,12 +72,11 @@ export class Service {
     const affluence = Math.exp(-Math.pow((h - 20.6) / 0.9, 2));
     for (const t of this.tables) {
       const resa = this.resas.find(r => r.table === t.id && !r.arrivee && r.heure - this.t < 30 && r.heure - this.t > -15);
-      const debout = t.type === 'salon';          // the lounge: drinks only
       switch (t.etat) {
         case 'libre':
           if (resa) { this._vers(t, 'reservee', 0); t.resa = resa; break; }
-          if (this.rnd() < affluence * dt * (debout ? 0.05 : 0.035)) {
-            this._asseoir(t, Math.max(1, Math.min(t.places, Math.round(this._r(debout ? 1.5 : 1.6, t.places + 0.4)))));
+          if (this.rnd() < affluence * dt * 0.035) {
+            this._asseoir(t, Math.max(1, Math.min(t.places, Math.round(this._r(1.6, t.places + 0.4)))));
           }
           break;
         case 'reservee':
@@ -92,7 +89,7 @@ export class Service {
           break;
         case 'commandee': {
           for (const p of t.plats) if (!p.servi && this.t >= p.pret + 1.5) p.servi = true;
-          if (t.plats.every(p => p.servi)) this._vers(t, 'servie', debout ? this._r(18, 40) : this._r(26, 44));
+          if (t.plats.every(p => p.servi)) this._vers(t, 'servie', this._r(26, 44));
           break;
         }
         case 'servie':
@@ -100,7 +97,7 @@ export class Service {
           break;
         case 'addition':
           if (this.t >= t.fin) { t.invites = 0; t.plats = []; t.commandeA = null; t.resa = null;
-            this._vers(t, 'debarrasser', debout ? this._r(1, 3) : this._r(3, 7)); }
+            this._vers(t, 'debarrasser', this._r(3, 7)); }
           break;
         case 'debarrasser':
           if (this.t >= t.fin) this._vers(t, 'libre', 0);
@@ -109,12 +106,6 @@ export class Service {
       const attente = this.t - t.depuis;
       t.alerte = (t.etat === 'installee' && attente > SEUILS.installee) || (t.etat === 'commandee' && attente > SEUILS.commandee);
     }
-    if (Math.floor(this.t / 5) !== this._cinq) {
-      this._cinq = Math.floor(this.t / 5);
-      const h = { t: this.t };
-      for (const e of Object.keys(ETATS)) h[e] = this.tables.filter(x => x.etat === e).reduce((s, x) => s + x.invites, 0);
-      this.histoire.push(h);
-    }
     // the bar: people come and go one by one
     const cible = Math.round(7 * Math.min(1, 0.25 + affluence * 0.75));
     if (this.rnd() < dt * 0.3) this.bar.invites = Math.max(0, Math.min(7, this.bar.invites + (this.bar.invites < cible ? 1 : -1)));
@@ -122,18 +113,14 @@ export class Service {
 
   _asseoir(t, n) {
     t.invites = n; t.plats = []; t.commandeA = null;
-    this._vers(t, 'installee', t.type === 'salon' ? this._r(2, 5) : this._r(3, 10));
+    this._vers(t, 'installee', this._r(3, 10));
   }
 
   _commander(t) {
     t.commandeA = this.t;
-    if (t.type === 'salon') {
-      for (let k = 0; k < t.invites; k++) t.plats.push({ nom: this._choix(CARTE.boisson), pret: this.t + this._r(3, 7), servi: false });
-    } else {
-      for (let k = 0; k < t.invites; k++) {
-        if (this.rnd() < 0.45) t.plats.push({ nom: this._choix(CARTE.entree), pret: this.t + this._r(9, 15), servi: false });
-        t.plats.push({ nom: this._choix(CARTE.plat), pret: this.t + this._r(15, 27), servi: false });
-      }
+    for (let k = 0; k < t.invites; k++) {
+      if (this.rnd() < 0.45) t.plats.push({ nom: this._choix(CARTE.entree), pret: this.t + this._r(9, 15), servi: false });
+      t.plats.push({ nom: this._choix(CARTE.plat), pret: this.t + this._r(15, 27), servi: false });
     }
     this._vers(t, 'commandee', 0);
   }

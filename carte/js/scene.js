@@ -57,14 +57,14 @@ export class Scene3D {
     this.scene.add(sun, sun.target);
 
     // the ground around the building, with the grid fading out
-    const sol = new THREE.Mesh(new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2),
+    const sol = this.terrain = new THREE.Mesh(new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2),
       grille(0xe6e5e2, 0xa8a8a8, 0.45, 0.8, [14, 30]));
     sol.position.y = -0.052; sol.receiveShadow = true; sol.layers.enable(1);
     this.scene.add(sol);
 
     this.etages = [];            // one group per floor
     this.style = 'fantome';
-    this.zone = null;            // step 6: the layout shown between the bar and the room (Z1..Z4), the others hidden
+    this.theme = 'clair';        // step 7: the interface and the map can go dark
     this._passe();
     this.taille();
   }
@@ -140,7 +140,6 @@ void main() {
       let p = o; while (p && p.userData.role === undefined) p = p.parent;
       const ud = p ? p.userData : {};
       o.userData.role = ud.role; o.userData.fin = ud.fin; o.userData.table = ud.table; o.userData.noeud = p ? p.name : o.name;
-      o.userData.variante = ud.variante;
       const nomMat = (o.material.name || '').replace(/\.\d+$/, '');
       o.userData.mat = nomMat;
       o.castShadow = o.receiveShadow = true;
@@ -148,7 +147,24 @@ void main() {
     });
   }
 
-  montrerZone(z) { this.zone = z; this.appliquerStyle(this.style); }
+  // ---- the dark theme: the same drawing with the tones turned over, light lines on dark surfaces
+  _c(clair, sombre) { return this.theme === 'sombre' ? sombre : clair; }
+
+  _ton(hex) {
+    if (this.theme !== 'sombre') return hex;
+    const c = new THREE.Color(hex), hsl = {};
+    c.getHSL(hsl, THREE.SRGBColorSpace);
+    return c.setHSL(hsl.h, hsl.s, THREE.MathUtils.clamp(1.10 - hsl.l, 0.08, 0.55), THREE.SRGBColorSpace);
+  }
+
+  appliquerTheme(theme) {
+    this.theme = theme;
+    this.scene.background.set(this._c(0xf4f3f1, 0x161618));
+    this.terrain.material.dispose();
+    this.terrain.material = this.theme === 'sombre' ? grille(0x18181a, 0x3a3a3e, 0.45, 0.8, [14, 30])
+      : grille(0xe6e5e2, 0xa8a8a8, 0.45, 0.8, [14, 30]);
+    this.appliquerStyle(this.style);
+  }
 
   appliquerStyle(style) {
     this.style = style;
@@ -160,7 +176,7 @@ void main() {
         if (racine.visible) racine.traverse(o => { if (o.isMesh) this._habiller(o, style); });
       }
     }
-    this.composite.uniforms.encre.value.set(style === 'fil-de-fer' ? 0x5a5a5a : 0x4d4d4d);
+    this.composite.uniforms.encre.value.set(style === 'fil-de-fer' ? this._c(0x5a5a5a, 0xd0d0d4) : this._c(0x4d4d4d, 0xb9b9be));
   }
 
   _habiller(o, style) {
@@ -168,8 +184,7 @@ void main() {
     if (o.userData.trait) { o.remove(o.userData.trait); o.userData.trait = null; }
     if (o.userData.cache) { o.remove(o.userData.cache); o.userData.cache = null; }
     o.layers.set(0); o.castShadow = true;
-    o.visible = !(ud.variante && ud.variante !== this.zone);
-    const ton = TONS[ud.mat] ?? 0xf3f3f3;
+    const ton = this._ton(TONS[ud.mat] ?? 0xf3f3f3), c = (a, b) => this._c(a, b);
     let mat;
     const trait = (couleur, opacite, devant = true) => {
       const l = new THREE.LineSegments(ud.aretes, new THREE.LineBasicMaterial({ color: couleur, transparent: true,
@@ -177,21 +192,22 @@ void main() {
       l.raycast = () => {}; o.add(l); return l;
     };
     if (role === 'sol') {
-      mat = grille(0xf9f8f6, 0xcfcfcf, 0.35, 0.55);
+      mat = this.theme === 'sombre' ? grille(0x232326, 0x3d3d41, 0.35, 0.55) : grille(0xf9f8f6, 0xcfcfcf, 0.35, 0.55);
       o.layers.enable(1);
     } else if (style === 'fantome') {
       if (role === 'fantome') {
-        mat = new THREE.MeshStandardMaterial({ color: 0xfbfbfb, transparent: true, opacity: 0.16, depthWrite: false, roughness: 0.6 });
+        mat = new THREE.MeshStandardMaterial({ color: c(0xfbfbfb, 0x8e8e93), transparent: true, opacity: c(0.16, 0.07),
+          depthWrite: false, roughness: 0.6 });
         o.castShadow = false;
-        ud.trait = trait(ud.fin ? 0xd6d6d6 : 0xb8b8b8, ud.fin ? 0.5 : 0.8);
+        ud.trait = trait(ud.fin ? c(0xd6d6d6, 0x46464a) : c(0xb8b8b8, 0x6c6c72), ud.fin ? 0.5 : 0.8);
       } else if (ud.mat === 'pave' || ud.mat === 'verre') {
-        mat = new THREE.MeshStandardMaterial({ color: 0xf2f6f8, transparent: true, opacity: ud.mat === 'pave' ? 0.55 : 0.16,
+        mat = new THREE.MeshStandardMaterial({ color: c(0xf2f6f8, 0x3a4248), transparent: true, opacity: ud.mat === 'pave' ? 0.55 : 0.16,
           depthWrite: false, roughness: 0.3 });
         o.castShadow = ud.mat === 'pave';
-        ud.trait = trait(0xbdbdbd, 0.7);
+        ud.trait = trait(c(0xbdbdbd, 0x5c5c61), 0.7);
       } else if (ud.fin) {
         mat = new THREE.MeshStandardMaterial({ color: ton, roughness: 0.9 });
-        ud.trait = trait(0xb0b0b0, 0.8);
+        ud.trait = trait(c(0xb0b0b0, 0x67676c), 0.8);
       } else {
         mat = new THREE.MeshStandardMaterial({ color: ton, roughness: ud.mat === 'laiton' ? 0.45 : 0.88 });
         o.layers.enable(1);
@@ -200,13 +216,13 @@ void main() {
       mat = new THREE.MeshStandardMaterial({ color: ton, transparent: true, opacity: ud.mat === 'pave' ? 0.3 : 0.42,
         depthWrite: false, roughness: 0.85 });
       if (!ud.fin) o.layers.enable(1);
-      ud.trait = trait(0xa8a8a8, 0.55, false);
+      ud.trait = trait(c(0xa8a8a8, 0x707076), 0.55, false);
     } else {   // fil de fer: faces almost invisible but hiding what is behind; hidden edges drawn lighter
-      mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.03 });
+      mat = new THREE.MeshBasicMaterial({ color: c(0xffffff, 0x000000), transparent: true, opacity: 0.03 });
       o.castShadow = false;
       if (!ud.fin) o.layers.enable(1);
-      ud.trait = trait(ud.fin ? 0xb5b5b5 : 0x6a6a6a, ud.fin ? 0.6 : 0.9, true);
-      ud.cache = trait(0xb9b9b9, 0.45, false);
+      ud.trait = trait(ud.fin ? c(0xb5b5b5, 0x5a5a5f) : c(0x6a6a6a, 0xc4c4c9), ud.fin ? 0.6 : 0.9, true);
+      ud.cache = trait(c(0xb9b9b9, 0x4a4a4f), 0.45, false);
     }
     if (o.userData.matBase) o.userData.matBase.dispose?.();
     o.material = mat; o.userData.matBase = mat;
