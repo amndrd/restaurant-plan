@@ -9,9 +9,11 @@
 #        blender -b -P floor1.py -- variante=fantome elements=1 [plans=bar,banquette,escalier,facade,rideau]
 #            (step 3: the fixed elements modelled from the photos: bar, booths, stair, glass blocks,
 #             rock garden, concierge desk, curtains; plans = close-ups in the solid white model)
+#        blender -b -P floor1.py -- variante=fantome mobilier=1 [plans=salle,tabourets,tambour]
+#            (step 4: the furniture of the plan, over the fixed elements; also writes modele/floor1-tables.json)
 import bpy, bmesh, json, math, random, sys
 from pathlib import Path
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 ICI = Path(__file__).resolve().parent
 RACINE = ICI.parents[1]
@@ -24,7 +26,8 @@ DATA = json.loads((RACINE / 'modele' / 'floor1-murs.json').read_text())
 PX = 1 / DATA['echelle_px_par_m']        # metres per plan pixel (120 px = 1 m, see analyse/)
 CX, CY = 837, 1230                       # plan pixel placed at the world origin
 H = 3.35                                 # ground floor storey height (floor to the mezzanine slab), from the section
-ELEMENTS = ARGS.get('elements') == '1'   # step 3: fixed elements (glass blocks, detailed stair, bar, booths...)
+MOBILIER = ARGS.get('mobilier') == '1'   # step 4: the furniture (tables, chairs, stools, planters, pendants)
+ELEMENTS = ARGS.get('elements') == '1' or MOBILIER   # step 3: fixed elements (glass blocks, stair, bar, booths...)
 
 
 def P(x, y, z=0.0):
@@ -478,13 +481,14 @@ def chemin_u(cx, cy, r, x_bout, seg=48):
 
 
 def banquettes():
-    base = [(0.005, 0.0, False), (0.50, 0.0, False), (0.50, 0.08, False), (0.56, 0.08, False), (0.56, 0.40, False),
+    # the seat front at 0.46 m from the shell and the U ending at x 413, as drawn on the plan
+    base = [(0.005, 0.0, False), (0.36, 0.0, False), (0.36, 0.08, False), (0.42, 0.08, False), (0.42, 0.40, False),
             (0.09, 0.40, False), (0.09, 0.98, False), (0.005, 0.98, False)]
-    coussin = [(0.09, 0.401, False), (0.56, 0.401, True)] + arrondi(0.56, 0.441, 0.04, 0.04, -90, 90, 8)[1:-1] + \
-              [(0.56, 0.481, False), (0.09, 0.481, False)]
+    coussin = [(0.09, 0.401, False), (0.42, 0.401, True)] + arrondi(0.42, 0.441, 0.04, 0.04, -90, 90, 8)[1:-1] + \
+              [(0.42, 0.481, False), (0.09, 0.481, False)]
     for t in DATA['tambours']:
         cx, cy, k = t['cx'], t['cy'], t['id']
-        ch = chemin_u(cx, cy, 131, 440)
+        ch = chemin_u(cx, cy, 131, 413)
         c = P(cx, cy)
         sweep(f'banquette-{k}-assise', ch, base, 'Banquettes', M_BANQUETTE, ref=c)
         sweep(f'banquette-{k}-coussin', ch, coussin, 'Banquettes', M_BANQUETTE, ref=c)
@@ -718,6 +722,351 @@ def separer(objs, cut, m_ghost=None):
             couper(o, cut, 'bas')
 
 
+# ---------------------------------------------------------------- step 4: the furniture, from the plan and the photos
+# Each piece is built in its own frame (metres, origin on the floor under its centre, facing +y), turned towards what
+# it faces and set on its plan point. One object per piece, named for the live map: table-05, chaise-05-2...
+# Heights from the photos: dining tables at 0.75 m with thin steel chairs (photos 9, 10); along the right facade,
+# high tables at 1.05 m with stools and a ledge under the glass blocks (photo 8); in the drums a round table on a
+# conical foot with three tub armchairs (photos 17, 31); wooden standing tables on A-frames (photo 31).
+M_PLATEAU = mat('plateau', (0.05, 0.05, 0.05), 0.3)       # dark stone table tops
+M_ACIER = mat('acier', (0.035, 0.035, 0.04), 0.4)          # thin black steel
+M_CUIR = mat('cuir', (0.08, 0.075, 0.07), 0.55)            # leather
+M_BOIS = mat('bois', (0.15, 0.10, 0.065), 0.6)             # wood: standing tables, ledge, sideboard
+M_POT = mat('pot', (0.30, 0.30, 0.29), 0.85)
+M_TERRE = mat('terre', (0.10, 0.08, 0.06), 1.0)
+M_FEUILLE = mat('feuillage', (0.20, 0.26, 0.14), 0.8)
+M_LAITON = mat('laiton', (0.55, 0.45, 0.30), 0.35)         # the lamps
+
+
+def rrect(cx_, cy_, w, d, r, seg=6):
+    """Rounded rectangle outline (local metres), counter-clockwise from the right side."""
+    pts = []
+    for qx, qy, a0 in ((1, 1, 0), (-1, 1, 90), (-1, -1, 180), (1, -1, 270)):
+        ox, oy = cx_ + qx * (w / 2 - r), cy_ + qy * (d / 2 - r)
+        pts += [(ox + r * math.cos(math.radians(a0 + 90 * k / seg)), oy + r * math.sin(math.radians(a0 + 90 * k / seg)))
+                for k in range(seg + 1)]
+    return pts
+
+
+class Piece:
+    """A bmesh in a local frame; each part keeps its material."""
+    def __init__(self):
+        self.bm = bmesh.new(); self.mats = []
+
+    def _fin(self, n0, m):
+        self.bm.faces.ensure_lookup_table()
+        if m not in self.mats:
+            self.mats.append(m)
+        for f in self.bm.faces[n0:]:
+            f.material_index = self.mats.index(m)
+
+    def prisme(self, pts, z0, z1, m):
+        n0 = len(self.bm.faces)
+        lo = [self.bm.verts.new((x, y, z0)) for x, y in pts]
+        hi = [self.bm.verts.new((x, y, z1)) for x, y in pts]
+        self.bm.faces.new(list(reversed(lo))); self.bm.faces.new(hi)
+        for k in range(len(pts)):
+            j = (k + 1) % len(pts)
+            self.bm.faces.new((lo[k], lo[j], hi[j], hi[k]))
+        self._fin(n0, m)
+
+    def boite(self, x0, y0, x1, y1, z0, z1, m):
+        self.prisme([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], z0, z1, m)
+
+    def cyl(self, cx_, cy_, r0, r1, z0, z1, m, seg=24):
+        """A vertical frustum: radius r0 at z0, r1 at z1."""
+        n0 = len(self.bm.faces)
+        lo = [self.bm.verts.new((cx_ + r0 * math.cos(math.tau * k / seg), cy_ + r0 * math.sin(math.tau * k / seg), z0))
+              for k in range(seg)]
+        hi = [self.bm.verts.new((cx_ + r1 * math.cos(math.tau * k / seg), cy_ + r1 * math.sin(math.tau * k / seg), z1))
+              for k in range(seg)]
+        self.bm.faces.new(list(reversed(lo))); self.bm.faces.new(hi)
+        for k in range(seg):
+            j = (k + 1) % seg
+            self.bm.faces.new((lo[k], lo[j], hi[j], hi[k]))
+        self._fin(n0, m)
+
+    def barre(self, a, b, w, m):
+        """A square bar of width w from point a to point b."""
+        a, b = Vector(a), Vector(b)
+        d = (b - a).normalized()
+        u = d.cross(Vector((0, 0, 1)) if abs(d.z) < 0.9 else Vector((1, 0, 0))).normalized() * (w / 2)
+        v = d.cross(u).normalized() * (w / 2)
+        n0 = len(self.bm.faces)
+        c = [[self.bm.verts.new(p + su * u + sv * v) for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))] for p in (a, b)]
+        self.bm.faces.new(list(reversed(c[0]))); self.bm.faces.new(c[1])
+        for k in range(4):
+            j = (k + 1) % 4
+            self.bm.faces.new((c[0][k], c[0][j], c[1][j], c[1][k]))
+        self._fin(n0, m)
+
+    def bande(self, R, cy_, t, a, z0, z1, m, seg=14):
+        """A curved backrest: arc of inner radius R about (0, cy_), opening towards -y, from -a to +a degrees."""
+        ang = [math.radians(-a + 2 * a * k / seg) for k in range(seg + 1)]
+        inner = [(R * math.sin(q), cy_ - R * math.cos(q)) for q in ang]
+        outer = [((R + t) * math.sin(q), cy_ - (R + t) * math.cos(q)) for q in reversed(ang)]
+        self.prisme(inner + outer, z0, z1, m)
+
+    def bulle(self, c, r, graine, m):
+        """A lump of foliage: a noisy icosphere."""
+        rnd = random.Random(graine)
+        n0 = len(self.bm.faces)
+        tmp = bmesh.new()
+        bmesh.ops.create_icosphere(tmp, subdivisions=3, radius=1.0)
+        me = bpy.data.meshes.new('tmp'); tmp.to_mesh(me); tmp.free()
+        ph = [rnd.uniform(0, math.tau) for _ in range(3)]     # a smooth lumpy surface, not random spikes
+        vs = [self.bm.verts.new(Vector(c) + v.co * r * (1 + 0.12 * math.sin(3 * v.co.x + ph[0]) * math.sin(3 * v.co.y + ph[1])
+                                                          + 0.08 * math.sin(4 * v.co.z + ph[2]))) for v in me.vertices]
+        for p in me.polygons:
+            self.bm.faces.new([vs[i] for i in p.vertices])
+        bpy.data.meshes.remove(me)
+        self._fin(n0, m)
+
+
+def poser(name, pc, x, y, vers=None, collection='Mobilier', z=0.0):
+    """Turn the piece so its +y faces the plan point `vers`, set it on the plan point (x, y), make the object."""
+    o_ = P(x, y, z)
+    ang = 0.0
+    if vers is not None:
+        w = P(*vers) - P(x, y)
+        ang = math.atan2(w.y, w.x) - math.pi / 2
+    bmesh.ops.transform(pc.bm, matrix=Matrix.Translation(o_) @ Matrix.Rotation(ang, 4, 'Z'), verts=pc.bm.verts)
+    bmesh.ops.recalc_face_normals(pc.bm, faces=pc.bm.faces)
+    me = bpy.data.meshes.new(name)
+    pc.bm.to_mesh(me); pc.bm.free()
+    for m in pc.mats:
+        me.materials.append(m)
+    for p in me.polygons:
+        p.use_smooth = True
+    me.set_sharp_from_angle(angle=math.radians(40))
+    ob = bpy.data.objects.new(name, me)
+    coll(collection).objects.link(ob)
+    return ob
+
+
+# ---- the pieces
+def chaise(haute=False):
+    """The thin steel chair of photos 9 and 10 (seat 0.47 m); haute: the stool of photo 8 (seat 0.77 m, footrest)."""
+    pc = Piece()
+    s = 0.30 if haute else 0.0
+    zs = 0.42 + s
+    pc.prisme(rrect(0, 0, 0.46, 0.44, 0.14), zs, zs + 0.05, M_CUIR)
+    pieds = []
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            a, b = (sx * 0.20, sy * 0.18, 0.0), (sx * 0.17, sy * 0.14, zs)
+            pc.barre(a, b, 0.018, M_ACIER)
+            pieds.append((Vector(a), Vector(b)))
+    if haute:                                   # the footrest ring, at 0.28 m
+        t = 0.28 / zs
+        q = [a.lerp(b, t) for a, b in pieds]    # order: (-,-), (-,+), (+,-), (+,+)
+        for i, j in ((0, 1), (1, 3), (3, 2), (2, 0)):
+            pc.barre(q[i], q[j], 0.014, M_ACIER)
+    zb = 0.66 + s
+    for sx in (-1, 1):                          # the back posts, from the seat to the backrest
+        pc.barre((sx * 0.17, -0.15, zs + 0.05), (sx * 0.17, -0.168, zb), 0.018, M_ACIER)
+    pc.bande(0.30, 0.10, 0.03, 36, zb, zb + 0.15, M_CUIR)
+    return pc
+
+
+def fauteuil():
+    """The tub armchair of the drums (photos 10, 31): an upholstered shell, a cushion, short steel legs."""
+    pc = Piece()
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            pc.barre((sx * 0.20, sy * 0.17, 0.0), (sx * 0.18, sy * 0.15, 0.33), 0.02, M_ACIER)
+    pc.prisme(rrect(0, 0, 0.58, 0.54, 0.21), 0.33, 0.39, M_CUIR)          # the thin seat shell
+    pc.prisme(rrect(0, 0.025, 0.475, 0.49, 0.15), 0.39, 0.45, M_CUIR)       # the cushion, inside the back
+    # the back and arms: a 4.5 cm shell around the back half, open at the front (y > 0.05)
+    ext = [p for p in rrect(0, 0, 0.58, 0.54, 0.21, 10) if p[1] < 0.05]     # left side -> back -> right side
+    inn = [p for p in rrect(0, 0, 0.49, 0.45, 0.165, 10) if p[1] < 0.05]
+    u = [(-0.29, 0.05)] + ext + [(0.29, 0.05), (0.245, 0.05)] + list(reversed(inn)) + [(-0.245, 0.05)]
+    pc.prisme(u, 0.39, 0.70, M_CUIR)
+    return pc
+
+
+def table_rect(W, L, h, pieds):
+    """A table W x L (m, L along y) at height h, on pedestals (local y) with square base plates."""
+    pc = Piece()
+    pc.boite(-W / 2, -L / 2, W / 2, L / 2, h - 0.03, h, M_PLATEAU)
+    p = 0.44 if h < 1 else 0.50
+    for yp in pieds:
+        pc.cyl(0, yp, 0.035, 0.035, 0.02, h - 0.03, M_ACIER, 12)
+        pc.boite(-p / 2, yp - p / 2, p / 2, yp + p / 2, 0.0, 0.02, M_ACIER)
+    return pc
+
+
+def table_ronde():
+    pc = Piece()
+    pc.cyl(0, 0, 0.48, 0.48, 0.72, 0.75, M_PLATEAU, 48)
+    pc.cyl(0, 0, 0.22, 0.06, 0.0, 0.72, M_ACIER, 32)       # the conical foot (photo 17)
+    return pc
+
+
+def table_haute(L, W):
+    """Standing table of photo 31: a wooden top (L along x) on two steel A-frames joined by a stretcher."""
+    pc = Piece()
+    pc.boite(-L / 2, -W / 2, L / 2, W / 2, 1.01, 1.055, M_BOIS)
+    xe = L / 2 - 0.09
+    yb = 0.23 - 0.20 * 0.28 / 1.01
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            pc.barre((sx * xe, sy * 0.23, 0.0), (sx * xe, sy * 0.03, 1.01), 0.03, M_ACIER)
+        pc.barre((sx * xe, -yb, 0.28), (sx * xe, yb, 0.28), 0.025, M_ACIER)
+    pc.barre((-xe, 0, 0.28), (xe, 0, 0.28), 0.025, M_ACIER)
+    return pc
+
+
+def lampe():
+    """The small cordless table lamp (photos 9, 10, 15)."""
+    pc = Piece()
+    pc.cyl(0, 0, 0.04, 0.04, 0.0005, 0.03, M_LAITON, 16)
+    pc.cyl(0, 0, 0.008, 0.008, 0.03, 0.22, M_LAITON, 8)
+    pc.cyl(0, 0, 0.055, 0.03, 0.22, 0.25, M_LAITON, 16)
+    return pc
+
+
+def suspension(z, R):
+    """A flat saucer pendant (photos 15, 17) with its cable up to the slab."""
+    pc = Piece()
+    pc.cyl(0, 0, R, R, z, z + 0.012, M_LAITON, 32)
+    pc.cyl(0, 0, R, 0.03, z + 0.012, z + 0.06, M_ACIER, 32)
+    pc.cyl(0, 0, 0.003, 0.003, z + 0.06, H - 0.002, M_ACIER, 6)
+    return pc
+
+
+def jardiniere(graine):
+    """A round planter (the plan's 0.75 m circles) with a small tree, as in the architects' axonometry."""
+    pc = Piece()
+    pc.cyl(0, 0, 0.37, 0.37, 0.0, 0.55, M_POT, 40)
+    pc.cyl(0, 0, 0.33, 0.33, 0.55, 0.555, M_TERRE, 40)
+    pc.cyl(0, 0, 0.035, 0.022, 0.555, 1.62, M_BOIS, 10)
+    rnd = random.Random(graine)
+    for k in range(9):                          # an airy crown of small clumps, within 0.55 m of the trunk
+        a = math.tau * k / 9 + rnd.uniform(-0.3, 0.3)
+        d = rnd.uniform(0.12, 0.30)
+        pc.bulle((d * math.cos(a), d * math.sin(a), 1.55 + rnd.uniform(0.0, 0.75)), rnd.uniform(0.15, 0.21),
+                 graine * 10 + k, M_FEUILLE)
+    pc.bulle((0.02, -0.01, 2.25), 0.18, graine * 10 + 9, M_FEUILLE)
+    return pc
+
+
+# ---- the plan: the 13 service tables (numbers for the live map), the standing tables, the bar, the planters
+# drums: table centre (cx - 12, cy - 4) on the plan; armchairs at these offsets from the drum centre
+FAUTEUILS = [(64, -87), (105, -7), (64, 73)]
+# (id, name, x0, y0, x1, y1, height, chairs: (x, y) facing the table's long axis, pedestals, lamps, pendants) in plan px
+SALLE = [
+    (5, 'Rangée, table 1', 664, 1208.5, 757.5, 1354, 0.75,
+     [(x, y) for x in (627.5, 793.5) for y in (1242.5, 1322.5)], [1281.25], [1281.25], [1281.25]),
+    (6, 'Rangée, grande table', 664, 1446, 757.5, 1895, 0.75,
+     [(x, y) for x in (627.5, 793.5) for y in (1480, 1560, 1672.5, 1777.5, 1857.5)], [1518.5, 1671, 1811],
+     [1595, 1741], [1518.5, 1671, 1811]),
+    (7, 'Salle, table 1', 996, 1301, 1090, 1447.5, 0.75,
+     [(x, y) for x in (957.5, 1130) for y in (1335, 1410)], [1374.25], [1374.25], [1374.25]),
+    (8, 'Salle, table 2', 996, 1560, 1090, 1655, 0.75, [(957.5, 1612.5), (1130, 1612.5)], [1607.5], [1607.5], [1607.5]),
+    (9, 'Salle, table 3', 996, 1747.5, 1090, 1840, 0.75, [(957.5, 1797.5), (1130, 1797.5)], [1793.75], [1793.75],
+     [1793.75]),
+    (10, 'Façade, table haute 1', 1282.5, 890, 1376, 1037.5, 1.05, [(1242.5, 925), (1242.5, 1005)], [963.75], [963.75],
+     [963.75]),
+    (11, 'Façade, table haute 2', 1282.5, 1109, 1376, 1205, 1.05, [(1242.5, 1160)], [1157], [1157], [1157]),
+    (12, 'Façade, table haute 3', 1282.5, 1285, 1376, 1430, 1.05, [(1242.5, 1320), (1242.5, 1402.5)], [1357.5],
+     [1357.5], [1357.5]),
+    (13, 'Façade, table haute 4', 1282.5, 1585, 1376, 1730, 1.05, [(1242.5, 1620), (1242.5, 1700)], [1657.5], [1657.5],
+     [1657.5]),
+]
+# standing tables (the dark wooden squares of the plan): (id, x0, y0, x1, y1, places)
+DEBOUT = [(14, 597.5, 968.5, 666.5, 1038.5, 2), (15, 750, 968.5, 888.5, 1038.5, 4), (16, 1069.5, 967.5, 1140, 1040, 2)]
+TABOURETS_BAR = [657 + 71.67 * k for k in range(7)]       # y 792.5, facing the counter
+JARDINIERES = [(711, 1401), (1044, 1252.5), (1044, 1702.5)]
+
+
+def tablette_facade():
+    """The ledge under the right glass blocks, behind the high tables: 0.42 m deep, around the two facade columns."""
+    cols = [(1477.5, 805.0, 68.8), (1477.5, 1516.7, 69.1)]
+    y0, y1, xf, xb = 857, 1755, 1384, 1434
+    front = []
+    for y in range(y0, y1 + 1, 3):
+        x = xf - (13 * math.sin(math.pi * (y - 1462) / 110) if 1462 < y < 1572 else 0)
+        front.append((x, y))
+    back = []
+    for y in range(y1, y0 - 1, -3):
+        x = xb
+        for cx_, cy_, r in cols:
+            if abs(y - cy_) < r:
+                x = min(x, cx_ - math.sqrt(r * r - (y - cy_) ** 2))
+        back.append((x, y))
+    bm = bmesh.new(); prisme(bm, front + back, 0.0, 1.02); mesh_obj('tablette-facade', bm, 'Mobilier', M_BOIS)
+    bm = bmesh.new(); prisme(bm, front + back, 1.02, 1.05); mesh_obj('tablette-facade-plateau', bm, 'Mobilier', M_PLATEAU)
+
+
+def repose_pieds():
+    """The foot rail along the bar (photo 31), on small brackets."""
+    sweep('bar-repose-pieds', [P(428, 757), P(1176, 757)],
+          [(0.02 * math.cos(math.tau * k / 12), 0.22 + 0.02 * math.sin(math.tau * k / 12), True) for k in range(12)],
+          'Mobilier', M_ACIER, ref=P(800, 900))
+    bm = bmesh.new()
+    for k in range(6):
+        x = 440 + (1165 - 440) * k / 5
+        bm_box(bm, x - 1.2, 745.2, x + 1.2, 754.5, 0.21, 0.23)
+    mesh_obj('bar-repose-pieds-pattes', bm, 'Mobilier', M_ACIER)
+
+
+def build_mobilier():
+    """Step 4: the furniture. Returns the new objects; writes the table list for the live map."""
+    for c in ('Mobilier', 'Tables', 'Assises', 'Jardinieres', 'Suspensions'):
+        if c not in bpy.data.collections:
+            sc.collection.children.link(bpy.data.collections.new(c))
+    avant = set(bpy.data.objects)
+    liste = []
+    for n, t in enumerate(sorted(DATA['tambours'], key=lambda t: t['cy'])):
+        cx, cy = t['cx'], t['cy']
+        tc = (cx - 12, cy - 4)
+        poser(f'table-{n + 1:02d}', table_ronde(), *tc, collection='Tables')
+        poser(f'lampe-{n + 1:02d}', lampe(), tc[0] + 18, tc[1], collection='Tables', z=0.75)
+        poser(f'suspension-{n + 1:02d}', suspension(1.95, 0.30), *tc, collection='Suspensions')
+        for k, (dx, dy) in enumerate(FAUTEUILS):
+            poser(f'chaise-{n + 1:02d}-{k + 1}', fauteuil(), cx + dx, cy + dy, vers=tc, collection='Assises')
+        liste.append(dict(id=n + 1, nom=f'Tambour {n + 1}', type='tambour', centre_px=[round(tc[0], 1), round(tc[1], 1)],
+                          places=6, assises='banquette en U et 3 fauteuils'))
+    for tid, nom, x0, y0, x1, y1, h, chaises, pieds, lampes, susp in SALLE:
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        W, L = (x1 - x0) * PX, (y1 - y0) * PX
+        poser(f'table-{tid:02d}', table_rect(W, L, h, [-(yp - cy) * PX for yp in pieds]), cx, cy, collection='Tables')
+        for k, yl in enumerate(lampes):
+            poser(f'lampe-{tid:02d}' + (f'-{k + 1}' if len(lampes) > 1 else ''), lampe(), cx, yl, collection='Tables', z=h)
+        for k, ys in enumerate(susp):
+            poser(f'suspension-{tid:02d}' + (f'-{k + 1}' if len(susp) > 1 else ''),
+                  suspension(h + 1.0, 0.20), cx, ys, collection='Suspensions')
+        for k, (x, y) in enumerate(chaises):
+            poser(f'chaise-{tid:02d}-{k + 1}', chaise(haute=h > 1), x, y, vers=(cx, y), collection='Assises')
+        liste.append(dict(id=tid, nom=nom, type='table haute' if h > 1 else 'table', centre_px=[cx, cy],
+                          taille_m=[round(W, 2), round(L, 2)], places=len(chaises),
+                          assises='tabourets' if h > 1 else 'chaises'))
+    for tid, x0, y0, x1, y1, places in DEBOUT:
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        poser(f'table-{tid:02d}', table_haute((x1 - x0) * PX, (y1 - y0) * PX), cx, cy, collection='Tables')
+        liste.append(dict(id=tid, nom=f'Mange-debout {tid - 13}', type='mange-debout', centre_px=[cx, cy], places=places,
+                          assises='debout'))
+    for k, x in enumerate(TABOURETS_BAR):
+        poser(f'tabouret-bar-{k + 1}', chaise(haute=True), x, 792.5, vers=(x, 700), collection='Assises')
+    liste.append(dict(id=0, nom='Bar', type='bar', centre_px=[801.5, 716], places=len(TABOURETS_BAR), assises='tabourets'))
+    for k, (x, y) in enumerate(JARDINIERES):
+        poser(f'jardiniere-{k + 1}', jardiniere(k + 1), x, y, collection='Jardinieres')
+    tablette_facade()
+    repose_pieds()
+    bm = bmesh.new(); bm_box(bm, 467, 2172, 593, 2243, 0.0, 0.80)       # the sideboard of the alcove
+    mesh_obj('alcove-console', bm, 'Mobilier', M_BOIS)
+    for t in liste:
+        x, y = t['centre_px']; v = P(x, y)
+        t['centre_m'] = [round(v.x, 3), round(v.y, 3)]
+    (RACINE / 'modele' / 'floor1-tables.json').write_text(json.dumps(dict(
+        note='floor1 (rez-de-chaussée) : les tables de la carte en direct. centre_px : sur floor1.png ; centre_m : dans '
+             'le modèle (x vers la droite du plan, y vers le haut du plan, origine au pixel (837, 1230)).',
+        tables=liste, total_places=sum(t['places'] for t in liste)), ensure_ascii=False, indent=1))
+    return [o for o in bpy.data.objects if o not in avant]
+
+
+
 # ---------------------------------------------------------------- light, render
 def setup_render():
     sc.render.engine = 'CYCLES'
@@ -923,6 +1272,10 @@ PLANS = {
     'escalier':  ((1000, 1830, 1.55), (1040, 2210, 0.95), 24),  # photo 4
     'facade':    ((930, 1250, 1.50), (1452, 1050, 1.30), 26),   # photos 8, 9
     'rideau':    ((548, 1130, 1.30), (612, 1890, 1.10), 24, (1000, 1250)),   # photo 10, the alcove curtain
+    # step 4
+    'salle':     ((590, 1430, 1.30), (650, 1900, 1.00), 20, (1000, 1250)),   # photo 10, the tables along the drums
+    'tabourets': ((1232, 1040, 1.15), (1195, 2150, 0.95), 30, (1000, 1250)),  # photo 8, the high tables on the right
+    'tambour':   ((900, 860, 1.25), (400, 1010, 0.95), 30),                    # photo 31, drum 1, a standing table
 }
 
 
@@ -1019,7 +1372,8 @@ if ARGS.get('variante'):
     nom = ARGS['variante']
     V = VARIANTES[nom]
     num = list(VARIANTES).index(nom) + 1
-    OUT = Path(ARGS.get('out', RACINE / 'rendus' / ('4-elements-fixes' if ELEMENTS else '3-styles-blancs')))
+    OUT = Path(ARGS.get('out', RACINE / 'rendus' / ('5-mobilier' if MOBILIER else
+                                                    '4-elements-fixes' if ELEMENTS else '3-styles-blancs')))
     sc.collection.children.link(bpy.data.collections.new('Fantome'))
     m_ghost = mat('fantome', (0.98, 0.98, 0.98), 0.6, alpha=0.16)
 
@@ -1035,6 +1389,8 @@ if ARGS.get('variante'):
             o.visible_shadow = False            # only the solid walls cast shadows: no grey smudges seen from above
     if ELEMENTS:                                # the fixed elements, cut like the walls
         nouveaux = build_elements()
+        if MOBILIER:
+            nouveaux += build_mobilier()
         if V['cut'] is not None:
             separer(nouveaux, V['cut'], m_ghost if V['ghost'] else None)
 
@@ -1053,6 +1409,12 @@ if ARGS.get('variante'):
                                  ('rideau', (0.975, 0.972, 0.965), 0.9), ('bordure', (0.93,) * 3, 0.8)):
             set_mat(name, rgb, rough, a)
         set_mat('pave', (0.95, 0.97, 0.98), 0.25, 0.55 if a == 1.0 else min(a, 0.3))
+    if MOBILIER:                                # the furniture in the same whites; the steel a light grey
+        for name, rgb, rough in (('plateau', (0.90,) * 3, 0.5), ('acier', (0.74,) * 3, 0.5),
+                                 ('cuir', (0.955, 0.95, 0.94), 0.8), ('bois', (0.93, 0.92, 0.905), 0.8),
+                                 ('pot', (0.94,) * 3, 0.9), ('terre', (0.86, 0.85, 0.83), 1.0),
+                                 ('feuillage', (0.90, 0.92, 0.88), 0.9), ('laiton', (0.97,) * 3, 0.4)):
+            set_mat(name, rgb, rough, a)
     o_c = P(837, 1278)
     if V['grid']:
         m_int = mat_grille('sol-grille', (0.975, 0.972, 0.965), (0.80, 0.80, 0.80), 0.35, 0.55, o_c)
@@ -1117,7 +1479,12 @@ if ARGS.get('variante'):
             render(f'plan-{pl}', camera(f'cam-{pl}', P(x0, y0, z0), P(x1, y1, z1), lens=lens),
                    res[0] if res else (1500, 1000))
     elif ELEMENTS:
+        pendants = [o for o in bpy.data.objects if o.name.startswith('suspension')]
+        for o in pendants:                      # seen from the top, the pendants would hide the tables
+            o.hide_render = True
         render(f'{nom}-dessus', cam_top, (2000, 1250))
+        for o in pendants:
+            o.hide_render = False
         render(f'{nom}-3d', cam_3d, (2000, 1250))
     else:
         render(f'{num}-{nom}-dessus', cam_top, (2000, 1250))

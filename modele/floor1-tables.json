@@ -1,0 +1,297 @@
+{
+ "note": "floor1 (rez-de-chaussée) : les tables de la carte en direct. centre_px : sur floor1.png ; centre_m : dans le modèle (x vers la droite du plan, y vers le haut du plan, origine au pixel (837, 1230)).",
+ "tables": [
+  {
+   "id": 1,
+   "nom": "Tambour 1",
+   "type": "tambour",
+   "centre_px": [
+    394.3,
+    1006.1
+   ],
+   "places": 6,
+   "assises": "banquette en U et 3 fauteuils",
+   "centre_m": [
+    -3.689,
+    1.866
+   ]
+  },
+  {
+   "id": 2,
+   "nom": "Tambour 2",
+   "type": "tambour",
+   "centre_px": [
+    395.0,
+    1308.7
+   ],
+   "places": 6,
+   "assises": "banquette en U et 3 fauteuils",
+   "centre_m": [
+    -3.683,
+    -0.656
+   ]
+  },
+  {
+   "id": 3,
+   "nom": "Tambour 3",
+   "type": "tambour",
+   "centre_px": [
+    396.1,
+    1714.9
+   ],
+   "places": 6,
+   "assises": "banquette en U et 3 fauteuils",
+   "centre_m": [
+    -3.674,
+    -4.041
+   ]
+  },
+  {
+   "id": 4,
+   "nom": "Tambour 4",
+   "type": "tambour",
+   "centre_px": [
+    393.5,
+    2018.4
+   ],
+   "places": 6,
+   "assises": "banquette en U et 3 fauteuils",
+   "centre_m": [
+    -3.696,
+    -6.57
+   ]
+  },
+  {
+   "id": 5,
+   "nom": "Rangée, table 1",
+   "type": "table",
+   "centre_px": [
+    710.75,
+    1281.25
+   ],
+   "taille_m": [
+    0.78,
+    1.21
+   ],
+   "places": 4,
+   "assises": "chaises",
+   "centre_m": [
+    -1.052,
+    -0.427
+   ]
+  },
+  {
+   "id": 6,
+   "nom": "Rangée, grande table",
+   "type": "table",
+   "centre_px": [
+    710.75,
+    1670.5
+   ],
+   "taille_m": [
+    0.78,
+    3.74
+   ],
+   "places": 10,
+   "assises": "chaises",
+   "centre_m": [
+    -1.052,
+    -3.671
+   ]
+  },
+  {
+   "id": 7,
+   "nom": "Salle, table 1",
+   "type": "table",
+   "centre_px": [
+    1043.0,
+    1374.25
+   ],
+   "taille_m": [
+    0.78,
+    1.22
+   ],
+   "places": 4,
+   "assises": "chaises",
+   "centre_m": [
+    1.717,
+    -1.202
+   ]
+  },
+  {
+   "id": 8,
+   "nom": "Salle, table 2",
+   "type": "table",
+   "centre_px": [
+    1043.0,
+    1607.5
+   ],
+   "taille_m": [
+    0.78,
+    0.79
+   ],
+   "places": 2,
+   "assises": "chaises",
+   "centre_m": [
+    1.717,
+    -3.146
+   ]
+  },
+  {
+   "id": 9,
+   "nom": "Salle, table 3",
+   "type": "table",
+   "centre_px": [
+    1043.0,
+    1793.75
+   ],
+   "taille_m": [
+    0.78,
+    0.77
+   ],
+   "places": 2,
+   "assises": "chaises",
+   "centre_m": [
+    1.717,
+    -4.698
+   ]
+  },
+  {
+   "id": 10,
+   "nom": "Façade, table haute 1",
+   "type": "table haute",
+   "centre_px": [
+    1329.25,
+    963.75
+   ],
+   "taille_m": [
+    0.78,
+    1.23
+   ],
+   "places": 2,
+   "assises": "tabourets",
+   "centre_m": [
+    4.102,
+    2.219
+   ]
+  },
+  {
+   "id": 11,
+   "nom": "Façade, table haute 2",
+   "type": "table haute",
+   "centre_px": [
+    1329.25,
+    1157.0
+   ],
+   "taille_m": [
+    0.78,
+    0.8
+   ],
+   "places": 1,
+   "assises": "tabourets",
+   "centre_m": [
+    4.102,
+    0.608
+   ]
+  },
+  {
+   "id": 12,
+   "nom": "Façade, table haute 3",
+   "type": "table haute",
+   "centre_px": [
+    1329.25,
+    1357.5
+   ],
+   "taille_m": [
+    0.78,
+    1.21
+   ],
+   "places": 2,
+   "assises": "tabourets",
+   "centre_m": [
+    4.102,
+    -1.062
+   ]
+  },
+  {
+   "id": 13,
+   "nom": "Façade, table haute 4",
+   "type": "table haute",
+   "centre_px": [
+    1329.25,
+    1657.5
+   ],
+   "taille_m": [
+    0.78,
+    1.21
+   ],
+   "places": 2,
+   "assises": "tabourets",
+   "centre_m": [
+    4.102,
+    -3.562
+   ]
+  },
+  {
+   "id": 14,
+   "nom": "Mange-debout 1",
+   "type": "mange-debout",
+   "centre_px": [
+    632.0,
+    1003.5
+   ],
+   "places": 2,
+   "assises": "debout",
+   "centre_m": [
+    -1.708,
+    1.888
+   ]
+  },
+  {
+   "id": 15,
+   "nom": "Mange-debout 2",
+   "type": "mange-debout",
+   "centre_px": [
+    819.25,
+    1003.5
+   ],
+   "places": 4,
+   "assises": "debout",
+   "centre_m": [
+    -0.148,
+    1.888
+   ]
+  },
+  {
+   "id": 16,
+   "nom": "Mange-debout 3",
+   "type": "mange-debout",
+   "centre_px": [
+    1104.75,
+    1003.75
+   ],
+   "places": 2,
+   "assises": "debout",
+   "centre_m": [
+    2.231,
+    1.885
+   ]
+  },
+  {
+   "id": 0,
+   "nom": "Bar",
+   "type": "bar",
+   "centre_px": [
+    801.5,
+    716
+   ],
+   "places": 7,
+   "assises": "tabourets",
+   "centre_m": [
+    -0.296,
+    4.283
+   ]
+  }
+ ],
+ "total_places": 68
+}
