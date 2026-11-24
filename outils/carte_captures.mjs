@@ -1,5 +1,5 @@
-// Captures of the interactive map (carte/), for the step pages: each view, state system, numbering design and
-// style, at Retina scale, plus a short video of the map being handled. Serves carte/ itself on a free port.
+// Captures of the interactive map (carte/), for the step pages (step 6: the layouts of the space by the bar, the
+// settings and legend designs), at Retina scale, plus a short video of the map being handled. Serves carte/ itself on a free port.
 // usage: node outils/carte_captures.mjs [video]
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
@@ -11,30 +11,30 @@ const require = createRequire(process.env.PLAYWRIGHT_PKG || `${homedir()}/Deskto
 const { chromium } = require('playwright');
 
 const R = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = path.join(R, 'rendus', '6-carte');
-fs.mkdirSync(OUT, { recursive: true });
+const DOS = { carte: path.join(R, 'rendus', '6-carte'), zone: path.join(R, 'rendus', '7-espace-du-bar'),
+  ui: path.join(R, 'rendus', '8-reglages-legende') };
+Object.values(DOS).forEach(d => fs.mkdirSync(d, { recursive: true }));
+const OUT = DOS.carte;
 const port = 8800 + Math.floor(Math.random() * 100);
 const serveur = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: path.join(R, 'carte'), stdio: 'ignore' });
 await new Promise(r => setTimeout(r, 700));
 const base = `http://127.0.0.1:${port}/`;
 
-const PLANS = [   // name, address settings
-  ['carte-dessus', 'vitesse=0'],
-  ['carte-3d', 'vitesse=0&vue=3d'],
-  ['carte-fiche', 'vitesse=0&vue=3d&fiche=6'],
-  ['carte-reglages', 'vitesse=0&reglages=1'],
-  ['etats-A-halo', 'vitesse=0&vue=3d&systeme=A'],
-  ['etats-B-plateau', 'vitesse=0&vue=3d&systeme=B'],
-  ['etats-C-places', 'vitesse=0&vue=3d&systeme=C'],
-  ['etats-D-minuteur', 'vitesse=0&vue=3d&systeme=D'],
-  ['etats-A-proche', 'vitesse=0&vue=3d&systeme=A&cam=-50,40,9,-0.6,0.6,1.8'],
-  ['etats-C-proche', 'vitesse=0&vue=3d&systeme=C&cam=-50,40,9,-0.6,0.6,1.8'],
-  ['etats-D-proche', 'vitesse=0&vue=3d&systeme=D&cam=-50,40,9,-0.6,0.6,1.8'],
-  ...['1', '2', '3', '4', '5'].flatMap(n => [[`numeros-${n}-dessus`, `vitesse=0&systeme=0&numeros=${n}`],
-    [`numeros-${n}-proche`, `vitesse=0&vue=3d&systeme=0&numeros=${n}&cam=-50,40,${n === '2' ? 3.2 : 8.5},${n === '2' ? '1.75,0.6,1.25' : '0.2,0.6,2.6'}`]]),
-  ['style-fil-de-fer', 'vitesse=0&vue=3d&style=fil-de-fer'],
-  ['style-transparent', 'vitesse=0&vue=3d&style=transparent&systeme=B'],
-  ['style-blanc', 'vitesse=0&vue=3d&style=blanc&systeme=0'],
+// step 6: [folder, name, address settings, element to capture alone (optional)]
+const Z3D = 'nu=1&cam=-43.6,38.4,8.5,0.4,0.3,-1.69', ZHAUT = 'nu=1&cam=-90,90,12,0.25,0,-1.35';
+const PLANS = [
+  ['carte', 'carte-defaut-dessus', 'vitesse=0&heure=20:25&zone=Z4'],
+  ['carte', 'carte-defaut-3d', 'vitesse=0&heure=20:25&zone=Z4&vue=3d'],
+  ...['vide', 'Z1', 'Z2', 'Z3', 'Z4'].flatMap(z => [
+    ['zone', `zone-${z}-dessus`, `vitesse=0&heure=20:25&zone=${z === 'vide' ? '' : z}&${ZHAUT}`],
+    ['zone', `zone-${z}-3d`, `vitesse=0&heure=20:25&zone=${z === 'vide' ? '' : z}&vue=3d&${Z3D}`]]),
+  ['ui', 'R1', 'vitesse=0&heure=20:25&zone=Z4&ui=R1&vue=3d', '.r1'],
+  ['ui', 'R2', 'vitesse=0&heure=20:25&zone=Z4&ui=R2&ouvert=r2&vue=3d', '.r2-pop'],
+  ['ui', 'R3', 'vitesse=0&heure=20:25&zone=Z4&ui=R3&ouvert=systeme&vue=3d', '.r3'],
+  ['ui', 'R3-style', 'vitesse=0&heure=20:25&zone=Z4&ui=R3&ouvert=style&vue=3d&style=transparent', '.r3'],
+  ['ui', 'L1', 'vitesse=0&heure=20:25&zone=Z4&legende=L1&surligne=commandee', '#legende'],
+  ['ui', 'L2', 'vitesse=0&heure=20:25&zone=Z4&legende=L2', '#legende'],
+  ['ui', 'L3', 'vitesse=0&heure=21:05&zone=Z4&legende=L3', '#legende'],
 ];
 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
@@ -42,11 +42,20 @@ const seul = process.argv[2];
 if (seul !== 'video') {
   const p = await b.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 });
   p.on('pageerror', e => console.log('[pageerror]', e.message));
-  for (const [nom, q] of PLANS) {
+  for (const [dos, nom, q, el] of PLANS) {
     await p.goto(`${base}?${q}`);
     await p.waitForFunction(() => window.carte?.pret, null, { timeout: 60000 });
     await p.waitForTimeout(1800);
-    await p.screenshot({ path: path.join(OUT, `${nom}.png`) });
+    await p.screenshot({ path: path.join(DOS[dos], `${nom}.png`) });
+    if (el) {   // the element alone, with a margin of map around it
+      const r = await p.locator(el).boundingBox(), m = 24;
+      // a popover opens above its bar: take both
+      const r2 = el === '.r3' ? await p.locator('.r3-pop:not([hidden])').boundingBox().catch(() => null) : null;
+      const x0 = Math.min(r.x, r2?.x ?? r.x) - m, y0 = Math.min(r.y, r2?.y ?? r.y) - m;
+      const x1 = Math.max(r.x + r.width, r2 ? r2.x + r2.width : 0) + m, y1 = r.y + r.height + m;
+      await p.screenshot({ path: path.join(DOS[dos], `${nom}-proche.png`),
+        clip: { x: Math.max(0, x0), y: Math.max(0, y0), width: Math.min(1600, x1) - Math.max(0, x0), height: Math.min(1000, y1) - Math.max(0, y0) } });
+    }
     console.log('capture', nom);
   }
 }
@@ -55,7 +64,7 @@ if (seul === 'video' || seul === undefined) {
   // frames from Chrome's screencast, then a 30 fps video with the system ffmpeg
   const ctx = await b.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
-  await p.goto(`${base}?vitesse=120&heure=20:05`);
+  await p.goto(`${base}?vitesse=120&heure=20:05&zone=Z4`);
   await p.waitForFunction(() => window.carte?.pret, null, { timeout: 60000 });
   await p.waitForTimeout(500);
   const cdp = await ctx.newCDPSession(p), images = [];
@@ -79,11 +88,9 @@ if (seul === 'video' || seul === undefined) {
     v.project(C.cam.cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; });
   await p.mouse.move(pos[0], pos[1]); await p.waitForTimeout(400); await p.mouse.click(pos[0], pos[1]);
   await p.waitForTimeout(2500);
-  await p.click('#protos summary'); await p.waitForTimeout(700);
-  await p.selectOption('#systeme', 'D'); await p.waitForTimeout(2200);
-  await p.selectOption('#systeme', 'C'); await p.waitForTimeout(1800);
-  await p.selectOption('#systeme', 'A'); await p.waitForTimeout(600);
-  await p.click('#protos summary'); await p.waitForTimeout(400);
+  await p.click('.r1 button[data-cle="systeme"][data-v="D"]'); await p.waitForTimeout(2200);
+  await p.click('.r1 button[data-cle="systeme"][data-v="B"]'); await p.waitForTimeout(1800);
+  await p.click('.r1 button[data-cle="systeme"][data-v="C"]'); await p.waitForTimeout(600);
   await p.click('#fiche .fermer'); await p.waitForTimeout(400);
   await p.click('#outils button[data-action="recentrer"]'); await p.waitForTimeout(1200);
   await p.click('#vues button[data-vue="dessus"]'); await p.waitForTimeout(2200);
