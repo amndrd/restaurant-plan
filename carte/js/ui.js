@@ -2,7 +2,7 @@
 // (right, on a click).
 import { ETATS, ALERTE, hhmm } from './service.js';
 
-const NOMS = { tambour: 'Tambour', table: 'Table', 'table haute': 'Table haute', 'mange-debout': 'Mange-debout' };
+const NOMS = { tambour: 'Tambour', table: 'Table', 'table haute': 'Table haute', salon: 'Salon' };
 const STATUTS = { cuisine: 'En cuisine', pret: 'Prêt', servi: 'Servi' };
 
 export function nomTable(t) {
@@ -16,9 +16,6 @@ export class Interface {
     this.fiche = document.getElementById('fiche');
     this.heure = document.getElementById('heure');
     this.choix = null;
-    document.getElementById('legende').innerHTML =
-      Object.entries(ETATS).map(([, e]) => `<span><i style="background:${e.couleur}"></i>${e.nom.split(',')[0]}</span>`).join('') +
-      `<span><i style="background:${ALERTE}"></i>Alerte</span>`;
   }
 
   maj() {

@@ -1,15 +1,15 @@
-// How the map shows the state of each table. Four prototypes, switchable in the settings:
-//   A  Halo au sol      a soft coloured footprint under the table and its chairs
-//   B  Plateau          only the table top takes the colour
-//   C  Places occupées  each occupied seat takes the colour, a thin outline gives the state
+// How the map shows the state of each table (chosen at step 6: C by default, B and D in the settings):
+//   C  Places occupées  each occupied seat takes the colour of the state
+//   B  Plateau          the table top takes the colour
 //   D  Minuteur         a ring over the table fills with the time spent in the current state
-// Plus, in every prototype, the alerts (a table waiting too long) pulse in red.
+// In every system, a table waiting too long gets a pulsing red band; the legend can also outline the tables of one
+// state (surligner).
 import * as THREE from 'three';
 import { ETATS, ALERTE } from './service.js';
 
 const CIBLES = { reservee: 30, installee: 8, commandee: 22, servie: 40, addition: 10, debarrasser: 6 };
 
-function rondRect(w, d, r) {
+export function rondRect(w, d, r) {
   const s = new THREE.Shape(), x = -w / 2, y = -d / 2;
   s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
   s.lineTo(x + w, y + d - r); s.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
@@ -22,7 +22,7 @@ const mel = (hex, blanc) => new THREE.Color(hex).lerp(new THREE.Color(0xffffff),
 
 export class Systemes {
   constructor(scene, groupes, calque) {
-    this.groupes = groupes; this.variante = 'A';
+    this.groupes = groupes; this.variante = 'C'; this.surligne = null;
     this.racine = new THREE.Group(); this.racine.name = 'systemes'; scene.add(this.racine);
     this.cache = new Map();
     for (const g of groupes.values()) {
@@ -30,20 +30,20 @@ export class Systemes {
       const w = b.max.x - b.min.x + 2 * pad, d = b.max.z - b.min.z + 2 * pad, r = Math.min(0.55, w / 2 - 0.01, d / 2 - 0.01);
       const forme = rondRect(w, d, r);
       g.centre = new THREE.Vector3((b.min.x + b.max.x) / 2, 0, (b.min.z + b.max.z) / 2);
+      // D: a light grey footprint under the occupied tables
       const halo = new THREE.Mesh(new THREE.ShapeGeometry(forme, 10).rotateX(-Math.PI / 2),
-        new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false }));
+        new THREE.MeshLambertMaterial({ color: 0xe7e6e2, transparent: true, opacity: 0.92, depthWrite: false }));
       halo.position.set(g.centre.x, 0.004, g.centre.z); halo.receiveShadow = true; halo.renderOrder = -1;
-      const pts = forme.getSpacedPoints(80).map(p => new THREE.Vector3(p.x, 0, -p.y));
-      const contour = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),
-        new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.9 }));
-      contour.position.set(g.centre.x, 0.008, g.centre.z);
-      const anneau = new THREE.Mesh(new THREE.ShapeGeometry(this._anneau(forme, w, d, r), 10).rotateX(-Math.PI / 2),
+      // a 6 cm band around the footprint: the alerts, and the tables picked out from the legend
+      const s = rondRect(w + 0.12, d + 0.12, r + 0.06);
+      s.holes.push(new THREE.Path(forme.getPoints(12)));
+      const anneau = new THREE.Mesh(new THREE.ShapeGeometry(s, 10).rotateX(-Math.PI / 2),
         new THREE.MeshBasicMaterial({ color: ALERTE, transparent: true, opacity: 0.9, depthWrite: false }));
       anneau.position.set(g.centre.x, 0.006, g.centre.z);
       const pick = new THREE.Mesh(new THREE.BoxGeometry(w, 1.3, d), new THREE.MeshBasicMaterial({ visible: false }));
       pick.position.set(g.centre.x, 0.65, g.centre.z); pick.userData.table = g.id;
-      this.racine.add(halo, contour, anneau, pick);
-      Object.assign(g, { halo, contour, anneau, pick });
+      this.racine.add(halo, anneau, pick);
+      Object.assign(g, { halo, anneau, pick });
       const el = document.createElement('div');
       el.className = 'badge minuteur';
       el.innerHTML = `<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="21" fill="#fff"/>
@@ -55,13 +55,7 @@ export class Systemes {
     this.picks = [...groupes.values()].map(g => g.pick);
   }
 
-  _anneau(forme, w, d, r) {   // a 6 cm band just outside the footprint, for the alerts
-    const s = rondRect(w + 0.12, d + 0.12, r + 0.06);
-    s.holes.push(new THREE.Path(rondRect(w, d, r).getPoints(12).reverse()));
-    return s;
-  }
-
-  regler(v) { this.variante = v; this.change = true; }
+  regler(v) { this.variante = v; }
 
   _teinter(o, couleur, force = 1) {
     const base = o.userData.matBase;
@@ -70,8 +64,7 @@ export class Systemes {
     const cle = base.uuid + couleur + force;
     let m = this.cache.get(cle);
     if (!m) {
-      m = base.clone();
-      if (m.colorWrite === false) { m = new THREE.MeshStandardMaterial({ roughness: 0.8 }); }
+      m = base.colorWrite === false ? new THREE.MeshStandardMaterial({ roughness: 0.8 }) : base.clone();
       m.color = mel(couleur, 1 - force);
       this.cache.set(cle, m);
     }
@@ -81,30 +74,25 @@ export class Systemes {
   maj(service, cam, canvas, now, style) {
     const v = this.variante, pouls = 0.55 + 0.45 * Math.sin(now / 260);
     const traverse = style === 'fil-de-fer' || style === 'transparent';   // see-through styles: the colours too
+    const modele = traverse ? 'entier' : 'fantome';
     const largeur = canvas.clientWidth, hauteur = canvas.clientHeight, p = new THREE.Vector3();
     for (const g of this.groupes.values()) {
       const t = service.tables.find(x => x.id === g.id);
       const etat = ETATS[t.etat], occupe = !['libre', 'reservee', 'debarrasser'].includes(t.etat);
-      // A: the footprint
-      g.halo.visible = v === 'A' || (v === 'D' && t.etat !== 'libre');
+      g.halo.visible = v === 'D' && t.etat !== 'libre';
       g.halo.material.depthTest = g.anneau.material.depthTest = !traverse;
-      if (g.halo.visible) {
-        const c = v === 'D' ? 0xe7e6e2 : t.etat === 'libre' ? 0xe4e3df : etat.couleur;
-        g.halo.material.color.set(v === 'A' ? mel(c, 0.1) : c);
-        g.halo.material.opacity = t.etat === 'libre' ? 0.55 : 0.92;
+      // the band: alert (pulsing red) or picked out from the legend (state colour)
+      const surligne = !!this.surligne && (this.surligne === 'alerte' ? t.alerte : t.etat === this.surligne);
+      g.anneau.visible = !!(t.alerte || surligne);
+      if (g.anneau.visible) {
+        g.anneau.material.color.set(t.alerte ? ALERTE : etat.couleur);
+        g.anneau.material.opacity = t.alerte ? 0.35 + 0.6 * pouls : 0.95;
       }
-      // C: the outline
-      g.contour.visible = v === 'C' && t.etat !== 'libre';
-      if (g.contour.visible) g.contour.material.color.set(etat.couleur);
-      // alerts, every prototype
-      g.anneau.visible = v !== '0' && t.alerte;
-      if (g.anneau.visible) g.anneau.material.opacity = 0.35 + 0.6 * pouls;
       // B: the table tops
-      const modele = style === 'transparent' || style === 'fil-de-fer' ? 'entier' : 'fantome';
       for (const o of g.plateaux[modele]) this._teinter(o, v === 'B' && t.etat !== 'libre' ? (t.alerte ? ALERTE : etat.couleur) : null);
       // C: the seats, as many as the guests (drums: the armchairs, then the banquette)
       const sieges = g.sieges[modele];
-      sieges.forEach((s, k) => s.forEach(o => this._teinter(o, v === 'C' && occupe && k < t.invites ? etat.couleur : null, 0.85)));
+      sieges.forEach((s, k) => s && s.forEach(o => this._teinter(o, v === 'C' && occupe && k < t.invites ? etat.couleur : null, 0.85)));
       for (const o of g.banquette[modele]) this._teinter(o, v === 'C' && occupe && t.invites > sieges.length ? etat.couleur : null, 0.7);
       // D: the timer over the table
       const montrer = v === 'D' && t.etat !== 'libre';

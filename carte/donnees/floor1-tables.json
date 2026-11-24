@@ -1,5 +1,5 @@
 {
- "note": "floor1 (rez-de-chaussée) : les tables de la carte en direct. centre_px : sur floor1.png ; centre_m : dans le modèle (x vers la droite du plan, y vers le haut du plan, origine au pixel (837, 1230)).",
+ "note": "floor1 (rez-de-chaussée) : les tables de la carte en direct. centre_px : sur floor1.png ; centre_m : dans le modèle (x vers la droite du plan, y vers le haut du plan, origine au pixel (837, 1230)). variantes : les propositions pour l'espace entre le bar et la salle (étape 6), une seule sera gardée.",
  "tables": [
   {
    "id": 1,
@@ -11,6 +11,7 @@
    ],
    "places": 6,
    "assises": "banquette en U et 3 fauteuils",
+   "zone": "T",
    "centre_m": [
     -3.689,
     1.866
@@ -26,6 +27,7 @@
    ],
    "places": 6,
    "assises": "banquette en U et 3 fauteuils",
+   "zone": "T",
    "centre_m": [
     -3.683,
     -0.656
@@ -41,6 +43,7 @@
    ],
    "places": 6,
    "assises": "banquette en U et 3 fauteuils",
+   "zone": "T",
    "centre_m": [
     -3.674,
     -4.041
@@ -56,6 +59,7 @@
    ],
    "places": 6,
    "assises": "banquette en U et 3 fauteuils",
+   "zone": "T",
    "centre_m": [
     -3.696,
     -6.57
@@ -75,6 +79,7 @@
    ],
    "places": 4,
    "assises": "chaises",
+   "zone": "R",
    "centre_m": [
     -1.052,
     -0.427
@@ -94,6 +99,7 @@
    ],
    "places": 10,
    "assises": "chaises",
+   "zone": "R",
    "centre_m": [
     -1.052,
     -3.671
@@ -113,6 +119,7 @@
    ],
    "places": 4,
    "assises": "chaises",
+   "zone": "S",
    "centre_m": [
     1.717,
     -1.202
@@ -132,6 +139,7 @@
    ],
    "places": 2,
    "assises": "chaises",
+   "zone": "S",
    "centre_m": [
     1.717,
     -3.146
@@ -151,6 +159,7 @@
    ],
    "places": 2,
    "assises": "chaises",
+   "zone": "S",
    "centre_m": [
     1.717,
     -4.698
@@ -170,6 +179,7 @@
    ],
    "places": 2,
    "assises": "tabourets",
+   "zone": "F",
    "centre_m": [
     4.102,
     2.219
@@ -189,6 +199,7 @@
    ],
    "places": 1,
    "assises": "tabourets",
+   "zone": "F",
    "centre_m": [
     4.102,
     0.608
@@ -208,6 +219,7 @@
    ],
    "places": 2,
    "assises": "tabourets",
+   "zone": "F",
    "centre_m": [
     4.102,
     -1.062
@@ -227,54 +239,10 @@
    ],
    "places": 2,
    "assises": "tabourets",
+   "zone": "F",
    "centre_m": [
     4.102,
     -3.562
-   ]
-  },
-  {
-   "id": 14,
-   "nom": "Mange-debout 1",
-   "type": "mange-debout",
-   "centre_px": [
-    632.0,
-    1003.5
-   ],
-   "places": 2,
-   "assises": "debout",
-   "centre_m": [
-    -1.708,
-    1.888
-   ]
-  },
-  {
-   "id": 15,
-   "nom": "Mange-debout 2",
-   "type": "mange-debout",
-   "centre_px": [
-    819.25,
-    1003.5
-   ],
-   "places": 4,
-   "assises": "debout",
-   "centre_m": [
-    -0.148,
-    1.888
-   ]
-  },
-  {
-   "id": 16,
-   "nom": "Mange-debout 3",
-   "type": "mange-debout",
-   "centre_px": [
-    1104.75,
-    1003.75
-   ],
-   "places": 2,
-   "assises": "debout",
-   "centre_m": [
-    2.231,
-    1.885
    ]
   },
   {
@@ -293,5 +261,203 @@
    ]
   }
  ],
- "total_places": 68
+ "total_places": 60,
+ "variantes": {
+  "Z1": {
+   "nom": "Tables de deux",
+   "tables": [
+    {
+     "id": 14,
+     "nom": "Bistrot 1",
+     "type": "table",
+     "centre_px": [
+      681,
+      1027
+     ],
+     "places": 2,
+     "assises": "chaises",
+     "zone": "B",
+     "centre_m": [
+      -1.3,
+      1.692
+     ]
+    },
+    {
+     "id": 15,
+     "nom": "Bistrot 2",
+     "type": "table",
+     "centre_px": [
+      817,
+      1027
+     ],
+     "places": 2,
+     "assises": "chaises",
+     "zone": "B",
+     "centre_m": [
+      -0.167,
+      1.692
+     ]
+    },
+    {
+     "id": 16,
+     "nom": "Bistrot 3",
+     "type": "table",
+     "centre_px": [
+      953,
+      1027
+     ],
+     "places": 2,
+     "assises": "chaises",
+     "zone": "B",
+     "centre_m": [
+      0.967,
+      1.692
+     ]
+    },
+    {
+     "id": 17,
+     "nom": "Bistrot 4",
+     "type": "table",
+     "centre_px": [
+      1089,
+      1027
+     ],
+     "places": 2,
+     "assises": "chaises",
+     "zone": "B",
+     "centre_m": [
+      2.1,
+      1.692
+     ]
+    }
+   ]
+  },
+  "Z2": {
+   "nom": "Table d'hôtes",
+   "tables": [
+    {
+     "id": 14,
+     "nom": "Table d'hôtes",
+     "type": "table",
+     "centre_px": [
+      885,
+      1027
+     ],
+     "places": 10,
+     "assises": "chaises",
+     "zone": "B",
+     "centre_m": [
+      0.4,
+      1.692
+     ]
+    }
+   ]
+  },
+  "Z3": {
+   "nom": "Salon d'attente",
+   "tables": [
+    {
+     "id": 14,
+     "nom": "Salon 1",
+     "type": "salon",
+     "centre_px": [
+      760,
+      1027
+     ],
+     "places": 4,
+     "assises": "fauteuils",
+     "zone": "B",
+     "centre_m": [
+      -0.642,
+      1.692
+     ]
+    },
+    {
+     "id": 15,
+     "nom": "Salon 2",
+     "type": "salon",
+     "centre_px": [
+      1010,
+      1027
+     ],
+     "places": 4,
+     "assises": "fauteuils",
+     "zone": "B",
+     "centre_m": [
+      1.442,
+      1.692
+     ]
+    }
+   ]
+  },
+  "Z4": {
+   "nom": "Banquette jardinière",
+   "tables": [
+    {
+     "id": 14,
+     "nom": "Banquette 1",
+     "type": "table",
+     "centre_px": [
+      717,
+      1034
+     ],
+     "places": 2,
+     "assises": "banquette et chaise",
+     "zone": "B",
+     "centre_m": [
+      -1.0,
+      1.633
+     ]
+    },
+    {
+     "id": 15,
+     "nom": "Banquette 2",
+     "type": "table",
+     "centre_px": [
+      829,
+      1034
+     ],
+     "places": 2,
+     "assises": "banquette et chaise",
+     "zone": "B",
+     "centre_m": [
+      -0.067,
+      1.633
+     ]
+    },
+    {
+     "id": 16,
+     "nom": "Banquette 3",
+     "type": "table",
+     "centre_px": [
+      941,
+      1034
+     ],
+     "places": 2,
+     "assises": "banquette et chaise",
+     "zone": "B",
+     "centre_m": [
+      0.867,
+      1.633
+     ]
+    },
+    {
+     "id": 17,
+     "nom": "Banquette 4",
+     "type": "table",
+     "centre_px": [
+      1053,
+      1034
+     ],
+     "places": 2,
+     "assises": "banquette et chaise",
+     "zone": "B",
+     "centre_m": [
+      1.8,
+      1.633
+     ]
+    }
+   ]
+  }
+ }
 }

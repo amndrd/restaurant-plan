@@ -1,6 +1,7 @@
 // The interactive map of the room. Settings can also come from the address (for captures):
-//   ?vue=dessus|3d  style=fantome|blanc|transparent|fil-de-fer  systeme=A|B|C|D|0  numeros=0..5
-//   heure=20:40  vitesse=0|1|30|120  fiche=<table>  cam=az,el,largeur,x,y,z  reglages=1
+//   ?vue=dessus|3d  style=fantome|transparent|fil-de-fer  systeme=C|B|D  numeros=3|5|0
+//   zone=Z1|Z2|Z3|Z4 (the layout between the bar and the room)  ui=R1|R2|R3  legende=L1|L2|L3  ouvert=<menu>
+//   heure=20:40  vitesse=0|1|30|120  fiche=<table>  cam=az,el,largeur,x,y,z  surligne=<state>
 import * as THREE from 'three';
 import { Scene3D } from './scene.js';
 import { CameraCarte } from './camera.js';
@@ -8,6 +9,8 @@ import { Service, hhmm } from './service.js';
 import { Systemes } from './systemes.js';
 import { Numeros } from './numeros.js';
 import { Interface } from './ui.js';
+import { Reglages, REGLAGES } from './reglages.js';
+import { Legende } from './legende.js';
 
 const P = new URLSearchParams(location.search);
 const canvas = document.getElementById('vue');
@@ -20,6 +23,8 @@ const ETAGES = [
     tables: 'donnees/floor1-tables.json' },
 ];
 const BANQUETTES = { 49: 1, 114: 2, 306: 3, 413: 4 };   // drum (plan id) -> table
+const ZONE = P.get('zone') || '';
+if (P.get('nu')) document.body.classList.add('nu');     // the map alone, for the thumbnails of the settings
 
 function groupes(modeles, tables) {
   const G = new Map();
@@ -34,6 +39,7 @@ function groupes(modeles, tables) {
     racine.traverse(o => {
       if (!o.isMesh) return;
       const ud = o.userData;
+      if (ud.variante && ud.variante !== ZONE) return;
       const mb = /^banquette-(\d+)-coussin/.exec(ud.noeud || '');
       if (mb && BANQUETTES[mb[1]]) { G.get(BANQUETTES[mb[1]]).banquette[cle].push(o); return; }
       if (ud.table === undefined || ud.table === 0 || ud.role === 'fantome' || ud.role === 'suspension') return;
@@ -62,14 +68,16 @@ function groupes(modeles, tables) {
 
 async function demarrer() {
   const e = ETAGES[0];
+  s3.zone = ZONE;
   const modeles = await s3.chargerEtage(0, e.fichiers);
   const donnees = await (await fetch(e.tables)).json();
-  const G = groupes(modeles, donnees.tables);
+  const tables = [...donnees.tables, ...(donnees.variantes?.[ZONE]?.tables || [])];
+  const G = groupes(modeles, tables);
 
   const [h, m] = (P.get('heure') || '20:10').split(':').map(Number);
-  const service = new Service(donnees.tables, { heure: h * 60 + m });
+  const service = new Service(tables, { heure: h * 60 + m });
   const sys = new Systemes(s3.scene, G, calque);
-  const num = new Numeros(s3.scene, G, calque);
+  const num = new Numeros(G, calque);
   const ui = new Interface(service);
 
   // selection: a black band around the chosen table
@@ -83,13 +91,23 @@ async function demarrer() {
   };
   ui.surFermer = () => { choix.visible = false; };
 
-  // ---- the settings
-  const regler = (sel, val, f) => { const el = document.getElementById(sel); if (val !== null) el.value = val; f(el.value);
-    el.onchange = () => f(el.value); };
-  regler('style', P.get('style'), v => { s3.appliquerStyle(v); });
-  regler('systeme', P.get('systeme'), v => sys.regler(v));
-  regler('numeros', P.get('numeros'), v => num.regler(v));
-  if (P.get('reglages')) document.getElementById('protos').open = true;
+  // ---- the settings: style, tables, numbers (first option = default), in the chosen design
+  const valeurs = {};
+  for (const [cle, r] of Object.entries(REGLAGES)) {
+    const v = P.get(cle);
+    valeurs[cle] = r.options.some(o => o[0] === v) ? v : r.options[0][0];
+  }
+  const appliquer = (cle, v) => {
+    if (cle === 'style') s3.appliquerStyle(v);
+    if (cle === 'systeme') sys.regler(v);
+    if (cle === 'numeros') num.regler(v);
+  };
+  Object.entries(valeurs).forEach(([cle, v]) => appliquer(cle, v));
+  const reglages = new Reglages(P.get('ui') || 'R1', valeurs, appliquer);
+  const legende = new Legende(P.get('legende') || 'L1', service, sys);
+  if (P.get('ouvert')) reglages.ouvrir(P.get('ouvert'));
+  if (P.get('surligne')) legende.surligner?.(P.get('surligne'));
+
   let vitesse = Number(P.get('vitesse') ?? 30);
   const sv = document.getElementById('vitesse'), lecture = document.getElementById('lecture');
   if (vitesse) sv.value = String(vitesse);
@@ -103,7 +121,7 @@ async function demarrer() {
     document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle('on', x === b)); f(b.dataset[attr]); });
   boutons('vues', 'vue', v => cam.allerA(v));
   boutons('etages', 'etage', () => {});
-  document.querySelectorAll('#outils button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#outils button[data-action]').forEach(b => b.onclick = () => {
     const a = b.dataset.action;
     if (a === 'zoom+') cam.zoomer(1.4); else if (a === 'zoom-') cam.zoomer(1 / 1.4);
     else if (a === 'gauche') cam.tourner(-45); else if (a === 'droite') cam.tourner(45);
@@ -140,14 +158,14 @@ async function demarrer() {
     cam.maj(now);
     sys.maj(service, cam.cam, canvas, now, s3.style);
     num.maj(cam.cam, canvas);
-    if (now - tick > 250) { ui.maj(); tick = now; }
+    if (now - tick > 250) { ui.maj(); legende.maj(); tick = now; }
     s3.rendre(cam.cam);
     requestAnimationFrame(boucle);
   };
   ui.maj();
   requestAnimationFrame(boucle);
   document.getElementById('chargement').classList.add('fini');
-  window.carte = { s3, cam, service, sys, num, ui, G, choisir, hhmm, pret: true };
+  window.carte = { s3, cam, service, sys, num, ui, G, choisir, reglages, legende, hhmm, pret: true };
 }
 
 demarrer().catch(err => {

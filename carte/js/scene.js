@@ -64,6 +64,7 @@ export class Scene3D {
 
     this.etages = [];            // one group per floor
     this.style = 'fantome';
+    this.zone = null;            // step 6: the layout shown between the bar and the room (Z1..Z4), the others hidden
     this._passe();
     this.taille();
   }
@@ -114,7 +115,7 @@ void main() {
     this.composite.uniforms.pas.value = pr >= 2 ? 1.5 : 1;
   }
 
-  // ---- loading a floor: two models, cut (fantôme, blanc) and whole (transparent, fil de fer)
+  // ---- loading a floor: two models, cut (fantôme) and whole (transparent, fil de fer)
   async chargerEtage(n, fichiers) {
     const charge = new GLTFLoader();
     const g = new THREE.Group(); g.name = `etage-${n}`;
@@ -139,12 +140,15 @@ void main() {
       let p = o; while (p && p.userData.role === undefined) p = p.parent;
       const ud = p ? p.userData : {};
       o.userData.role = ud.role; o.userData.fin = ud.fin; o.userData.table = ud.table; o.userData.noeud = p ? p.name : o.name;
+      o.userData.variante = ud.variante;
       const nomMat = (o.material.name || '').replace(/\.\d+$/, '');
       o.userData.mat = nomMat;
       o.castShadow = o.receiveShadow = true;
       o.userData.aretes = new THREE.EdgesGeometry(o.geometry, 28);
     });
   }
+
+  montrerZone(z) { this.zone = z; this.appliquerStyle(this.style); }
 
   appliquerStyle(style) {
     this.style = style;
@@ -163,7 +167,8 @@ void main() {
     const ud = o.userData, role = ud.role;
     if (o.userData.trait) { o.remove(o.userData.trait); o.userData.trait = null; }
     if (o.userData.cache) { o.remove(o.userData.cache); o.userData.cache = null; }
-    o.layers.set(0); o.visible = true; o.castShadow = true;
+    o.layers.set(0); o.castShadow = true;
+    o.visible = !(ud.variante && ud.variante !== this.zone);
     const ton = TONS[ud.mat] ?? 0xf3f3f3;
     let mat;
     const trait = (couleur, opacite, devant = true) => {
@@ -174,9 +179,8 @@ void main() {
     if (role === 'sol') {
       mat = grille(0xf9f8f6, 0xcfcfcf, 0.35, 0.55);
       o.layers.enable(1);
-    } else if (style === 'fantome' || style === 'blanc') {
+    } else if (style === 'fantome') {
       if (role === 'fantome') {
-        if (style === 'blanc') { o.visible = false; return; }
         mat = new THREE.MeshStandardMaterial({ color: 0xfbfbfb, transparent: true, opacity: 0.16, depthWrite: false, roughness: 0.6 });
         o.castShadow = false;
         ud.trait = trait(ud.fin ? 0xd6d6d6 : 0xb8b8b8, ud.fin ? 0.5 : 0.8);
