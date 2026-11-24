@@ -12,8 +12,9 @@ export class Legende {
       [...Object.entries(ETATS), ['alerte', { nom: 'Alerte', couleur: ALERTE }]].map(([k, e]) =>
       `<button class="l1-c" data-e="${k}"><i style="background:${e.couleur}"></i><span>${e.nom.split(',')[0]}</span><b></b></button>`).join('') +
       '<div class="l-aide">Touchez un état pour repérer ses tables sur la carte.</div>';
+    // hovering previews the tables of a state on the map; only a click selects the state (the black button)
     const montrer = e => { this.sys.surligne = e ?? this.fixe; this.el.querySelectorAll('.l1-c').forEach(b =>
-      b.classList.toggle('on', b.dataset.e === (e ?? this.fixe))); };
+      b.classList.toggle('on', b.dataset.e === this.fixe)); };
     this.el.querySelectorAll('.l1-c').forEach(b => {
       b.onmouseenter = () => montrer(b.dataset.e);
       b.onmouseleave = () => montrer(null);

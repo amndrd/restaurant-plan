@@ -33,7 +33,6 @@ export class Systemes {
       // D: a light grey footprint under the occupied tables
       const halo = new THREE.Mesh(new THREE.ShapeGeometry(forme, 10).rotateX(-Math.PI / 2),
         new THREE.MeshLambertMaterial({ color: 0xe7e6e2, transparent: true, opacity: 0.92, depthWrite: false }));
-      halo.userData.clair = 0xe7e6e2; halo.userData.sombre = 0x2e2e31;
       halo.position.set(g.centre.x, 0.004, g.centre.z); halo.receiveShadow = true; halo.renderOrder = -1;
       // a 6 cm band around the footprint: the alerts, and the tables picked out from the legend
       const s = rondRect(w + 0.12, d + 0.12, r + 0.06);
@@ -47,10 +46,11 @@ export class Systemes {
       Object.assign(g, { halo, anneau, pick });
       const el = document.createElement('div');
       el.className = 'badge minuteur';
-      el.innerHTML = `<svg viewBox="0 0 44 44"><circle class="fond" cx="22" cy="22" r="21"/>
+      // the inner block pulses on an alert; the outer one only carries the position (so the pulse stays in place)
+      el.innerHTML = `<div class="m-in"><svg viewBox="0 0 44 44"><circle class="fond" cx="22" cy="22" r="21"/>
         <circle class="rail" cx="22" cy="22" r="17" fill="none" stroke-width="4"/>
         <circle class="arc" cx="22" cy="22" r="17" fill="none" stroke-width="4" stroke-linecap="round"
-          stroke-dasharray="0 107" transform="rotate(-90 22 22)"/></svg><b></b>`;
+          stroke-dasharray="0 107" transform="rotate(-90 22 22)"/></svg><b></b></div>`;
       el.hidden = true; calque.appendChild(el); g.badge = el;
     }
     this.picks = [...groupes.values()].map(g => g.pick);
@@ -78,10 +78,10 @@ export class Systemes {
     const modele = traverse ? 'entier' : 'fantome';
     const largeur = canvas.clientWidth, hauteur = canvas.clientHeight, p = new THREE.Vector3();
     for (const g of this.groupes.values()) {
+      if (g.type === 'bar') { this._bar(g, service, modele, pouls); continue; }
       const t = service.tables.find(x => x.id === g.id);
       const etat = ETATS[t.etat], occupe = !['libre', 'reservee', 'debarrasser'].includes(t.etat);
       g.halo.visible = v === 'D' && t.etat !== 'libre';
-      g.halo.material.color.set(this.sombre ? g.halo.userData.sombre : g.halo.userData.clair);
       g.halo.material.depthTest = g.anneau.material.depthTest = !traverse;
       // the band: alert (pulsing red) or picked out from the legend (state colour)
       const surligne = !!this.surligne && (this.surligne === 'alerte' ? t.alerte : t.etat === this.surligne);
@@ -111,5 +111,20 @@ export class Systemes {
         g.badge.classList.toggle('alerte', t.alerte);
       }
     }
+  }
+
+  // the bar, in every system: each stool takes the state of the guests sitting on it; a red band if one waits too long
+  _bar(g, service, modele, pouls) {
+    const b = service.bar;
+    g.halo.visible = false; g.badge.hidden = true;
+    const alerte = b.groupes.some(x => x.alerte);
+    const surligne = !!this.surligne && b.groupes.some(x => this.surligne === 'alerte' ? x.alerte : x.etat === this.surligne);
+    g.anneau.visible = alerte || surligne;
+    if (g.anneau.visible) {
+      g.anneau.material.color.set(alerte ? ALERTE : ETATS[this.surligne]?.couleur ?? ALERTE);
+      g.anneau.material.opacity = alerte ? 0.35 + 0.6 * pouls : 0.95;
+    }
+    g.sieges[modele].forEach((l, k) => { const x = b.sieges[k];
+      if (l) l.forEach(o => this._teinter(o, x ? (x.alerte ? ALERTE : ETATS[x.etat].couleur) : null, 0.85)); });
   }
 }

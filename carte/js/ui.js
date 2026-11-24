@@ -41,6 +41,7 @@ export class Interface {
 
   montrer(id) {
     this.choix = id;
+    if (id === 0) return this.montrerBar();
     const t = this.s.tables.find(x => x.id === id);
     if (!t) return this.cacher();
     const e = ETATS[t.etat], min = Math.round(this.s.attente(t));
@@ -62,6 +63,35 @@ export class Interface {
       </div>
       ${liste ? `<h3>Commande</h3><ul>${liste}</ul>` : ''}
       ${t.resa ? `<div class="note">Réservée à <b>${hhmm(t.resa.heure)}</b> au nom de ${t.resa.nom}, ${t.resa.couverts} personnes.</div>` : ''}
+      <div class="note">Données provisoires : le service est simulé.</div>`;
+    this.fiche.hidden = false;
+    this.fiche.querySelector('.fermer').onclick = () => this.cacher();
+  }
+
+  // the bar: each group of guests on its stools, with its state and its order
+  montrerBar() {
+    const b = this.s.bar, enCours = b.groupes.filter(g => g.etat === 'commandee');
+    const attente = enCours.length ? Math.round(Math.max(...enCours.map(g => this.s.t - g.depuis))) : null;
+    const alerte = b.groupes.some(g => g.alerte);
+    const groupes = [...b.groupes].sort((x, y) => x.sieges[0] - y.sieges[0]).map(g => {
+      const e = ETATS[g.etat], plats = {};
+      for (const p of g.plats) plats[p.nom] = (plats[p.nom] || 0) + 1;
+      const sieges = g.sieges.length > 1 ? `${g.sieges[0] + 1}–${g.sieges[g.sieges.length - 1] + 1}` : `${g.sieges[0] + 1}`;
+      return `<li class="groupe-bar"><span class="tab">${sieges}</span><span class="p"><b>${g.invites} pers.</b>
+        <span class="etat-bar"><i style="background:${g.alerte ? ALERTE : e.couleur}"></i>${e.nom.split(',')[0]} · ${Math.round(this.s.t - g.depuis)}′</span>
+        ${Object.keys(plats).length ? `<small>${Object.entries(plats).map(([n, q]) => `${q > 1 ? q + '× ' : ''}${n}`).join(', ')}</small>` : ''}</span></li>`;
+    }).join('');
+    this.fiche.innerHTML = `
+      <div class="tete">
+        <div><h2>Bar</h2><p>${b.places} tabourets · service ${b.serveur}</p></div>
+        <button class="fermer" title="Fermer">×</button>
+      </div>
+      <div class="chiffres">
+        <div><b>${b.invites}<small> / ${b.places}</small></b><span>au comptoir</span></div>
+        <div><b>${enCours.length}</b><span>en attente</span></div>
+        <div class="${alerte ? 'alerte' : ''}"><b>${attente === null ? '—' : attente + '′'}</b><span>plus longue attente</span></div>
+      </div>
+      ${groupes ? `<h3>Au comptoir, par tabouret</h3><ul>${groupes}</ul>` : '<div class="note">Personne au bar pour l’instant.</div>'}
       <div class="note">Données provisoires : le service est simulé.</div>`;
     this.fiche.hidden = false;
     this.fiche.querySelector('.fermer').onclick = () => this.cacher();

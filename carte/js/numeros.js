@@ -1,6 +1,7 @@
 // Table numbers (chosen at step 6): the label by default, the zones, or none.
 //   3  Étiquette   a black pill floating over the table on a hairline, a map callout
-//   5  Zones       a zone letter and a number: T tambours, R rangée, S salle, F façade, B près du bar
+//   5  Zones       a zone letter and a number: T tambours, R rangée, S salle, F façade, B banquette près du bar
+// The bar has its own label.
 import * as THREE from 'three';
 
 export class Numeros {
@@ -8,11 +9,13 @@ export class Numeros {
     this.variante = '3'; this.l = { 3: [], 5: [] };
     const parZone = {};
     for (const g of [...groupes.values()].sort((a, b) => a.id - b.id)) {
-      const z = g.zone || 'S'; parZone[z] = (parZone[z] || 0) + 1; g.code = `${z}${parZone[z]}`;
+      const bar = g.type === 'bar';
+      const z = g.zone || 'S';
+      if (!bar) { parZone[z] = (parZone[z] || 0) + 1; g.code = `${z}${parZone[z]}`; }
       const e3 = document.createElement('div'); e3.className = 'badge etiquette';
-      e3.innerHTML = `<div class="pastille">${g.id}</div><div class="fil"></div>`;
+      e3.innerHTML = `<div class="pastille">${bar ? 'Bar' : g.id}</div><div class="fil"></div>`;
       const e5 = document.createElement('div'); e5.className = 'badge';
-      e5.innerHTML = `<div class="zone"><em>${z}</em><span>${g.code.slice(1)}</span></div>`;
+      e5.innerHTML = bar ? '<div class="zone"><em>Bar</em></div>' : `<div class="zone"><em>${z}</em><span>${g.code.slice(1)}</span></div>`;
       for (const [k, e] of [[3, e3], [5, e5]]) { e.hidden = true; calque.appendChild(e); this.l[k].push({ e, g }); }
     }
   }

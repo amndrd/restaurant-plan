@@ -2,7 +2,7 @@
 @font-face{font-family:"Inter";font-weight:500;src:url(../polices/inter-latin-500-normal.woff2) format("woff2")}
 @font-face{font-family:"Inter";font-weight:600;src:url(../polices/inter-latin-600-normal.woff2) format("woff2")}
 
-/* the two themes of the interface: light by default, dark with the button at the top right */
+/* the two themes of the interface: light by default, dark with the button at the top right (the map stays light) */
 :root{
   --fond:#f4f3f1; --panneau:#fff; --texte:#151515; --texte2:#444; --gris:#6f6f6f; --gris-clair:#a3a3a3; --trait:#e4e4e2;
   --sub:#f1f0ee; --sub2:#f7f7f5; --inv:#151515; --inv-tx:#fff;
@@ -87,6 +87,15 @@ canvas#vue.survol{cursor:pointer}
 .fiche li .s.pret{background:rgba(240,166,48,.16);color:#c98516}
 .fiche li .s.servi{background:rgba(67,163,107,.15);color:#3b9862}
 .fiche .note{font-size:12px;color:var(--gris);border-top:1px solid var(--trait);padding-top:10px}
+.fiche .chiffres b small{font-size:12px;font-weight:500;color:var(--gris)}
+.fiche li.groupe-bar{align-items:flex-start;gap:10px;padding:2px 0}
+.groupe-bar .tab{min-width:34px;height:22px;border-radius:6px;background:var(--sub);display:grid;place-items:center;font-size:11px;
+  font-weight:600;font-variant-numeric:tabular-nums;color:var(--texte2)}
+.groupe-bar .p{display:flex;flex-direction:column;gap:2px}
+.groupe-bar .p b{font-weight:600;font-size:13px}
+.etat-bar{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texte2)}
+.etat-bar i{width:8px;height:8px;border-radius:4px;display:block}
+.groupe-bar small{font-size:12px;color:var(--gris)}
 
 /* ---- tools */
 .outils{position:fixed;right:20px;bottom:92px;display:flex;flex-direction:column;background:var(--panneau);
@@ -117,7 +126,7 @@ canvas#vue.survol{cursor:pointer}
 .l1-c i{width:10px;height:10px;border-radius:3px;display:block}
 .l1-c b{font-size:11px;font-weight:600;min-width:20px;height:18px;border-radius:9px;background:var(--sub);display:grid;place-items:center;
   padding:0 5px;font-variant-numeric:tabular-nums;color:var(--texte)}
-.l1-c:hover{background:var(--sub)}
+.l1-c:hover:not(.on){background:color-mix(in srgb,var(--inv) 9%,transparent)}
 .l1-c.on{background:var(--inv);color:var(--inv-tx)}
 .l1-c.on b{background:rgba(127,127,127,.3);color:var(--inv-tx)}
 .l1-c.vide{opacity:.45}
@@ -161,15 +170,17 @@ canvas#vue.survol{cursor:pointer}
 
 /* ---- labels over the map: the timer (D), the numbers (étiquette, zones) */
 .badge[hidden]{display:none!important}
-.badge{position:absolute;left:0;top:0;transform:translate(-50%,-50%);will-change:transform;pointer-events:none}
+.badge{position:absolute;left:0;top:0;transform:translate(-50%,-50%);will-change:transform;pointer-events:none;
+  --panneau:#fff;--texte:#151515;--sub:#f1f0ee;--inv:#151515;--inv-tx:#fff}   /* on the map, which stays light */
 .minuteur{width:44px;height:44px}
+.minuteur .m-in{position:absolute;inset:0}
 .minuteur svg{position:absolute;inset:0}
 .minuteur .fond{fill:var(--panneau)}
 .minuteur .rail{stroke:var(--sub)}
 .minuteur b{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:600;color:var(--texte);
   font-variant-numeric:tabular-nums}
-.minuteur.alerte{animation:pouls 1.4s ease-in-out infinite}
-@keyframes pouls{50%{scale:1.1}}
+.minuteur.alerte .m-in{animation:pouls 1.4s ease-in-out infinite}
+@keyframes pouls{50%{transform:scale(1.1)}}
 .etiquette{display:flex;flex-direction:column;align-items:center}
 .etiquette .pastille{min-width:26px;height:26px;padding:0 8px;border-radius:13px;background:var(--inv);color:var(--inv-tx);
   font-size:13px;font-weight:600;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.18)}

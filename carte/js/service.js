@@ -12,11 +12,15 @@ export const ETATS = {
 };
 export const ALERTE = '#e5484d';
 const SEUILS = { installee: 8, commandee: 22 };          // minutes before a table is flagged
+const SEUILS_BAR = { installee: 6, commandee: 12 };      // at the bar, drinks come faster
 
 const CARTE = {           // provisional menu
   entree: ['Burrata, tomates anciennes', 'Tartare de daurade', 'Velouté de châtaigne', 'Œuf parfait, champignons'],
   plat: ['Risotto aux cèpes', 'Filet de bar, beurre blanc', 'Côte de veau, jus corsé', 'Gnocchis, sauge et parmesan',
     'Pluma ibérique, purée fumée'],
+  boisson: ['Negroni', 'Spritz', 'Old fashioned', 'Verre de vin blanc', 'Verre de vin rouge', 'Bière pression',
+    'Cocktail sans alcool'],
+  comptoir: ['Olives et focaccia', 'Croquetas', 'Planche de charcuterie'],
 };
 const EQUIPE = { tambour: 'Léa', table: 'Hugo', 'table haute': 'Inès', bar: 'Inès' };
 const NOMS = ['Martin', 'Bernard', 'Dubois', 'Laurent', 'Moreau', 'Garcia', 'Roux', 'Fournier', 'Lambert', 'Bonnet'];
@@ -34,8 +38,9 @@ export class Service {
     this.t = debut;
     this.tables = tables.filter(t => t.type !== 'bar').map(t => ({ ...t, etat: 'libre', depuis: debut, invites: 0,
       plats: [], commandeA: null, fin: 0, resa: null, alerte: false, serveur: EQUIPE[t.type] }));
+    // the bar: guests alone or in twos, each group on free stools side by side (sieges[k] = the group on stool k)
     const bar = tables.find(t => t.type === 'bar');
-    this.bar = { ...bar, invites: 0, serveur: EQUIPE.bar };
+    this.bar = { ...bar, invites: 0, serveur: EQUIPE.bar, sieges: Array(bar.places).fill(null), groupes: [], n: 0 };
     this.resas = this._reservations();
     this.avancerJusqua(heure);
   }
@@ -106,9 +111,41 @@ export class Service {
       const attente = this.t - t.depuis;
       t.alerte = (t.etat === 'installee' && attente > SEUILS.installee) || (t.etat === 'commandee' && attente > SEUILS.commandee);
     }
-    // the bar: people come and go one by one
-    const cible = Math.round(7 * Math.min(1, 0.25 + affluence * 0.75));
-    if (this.rnd() < dt * 0.3) this.bar.invites = Math.max(0, Math.min(7, this.bar.invites + (this.bar.invites < cible ? 1 : -1)));
+    this._bar(dt, affluence);
+  }
+
+  _bar(dt, affluence) {
+    const b = this.bar;
+    if (this.rnd() < dt * (0.012 + affluence * 0.09)) {          // someone comes to the bar, alone or in twos
+      const n = this.rnd() < 0.55 ? 2 : 1;
+      const libres = [];
+      for (let k = 0; k + n <= b.sieges.length; k++) if (b.sieges.slice(k, k + n).every(x => !x)) libres.push(k);
+      if (libres.length) {
+        const k = libres[Math.floor(this.rnd() * libres.length)];
+        const g = { id: ++b.n, sieges: Array.from({ length: n }, (_, i) => k + i), invites: n, plats: [], commandeA: null };
+        this._vers(g, 'installee', this._r(1, 4));
+        b.groupes.push(g); g.sieges.forEach(i => { b.sieges[i] = g; });
+      }
+    }
+    for (const g of b.groupes) {
+      if (g.etat === 'installee' && this.t >= g.fin) {
+        g.commandeA = this.t;
+        for (let i = 0; i < g.invites; i++) g.plats.push({ nom: this._choix(CARTE.boisson), pret: this.t + this._r(2, 7), servi: false });
+        if (this.rnd() < 0.35) g.plats.push({ nom: this._choix(CARTE.comptoir), pret: this.t + this._r(6, 12), servi: false });
+        this._vers(g, 'commandee', 0);
+      } else if (g.etat === 'commandee') {
+        for (const p of g.plats) if (!p.servi && this.t >= p.pret + 1) p.servi = true;
+        if (g.plats.every(p => p.servi)) this._vers(g, 'servie', this._r(20, 55));
+      } else if (g.etat === 'servie' && this.t >= g.fin) {
+        this._vers(g, 'addition', this._r(3, 8));
+      } else if (g.etat === 'addition' && this.t >= g.fin) {
+        g.parti = true; g.sieges.forEach(i => { b.sieges[i] = null; });
+      }
+      const attente = this.t - g.depuis;
+      g.alerte = (g.etat === 'installee' && attente > SEUILS_BAR.installee) || (g.etat === 'commandee' && attente > SEUILS_BAR.commandee);
+    }
+    b.groupes = b.groupes.filter(g => !g.parti);
+    b.invites = b.groupes.reduce((s, g) => s + g.invites, 0);
   }
 
   _asseoir(t, n) {
@@ -137,6 +174,6 @@ export class Service {
     const prochaine = this.resas.find(r => !r.arrivee && r.heure >= this.t - 15);
     return { couverts, places, parEtat, libres: parEtat.libre, total: T.length,
       attente: cmd.length ? cmd.reduce((s, t) => s + (this.t - t.depuis), 0) / cmd.length : 0, enAttente: cmd.length,
-      alertes: T.filter(t => t.alerte).length, bar: this.bar.invites, prochaine };
+      alertes: T.filter(t => t.alerte).length + this.bar.groupes.filter(g => g.alerte).length, bar: this.bar.invites, prochaine };
   }
 }

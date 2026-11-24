@@ -27,8 +27,7 @@ if (P.get('nu')) document.body.classList.add('nu');     // the map alone, withou
 
 function groupes(modeles, tables) {
   const G = new Map();
-  for (const t of tables) {
-    if (t.type === 'bar') continue;
+  for (const t of tables) {           // the bar is a group too (id 0): its seven stools and its counter
     G.set(t.id, { ...t, boite: new THREE.Box3(), plateaux: { fantome: [], entier: [] }, sieges: { fantome: [], entier: [] },
       banquette: { fantome: [], entier: [] }, boitePlateau: new THREE.Box3() });
   }
@@ -40,7 +39,10 @@ function groupes(modeles, tables) {
       const ud = o.userData;
       const mb = /^banquette-(\d+)-coussin/.exec(ud.noeud || '');
       if (mb && BANQUETTES[mb[1]]) { G.get(BANQUETTES[mb[1]]).banquette[cle].push(o); return; }
-      if (ud.table === undefined || ud.table === 0 || ud.role === 'fantome' || ud.role === 'suspension') return;
+      if (ud.noeud === 'bar-plateaux' && cle === 'fantome') {           // the counter: where the bar's label stands
+        G.get(0).boite.expandByObject(o); G.get(0).boitePlateau.expandByObject(o); return;
+      }
+      if (ud.table === undefined || ud.role === 'fantome' || ud.role === 'suspension') return;
       const g = G.get(ud.table); if (!g) return;
       if (cle === 'fantome' && ud.mat !== 'laiton') g.boite.expandByObject(o);
       if (ud.role === 'table' && (ud.mat === 'plateau' || ud.mat === 'bois')) {
@@ -107,7 +109,7 @@ async function demarrer() {
   if (P.get('legende')) legende.ouvrir(true);
   if (P.get('surligne')) { legende.ouvrir(true); legende.surligner(P.get('surligne')); }
 
-  // ---- the theme: light or dark, the interface and the map together; remembered on this device
+  // ---- the theme of the interface: light or dark (the map itself stays light); remembered on this device
   const LUNE = '<svg viewBox="0 0 20 20"><path d="M15.5 12.6A6.5 6.5 0 0 1 7.4 4.5a6.5 6.5 0 1 0 8.1 8.1z" fill="currentColor"/></svg>';
   const SOLEIL = '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3.6" fill="currentColor"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">' +
     [0, 45, 90, 135, 180, 225, 270, 315].map(a => { const r = a * Math.PI / 180;
@@ -115,9 +117,6 @@ async function demarrer() {
   const bTheme = document.getElementById('theme');
   const theme = t => {
     document.body.classList.toggle('sombre', t === 'sombre');
-    s3.appliquerTheme(t);
-    sys.sombre = t === 'sombre';
-    choix.material.color.set(t === 'sombre' ? 0xf2f2f3 : 0x151515);
     bTheme.innerHTML = t === 'sombre' ? SOLEIL : LUNE;
     bTheme.title = t === 'sombre' ? 'Passer en clair' : 'Passer en sombre';
     try { localStorage.setItem('carte-theme', t); } catch (e) { /* private mode */ }
