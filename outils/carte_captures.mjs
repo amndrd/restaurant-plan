@@ -1,5 +1,5 @@
-// Captures of the interactive map (carte/), for the step pages (step 6: the layouts of the space by the bar, the
-// settings and legend designs), at Retina scale, plus a short video of the map being handled. Serves carte/ itself on a free port.
+// Captures of the interactive map (carte/), for the step pages (step 7: the map as chosen, light and dark), at
+// Retina scale, plus a short video of the map being handled. Serves carte/ itself on a free port.
 // usage: node outils/carte_captures.mjs [video]
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
@@ -11,8 +11,7 @@ const require = createRequire(process.env.PLAYWRIGHT_PKG || `${homedir()}/Deskto
 const { chromium } = require('playwright');
 
 const R = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DOS = { carte: path.join(R, 'rendus', '6-carte'), zone: path.join(R, 'rendus', '7-espace-du-bar'),
-  ui: path.join(R, 'rendus', '8-reglages-legende') };
+const DOS = { carte: path.join(R, 'rendus', '9-carte-finale') };
 Object.values(DOS).forEach(d => fs.mkdirSync(d, { recursive: true }));
 const OUT = DOS.carte;
 const port = 8800 + Math.floor(Math.random() * 100);
@@ -20,22 +19,14 @@ const serveur = spawn('python3', ['-m', 'http.server', String(port), '--bind', '
 await new Promise(r => setTimeout(r, 700));
 const base = `http://127.0.0.1:${port}/`;
 
-// step 6: [folder, name, address settings, element to capture alone (optional)]
-const Z3D = 'nu=1&cam=-43.6,38.4,8.5,0.4,0.3,-1.69', ZHAUT = 'nu=1&cam=-90,90,12,0.25,0,-1.35';
-const PLANS = [
-  ['carte', 'carte-defaut-dessus', 'vitesse=0&heure=20:25&zone=Z4'],
-  ['carte', 'carte-defaut-3d', 'vitesse=0&heure=20:25&zone=Z4&vue=3d'],
-  ...['vide', 'Z1', 'Z2', 'Z3', 'Z4'].flatMap(z => [
-    ['zone', `zone-${z}-dessus`, `vitesse=0&heure=20:25&zone=${z === 'vide' ? '' : z}&${ZHAUT}`],
-    ['zone', `zone-${z}-3d`, `vitesse=0&heure=20:25&zone=${z === 'vide' ? '' : z}&vue=3d&${Z3D}`]]),
-  ['ui', 'R1', 'vitesse=0&heure=20:25&zone=Z4&ui=R1&vue=3d', '.r1'],
-  ['ui', 'R2', 'vitesse=0&heure=20:25&zone=Z4&ui=R2&ouvert=r2&vue=3d', '.r2-pop'],
-  ['ui', 'R3', 'vitesse=0&heure=20:25&zone=Z4&ui=R3&ouvert=systeme&vue=3d', '.r3'],
-  ['ui', 'R3-style', 'vitesse=0&heure=20:25&zone=Z4&ui=R3&ouvert=style&vue=3d&style=transparent', '.r3'],
-  ['ui', 'L1', 'vitesse=0&heure=20:25&zone=Z4&legende=L1&surligne=commandee', '#legende'],
-  ['ui', 'L2', 'vitesse=0&heure=20:25&zone=Z4&legende=L2', '#legende'],
-  ['ui', 'L3', 'vitesse=0&heure=21:05&zone=Z4&legende=L3', '#legende'],
-];
+// step 7, the map as chosen: [folder, name, address settings, element to capture alone (optional)]
+const PLANS = ['clair', 'sombre'].flatMap(t => [
+  ['carte', `${t}-dessus`, `theme=${t}&vitesse=0&heure=20:25`],
+  ['carte', `${t}-3d`, `theme=${t}&vitesse=0&heure=20:25&vue=3d`],
+  ['carte', `${t}-legende`, `theme=${t}&vitesse=0&heure=20:25&vue=3d&surligne=commandee`, '.pied'],
+  ['carte', `${t}-menu`, `theme=${t}&vitesse=0&heure=20:25&vue=3d&ouvert=${t === 'clair' ? 'style' : 'systeme'}`, '.r3'],
+  ['carte', `${t}-fiche`, `theme=${t}&vitesse=0&heure=20:25&vue=3d&fiche=15`, '#fiche'],
+]);
 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
 const seul = process.argv[2];
@@ -50,7 +41,8 @@ if (seul !== 'video') {
     if (el) {   // the element alone, with a margin of map around it
       const r = await p.locator(el).boundingBox(), m = 24;
       // a popover opens above its bar: take both
-      const r2 = el === '.r3' ? await p.locator('.r3-pop:not([hidden])').boundingBox().catch(() => null) : null;
+      const au = el === '.r3' ? '.r3-pop:not([hidden])' : el === '.pied' ? '#legende' : null;
+      const r2 = au ? await p.locator(au).boundingBox().catch(() => null) : null;
       const x0 = Math.min(r.x, r2?.x ?? r.x) - m, y0 = Math.min(r.y, r2?.y ?? r.y) - m;
       const x1 = Math.max(r.x + r.width, r2 ? r2.x + r2.width : 0) + m, y1 = r.y + r.height + m;
       await p.screenshot({ path: path.join(DOS[dos], `${nom}-proche.png`),
@@ -64,14 +56,13 @@ if (seul === 'video' || seul === undefined) {
   // frames from Chrome's screencast, then a 30 fps video with the system ffmpeg
   const ctx = await b.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
-  await p.goto(`${base}?vitesse=120&heure=20:05&zone=Z4`);
+  await p.goto(`${base}?vitesse=120&heure=20:05&theme=clair`);
   await p.waitForFunction(() => window.carte?.pret, null, { timeout: 60000 });
   await p.waitForTimeout(500);
   const cdp = await ctx.newCDPSession(p), images = [];
   cdp.on('Page.screencastFrame', async f => { images.push({ t: f.metadata.timestamp, d: f.data });
     await cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {}); });
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 92, everyNthFrame: 1 });
-  const t0 = Date.now();
   await p.waitForTimeout(1500);
   await p.click('#vues button[data-vue="3d"]'); await p.waitForTimeout(1800);
   const glisser = async (x0, y0, x1, y1, bouton = 'left', pas = 40) => {
@@ -83,17 +74,23 @@ if (seul === 'video' || seul === undefined) {
   await glisser(1060, 515, 890, 480, 'right', 60); await p.waitForTimeout(500);
   for (let k = 0; k < 8; k++) { await p.mouse.move(870, 560); await p.mouse.wheel(0, -50); await p.waitForTimeout(45); }
   await p.waitForTimeout(600);
-  await glisser(800, 560, 700, 500, 'left', 40); await p.waitForTimeout(600);
-  const pos = await p.evaluate(() => { const C = window.carte, g = C.G.get(6), v = g.centre.clone(); v.y = 0.75;
+  const pos = await p.evaluate(() => { const C = window.carte, g = C.G.get(15), v = g.centre.clone(); v.y = 0.75;
     v.project(C.cam.cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; });
   await p.mouse.move(pos[0], pos[1]); await p.waitForTimeout(400); await p.mouse.click(pos[0], pos[1]);
-  await p.waitForTimeout(2500);
-  await p.click('.r1 button[data-cle="systeme"][data-v="D"]'); await p.waitForTimeout(2200);
-  await p.click('.r1 button[data-cle="systeme"][data-v="B"]'); await p.waitForTimeout(1800);
-  await p.click('.r1 button[data-cle="systeme"][data-v="C"]'); await p.waitForTimeout(600);
+  await p.waitForTimeout(2200);
+  await p.click('.r3-menu[data-cle="systeme"] .r3-b'); await p.waitForTimeout(900);
+  await p.click('.r3-menu[data-cle="systeme"] .r3-pop button[data-v="D"]'); await p.waitForTimeout(2000);
+  await p.click('.r3-menu[data-cle="systeme"] .r3-b'); await p.waitForTimeout(700);
+  await p.click('.r3-menu[data-cle="systeme"] .r3-pop button[data-v="C"]'); await p.waitForTimeout(800);
   await p.click('#fiche .fermer'); await p.waitForTimeout(400);
+  await p.click('#legende-b'); await p.waitForTimeout(800);
+  await p.hover('.l1-c[data-e="servie"]'); await p.waitForTimeout(1300);
+  await p.hover('.l1-c[data-e="commandee"]'); await p.waitForTimeout(1300);
+  await p.click('#legende-b'); await p.waitForTimeout(600);
+  await p.click('#theme'); await p.waitForTimeout(2200);
   await p.click('#outils button[data-action="recentrer"]'); await p.waitForTimeout(1200);
   await p.click('#vues button[data-vue="dessus"]'); await p.waitForTimeout(2200);
+  await p.click('#theme'); await p.waitForTimeout(1200);
   await cdp.send('Page.stopScreencast');
   await ctx.close();
   const dos = path.join(OUT, '_images'); fs.mkdirSync(dos, { recursive: true });
