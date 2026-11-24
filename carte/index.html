@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Carte de salle</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/carte.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="vue" aria-label="Carte 3D de la salle"></canvas>
+<div id="calque" aria-hidden="true"></div>
+
+<header class="barre">
+  <div class="marque">
+    <span class="nom">Restaurant</span>
+    <span class="sous" id="etage-nom">Rez-de-chaussée · service du soir</span>
+  </div>
+  <div class="groupe" role="tablist" aria-label="Étage" id="etages">
+    <button class="on" data-etage="0">RDC</button>
+    <button data-etage="1" disabled title="Le 1er étage arrive à l'étape suivante">1er</button>
+  </div>
+  <div class="groupe" role="tablist" aria-label="Vue" id="vues">
+    <button class="on" data-vue="dessus">Haut</button>
+    <button data-vue="3d">3D</button>
+  </div>
+</header>
+
+<aside class="panneau kpi" id="kpi" aria-live="polite"></aside>
+
+<aside class="panneau fiche" id="fiche" hidden></aside>
+
+<div class="outils" id="outils">
+  <button data-action="zoom+" title="Zoomer">+</button>
+  <button data-action="zoom-" title="Dézoomer">−</button>
+  <span class="sep"></span>
+  <button data-action="gauche" title="Tourner à gauche">⟲</button>
+  <button data-action="droite" title="Tourner à droite">⟳</button>
+  <span class="sep"></span>
+  <button data-action="recentrer" title="Recentrer">◎</button>
+</div>
+
+<footer class="pied">
+  <div class="legende" id="legende"></div>
+  <div class="horloge">
+    <button id="lecture" title="Pause / lecture">❚❚</button>
+    <span id="heure">20:10</span>
+    <select id="vitesse" title="Vitesse de la simulation">
+      <option value="1">×1</option><option value="30" selected>×30</option><option value="120">×120</option>
+    </select>
+  </div>
+</footer>
+
+<details class="panneau protos" id="protos">
+  <summary>Réglages</summary>
+  <label>Style <select id="style">
+    <option value="fantome" selected>Fantôme</option><option value="blanc">Blanc</option>
+    <option value="transparent">Transparent</option><option value="fil-de-fer">Fil de fer</option>
+  </select></label>
+  <label>États des tables <select id="systeme">
+    <option value="A" selected>A · Halo au sol</option><option value="B">B · Plateau</option>
+    <option value="C">C · Places occupées</option><option value="D">D · Minuteur</option>
+    <option value="0">Aucun</option>
+  </select></label>
+  <label>Numéros <select id="numeros">
+    <option value="0" selected>Aucun</option><option value="1">1 · Peints au sol</option>
+    <option value="2">2 · Plaque sur la table</option><option value="3">3 · Étiquette</option>
+    <option value="4">4 · Repère d'architecte</option><option value="5">5 · Zones</option>
+  </select></label>
+</details>
+
+<div class="chargement" id="chargement">Chargement de la salle…</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
