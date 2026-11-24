@@ -11,6 +11,8 @@
 #             rock garden, concierge desk, curtains; plans = close-ups in the solid white model)
 #        blender -b -P floor1.py -- variante=fantome mobilier=1 [plans=salle,tabourets,tambour]
 #            (step 4: the furniture of the plan, over the fixed elements; also writes modele/floor1-tables.json)
+#        blender -b -P floor1.py -- variante=fantome|fil-de-fer mobilier=1 export=carte/modele/floor1-<x>.glb
+#            (step 5: the model for the interactive map, in glTF; each object carries its role and its table number)
 import bpy, bmesh, json, math, random, sys
 from pathlib import Path
 from mathutils import Matrix, Vector
@@ -1067,6 +1069,41 @@ def build_mobilier():
 
 
 
+# ---------------------------------------------------------------- step 5: the model of the interactive map
+# glTF export of the built variant (fantôme: cut at 1.2 m with the see-through tops; fil-de-fer: uncut). Each object
+# carries in its extras a role (mur, sol, tambour, element, table, assise...), 'fin' for the thin-line objects (glass
+# blocks, curtains) and, for the furniture, the number of its table (0 = the bar).
+ROLES = {'Coque': 'mur', 'Vitrages': 'vitrage', 'Tambours': 'tambour', 'Escalier': 'escalier', 'Sols': 'sol',
+         'Bar': 'element', 'Banquettes': 'element', 'Accueil': 'element', 'Rideaux': 'element', 'Jardin': 'element',
+         'Mobilier': 'element', 'Tables': 'table', 'Assises': 'assise', 'Jardinieres': 'jardiniere',
+         'Suspensions': 'suspension', 'Traits-fins': 'fin'}
+
+
+def export_web(chemin):
+    import re
+    chemin = Path(chemin) if Path(chemin).is_absolute() else RACINE / chemin
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    bpy.ops.object.select_all(action='DESELECT')
+    n = 0
+    for o in bpy.data.objects:
+        cs = [c.name for c in o.users_collection]
+        if o.type != 'MESH' or o.name == 'terrain' or 'Plan' in cs:
+            continue
+        o['role'] = 'fantome' if 'Fantome' in cs else next((ROLES[c] for c in cs if c in ROLES and c != 'Traits-fins'),
+                                                           'fin' if 'Traits-fins' in cs else 'autre')
+        o['fin'] = int('Traits-fins' in cs)
+        m = re.match(r'^(table|chaise|lampe|suspension)-(\d\d)', o.name)
+        if m:
+            o['table'] = int(m.group(2))
+        elif o.name.startswith('tabouret-bar'):
+            o['table'] = 0
+        o.select_set(True)
+        n += 1
+    bpy.ops.export_scene.gltf(filepath=str(chemin), export_format='GLB', use_selection=True, export_extras=True,
+                              export_apply=True, export_yup=True, export_cameras=False, export_lights=False)
+    print('export', chemin, n, 'objets')
+
+
 # ---------------------------------------------------------------- light, render
 def setup_render():
     sc.render.engine = 'CYCLES'
@@ -1454,7 +1491,9 @@ if ARGS.get('variante'):
     c3 = o_c + Vector((0, 0, 0.9))
     cam_3d = camera('cam-3d', c3 + d * 60, c3, ortho=25.5)
 
-    if ARGS.get('transition'):
+    if ARGS.get('export'):
+        export_web(ARGS['export'])
+    elif ARGS.get('transition'):
         # the switch from the top view to the 3D view: rotation slerped, scale and target eased
         q0 = cam_top.rotation_euler.to_quaternion(); q1 = cam_3d.rotation_euler.to_quaternion()
         n_img = int(ARGS.get('images', 48))
