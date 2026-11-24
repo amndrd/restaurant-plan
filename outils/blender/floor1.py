@@ -12,6 +12,7 @@
 #        blender -b -P floor1.py -- variante=fantome mobilier=1 [plans=salle,tabourets,tambour]
 #            (step 4: the furniture of the plan, over the fixed elements; also writes modele/floor1-tables.json)
 #        blender -b -P floor1.py -- variante=fantome|fil-de-fer mobilier=1 export=carte/modele/floor1-<x>.glb
+#            (step 6: the banquette by the bar replaces the standing tables; plans=zone for its close-up)
 #            (step 5: the model for the interactive map, in glTF; each object carries its role and its table number)
 import bpy, bmesh, json, math, random, sys
 from pathlib import Path
@@ -738,7 +739,6 @@ M_POT = mat('pot', (0.30, 0.30, 0.29), 0.85)
 M_TERRE = mat('terre', (0.10, 0.08, 0.06), 1.0)
 M_FEUILLE = mat('feuillage', (0.20, 0.26, 0.14), 0.8)
 M_LAITON = mat('laiton', (0.55, 0.45, 0.30), 0.35)         # the lamps
-M_TAPIS = mat('tapis', (0.30, 0.27, 0.23), 0.95)          # step 6: the rugs of the lounge
 
 
 def rrect(cx_, cy_, w, d, r, seg=6):
@@ -963,7 +963,7 @@ SALLE = [
     (13, 'Façade, table haute 4', 1282.5, 1585, 1376, 1730, 1.05, [(1242.5, 1620), (1242.5, 1700)], [1657.5], [1657.5],
      [1657.5]),
 ]
-# the plan's three standing tables (dark wooden squares near the bar) were removed at step 6: see ZONES below
+# the plan's three standing tables (dark wooden squares near the bar) were removed at step 6: see ESPACE_BAR below
 TABOURETS_BAR = [657 + 71.67 * k for k in range(7)]       # y 792.5, facing the counter
 JARDINIERES = [(711, 1401), (1044, 1252.5), (1044, 1702.5)]
 
@@ -1000,84 +1000,13 @@ def repose_pieds():
 
 
 # ---- step 6: the space between the bar and the room. The three standing tables of the plan are gone (the user did
-#      not want tables without chairs); four layouts are proposed for the free space, 4.1 x 1.7 m once the aisles are
-#      kept (0.8 m behind the bar stools, 0.75 m in front of drum 1, 0.65 m to the row of tables):
-#      Z1 four tables for two, Z2 a guest table for ten, Z3 a waiting lounge, Z4 a banquette backed by a planter.
-#      zone=Z1..Z4 builds one, zone=tous builds them all (the map shows the chosen one).
-ZONE = ARGS.get('zone', '')
-ZONES = {
-    'Z1': dict(nom='Tables de deux', tables=[(14 + k, f'Bistrot {k + 1}', x, 1027, 2) for k, x in enumerate((681, 817, 953, 1089))]),
-    'Z2': dict(nom="Table d'hôtes", tables=[(14, "Table d'hôtes", 885, 1027, 10)]),
-    'Z3': dict(nom="Salon d'attente", tables=[(14, 'Salon 1', 760, 1027, 4), (15, 'Salon 2', 1010, 1027, 4)]),
-    'Z4': dict(nom='Banquette jardinière', tables=[(14 + k, f'Banquette {k + 1}', x, 1034, 2) for k, x in enumerate((717, 829, 941, 1053))]),
-}
+#      not want tables without chairs). Of the four layouts proposed for the free space (4.1 x 1.7 m once the aisles are
+#      kept: 0.8 m behind the bar stools, 0.75 m in front of drum 1, 0.65 m to the row), the user chose the banquette
+#      backed by a planter (Z4, 24/11): a low hedge separates the bar aisle from the room, four tables for two in front.
+ESPACE_BAR = [(14 + k, f'Banquette {k + 1}', x, 1034, 2) for k, x in enumerate((717, 829, 941, 1053))]
 
 
-def tapis(w, d):
-    pc = Piece(); pc.prisme(rrect(0, 0, w, d, 0.10, 6), 0.0, 0.01, M_TAPIS); return pc
-
-
-def table_basse():
-    pc = Piece()
-    pc.cyl(0, 0, 0.30, 0.30, 0.40, 0.43, M_PLATEAU, 40)
-    pc.cyl(0, 0, 0.16, 0.05, 0.0, 0.40, M_ACIER, 24)
-    return pc
-
-
-def suspension_lineaire(L, z):
-    """A long bar light on two cables (photo 10 shows linear pendants over the tables)."""
-    pc = Piece()
-    pc.boite(-0.025, -L / 2, 0.025, L / 2, z, z + 0.04, M_LAITON)
-    for sy in (-1, 1):
-        pc.cyl(0, sy * (L / 2 - 0.15), 0.003, 0.003, z + 0.04, H - 0.002, M_ACIER, 6)
-    return pc
-
-
-def poser_zone(Z, nom, pc, x, y, table=None, **kw):
-    o = poser(f'{Z}-{nom}', pc, x, y, **kw)
-    o['variante'] = Z
-    if table is not None:
-        o['table'] = table
-    return o
-
-
-def zone_Z1():
-    for tid, _, x, y, _ in ZONES['Z1']['tables']:
-        poser_zone('Z1', f'table-{tid}', table_rect(0.68, 0.68, 0.75, [0.0]), x, y, tid, collection='Tables')
-        poser_zone('Z1', f'lampe-{tid}', lampe(), x + 12, y, tid, collection='Tables', z=0.75)
-        poser_zone('Z1', f'suspension-{tid}', suspension(1.75, 0.20), x, y, tid, collection='Suspensions')
-        for k, dy in enumerate((-77.5, 77.5)):
-            poser_zone('Z1', f'chaise-{tid}-{k + 1}', chaise(), x, y + dy, tid, vers=(x, y), collection='Assises')
-
-
-def zone_Z2():
-    tid, _, cx, cy, _ = ZONES['Z2']['tables'][0]
-    poser_zone('Z2', f'table-{tid}', table_rect(0.80, 3.40, 0.75, [(xp - cx) * PX for xp in (760, 885, 1010)]), cx, cy, tid,
-               vers=(cx + 100, cy), collection='Tables')
-    for k, xl in enumerate((820, 950)):
-        poser_zone('Z2', f'lampe-{tid}-{k + 1}', lampe(), xl, cy, tid, collection='Tables', z=0.75)
-    poser_zone('Z2', f'suspension-{tid}', suspension_lineaire(2.6, 1.80), cx, cy, tid, vers=(cx + 100, cy),
-               collection='Suspensions')
-    k = 0
-    for y, vy in ((942.5, cy), (1111.5, cy)):
-        for x in (721, 803, 885, 967, 1049):
-            k += 1
-            poser_zone('Z2', f'chaise-{tid}-{k}', chaise(), x, y, tid, vers=(x, vy), collection='Assises')
-
-
-def zone_Z3():
-    for tid, _, cx, cy, _ in ZONES['Z3']['tables']:
-        poser_zone('Z3', f'tapis-{tid}', tapis(1.9, 1.8), cx, cy, collection='Mobilier')
-        poser_zone('Z3', f'table-{tid}', table_basse(), cx, cy, tid, collection='Tables', z=0.0105)
-        poser_zone('Z3', f'lampe-{tid}', lampe(), cx + 10, cy, tid, collection='Tables', z=0.4405)
-        poser_zone('Z3', f'suspension-{tid}', suspension(1.85, 0.25), cx, cy, tid, collection='Suspensions')
-        for k, (dx, dy) in enumerate(((0, -70), (76, 0), (0, 70), (-76, 0))):
-            poser_zone('Z3', f'chaise-{tid}-{k + 1}', fauteuil(), cx + dx, cy + dy, tid, vers=(cx, cy),
-                       collection='Assises', z=0.012)
-
-
-def zone_Z4():
-    """A banquette along the bar aisle, its back a planter of low greenery; four tables for two in front of it."""
+def espace_bar():
     x0, x1, cx = 660, 1110, 885
     pc = Piece()           # local frame centred on (cx, 954), +y = plan up (towards the bar)
     ly = lambda yp: -(yp - 954) * PX
@@ -1091,19 +1020,14 @@ def zone_Z4():
         x = x0 + 10 + (x1 - x0 - 20) * (k // 2) / 27 + rnd.uniform(-5, 5)
         pc.bulle((lx(x), ly(922.5) + (0.035 if k % 2 else -0.035) + rnd.uniform(-0.01, 0.01), 1.05 + rnd.uniform(0.0, 0.08)),
                  rnd.uniform(0.065, 0.085), 40 + k, M_FEUILLE)
-    o = poser('Z4-banquette', pc, cx, 954, collection='Mobilier'); o['variante'] = 'Z4'
-    for tid, _, x, y, _ in ZONES['Z4']['tables']:
+    poser('banquette-bar', pc, cx, 954, collection='Mobilier')
+    for tid, _, x, y, _ in ESPACE_BAR:
         coussin = Piece(); coussin.prisme(rrect(0, 0, 0.83, 0.43, 0.05), 0.4005, 0.47, M_CUIR)
-        poser_zone('Z4', f'chaise-{tid}-2', coussin, x, 967.1, tid, collection='Assises')
-        poser_zone('Z4', f'table-{tid}', table_rect(0.70, 0.60, 0.75, [0.0]), x, y, tid, collection='Tables')
-        poser_zone('Z4', f'lampe-{tid}', lampe(), x, y + 10, tid, collection='Tables', z=0.75)
-        poser_zone('Z4', f'suspension-{tid}', suspension(1.75, 0.20), x, y, tid, collection='Suspensions')
-        poser_zone('Z4', f'chaise-{tid}-1', chaise(), x, 1106.5, tid, vers=(x, y), collection='Assises')
-
-
-def build_zones(quelles):
-    for Z in quelles:
-        globals()[f'zone_{Z}']()
+        poser(f'chaise-{tid}-2', coussin, x, 967.1, collection='Assises')       # its part of the banquette: seat 2
+        poser(f'table-{tid}', table_rect(0.70, 0.60, 0.75, [0.0]), x, y, collection='Tables')
+        poser(f'lampe-{tid}', lampe(), x, y + 10, collection='Tables', z=0.75)
+        poser(f'suspension-{tid}', suspension(1.75, 0.20), x, y, collection='Suspensions')
+        poser(f'chaise-{tid}-1', chaise(), x, 1106.5, vers=(x, y), collection='Assises')
 
 
 def build_mobilier():
@@ -1137,12 +1061,9 @@ def build_mobilier():
         liste.append(dict(id=tid, nom=nom, type='table haute' if h > 1 else 'table', centre_px=[cx, cy],
                           taille_m=[round(W, 2), round(L, 2)], places=len(chaises),
                           assises='tabourets' if h > 1 else 'chaises', zone='F' if h > 1 else 'R' if tid <= 6 else 'S'))
-    build_zones(list(ZONES) if ZONE == 'tous' else [ZONE] if ZONE in ZONES else [])
-    variantes = {}
-    for Z, d in ZONES.items():
-        variantes[Z] = dict(nom=d['nom'], tables=[dict(id=tid, nom=nom, type='salon' if Z == 'Z3' else 'table',
-            centre_px=[x, y], places=n, assises='fauteuils' if Z == 'Z3' else 'banquette et chaise' if Z == 'Z4' else 'chaises',
-            zone='B') for tid, nom, x, y, n in d['tables']])
+    espace_bar()
+    liste += [dict(id=tid, nom=nom, type='table', centre_px=[x, y], places=n, assises='banquette et chaise', zone='B')
+              for tid, nom, x, y, n in ESPACE_BAR]
     for k, x in enumerate(TABOURETS_BAR):
         poser(f'tabouret-bar-{k + 1}', chaise(haute=True), x, 792.5, vers=(x, 700), collection='Assises')
     liste.append(dict(id=0, nom='Bar', type='bar', centre_px=[801.5, 716], places=len(TABOURETS_BAR), assises='tabourets'))
@@ -1152,14 +1073,14 @@ def build_mobilier():
     repose_pieds()
     bm = bmesh.new(); bm_box(bm, 467, 2172, 593, 2243, 0.0, 0.80)       # the sideboard of the alcove
     mesh_obj('alcove-console', bm, 'Mobilier', M_BOIS)
-    for t in liste + [t for v in variantes.values() for t in v['tables']]:
+    for t in liste:
         x, y = t['centre_px']; v = P(x, y)
         t['centre_m'] = [round(v.x, 3), round(v.y, 3)]
     (RACINE / 'modele' / 'floor1-tables.json').write_text(json.dumps(dict(
         note='floor1 (rez-de-chaussée) : les tables de la carte en direct. centre_px : sur floor1.png ; centre_m : dans '
-             'le modèle (x vers la droite du plan, y vers le haut du plan, origine au pixel (837, 1230)). variantes : '
-             "les propositions pour l'espace entre le bar et la salle (étape 6), une seule sera gardée.",
-        tables=liste, total_places=sum(t['places'] for t in liste), variantes=variantes), ensure_ascii=False, indent=1))
+             'le modèle (x vers la droite du plan, y vers le haut du plan, origine au pixel (837, 1230)). zone : T tambours, '
+             'R rangée, S salle, F façade, B la banquette près du bar.',
+        tables=liste, total_places=sum(t['places'] for t in liste)), ensure_ascii=False, indent=1))
     return [o for o in bpy.data.objects if o not in avant]
 
 
@@ -1506,7 +1427,7 @@ if ARGS.get('variante'):
     nom = ARGS['variante']
     V = VARIANTES[nom]
     num = list(VARIANTES).index(nom) + 1
-    OUT = Path(ARGS.get('out', RACINE / 'rendus' / ('7-espace-du-bar' if ZONE else '5-mobilier' if MOBILIER else
+    OUT = Path(ARGS.get('out', RACINE / 'rendus' / ('5-mobilier' if MOBILIER else
                                                     '4-elements-fixes' if ELEMENTS else '3-styles-blancs')))
     sc.collection.children.link(bpy.data.collections.new('Fantome'))
     m_ghost = mat('fantome', (0.98, 0.98, 0.98), 0.6, alpha=0.16)
@@ -1547,8 +1468,7 @@ if ARGS.get('variante'):
         for name, rgb, rough in (('plateau', (0.90,) * 3, 0.5), ('acier', (0.74,) * 3, 0.5),
                                  ('cuir', (0.955, 0.95, 0.94), 0.8), ('bois', (0.93, 0.92, 0.905), 0.8),
                                  ('pot', (0.94,) * 3, 0.9), ('terre', (0.86, 0.85, 0.83), 1.0),
-                                 ('feuillage', (0.90, 0.92, 0.88), 0.9), ('laiton', (0.97,) * 3, 0.4),
-                                 ('tapis', (0.925, 0.918, 0.905), 0.95)):
+                                 ('feuillage', (0.90, 0.92, 0.88), 0.9), ('laiton', (0.97,) * 3, 0.4)):
             set_mat(name, rgb, rough, a)
     o_c = P(837, 1278)
     if V['grid']:
@@ -1613,7 +1533,7 @@ if ARGS.get('variante'):
     elif ARGS.get('plans'):
         for pl in ARGS['plans'].split(','):
             (x0, y0, z0), (x1, y1, z1), lens, *res = PLANS[pl]
-            render(f'plan-{pl}' + (f'-{ZONE}' if ZONE else ''), camera(f'cam-{pl}', P(x0, y0, z0), P(x1, y1, z1), lens=lens),
+            render(f'plan-{pl}', camera(f'cam-{pl}', P(x0, y0, z0), P(x1, y1, z1), lens=lens),
                    res[0] if res else (1500, 1000))
     elif ELEMENTS:
         pendants = [o for o in bpy.data.objects if o.name.startswith('suspension')]
