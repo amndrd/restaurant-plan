@@ -1,5 +1,5 @@
 // The interactive map of the room. Settings can also come from the address (for captures):
-//   ?vue=dessus|3d  style=fantome|transparent|fil-de-fer  systeme=C|B|D  numeros=3|5|0  theme=clair|sombre
+//   ?vue=dessus|3d  style=fantome|transparent|fil-de-fer  systeme=C|B|D  numeros=3|5|0
 //   ouvert=style|systeme|numeros (a menu of the command bar)  legende=1 (unfolded)  surligne=<state>
 //   heure=20:40  vitesse=0|1|30|120  fiche=<table>  cam=az,el,largeur,x,y,z  nu=1 (the map alone)
 import * as THREE from 'three';
@@ -109,22 +109,6 @@ async function demarrer() {
   if (P.get('legende')) legende.ouvrir(true);
   if (P.get('surligne')) { legende.ouvrir(true); legende.surligner(P.get('surligne')); }
 
-  // ---- the theme of the interface: light or dark (the map itself stays light); remembered on this device
-  const LUNE = '<svg viewBox="0 0 20 20"><path d="M15.5 12.6A6.5 6.5 0 0 1 7.4 4.5a6.5 6.5 0 1 0 8.1 8.1z" fill="currentColor"/></svg>';
-  const SOLEIL = '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3.6" fill="currentColor"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">' +
-    [0, 45, 90, 135, 180, 225, 270, 315].map(a => { const r = a * Math.PI / 180;
-      return `<path d="M${10 + 6 * Math.cos(r)} ${10 + 6 * Math.sin(r)}L${10 + 8 * Math.cos(r)} ${10 + 8 * Math.sin(r)}"/>`; }).join('') + '</g></svg>';
-  const bTheme = document.getElementById('theme');
-  const theme = t => {
-    document.body.classList.toggle('sombre', t === 'sombre');
-    bTheme.innerHTML = t === 'sombre' ? SOLEIL : LUNE;
-    bTheme.title = t === 'sombre' ? 'Passer en clair' : 'Passer en sombre';
-    try { localStorage.setItem('carte-theme', t); } catch (e) { /* private mode */ }
-  };
-  let leTheme = P.get('theme') || (() => { try { return localStorage.getItem('carte-theme'); } catch (e) { return null; } })() || 'clair';
-  theme(leTheme);
-  bTheme.onclick = () => { leTheme = leTheme === 'sombre' ? 'clair' : 'sombre'; theme(leTheme); };
-
   let vitesse = Number(P.get('vitesse') ?? 30);
   const sv = document.getElementById('vitesse'), lecture = document.getElementById('lecture');
   if (vitesse) sv.value = String(vitesse);
@@ -182,7 +166,7 @@ async function demarrer() {
   ui.maj();
   requestAnimationFrame(boucle);
   document.getElementById('chargement').classList.add('fini');
-  window.carte = { s3, cam, service, sys, num, ui, G, choisir, reglages, legende, theme, hhmm, pret: true };
+  window.carte = { s3, cam, service, sys, num, ui, G, choisir, reglages, legende, hhmm, pret: true };
 }
 
 demarrer().catch(err => {

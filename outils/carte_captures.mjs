@@ -1,4 +1,4 @@
-// Captures of the interactive map (carte/), for the step pages (step 7: the map as chosen, light and dark), at
+// Captures of the interactive map (carte/), for the step pages (step 7: the map as chosen; the interface is dark), at
 // Retina scale, plus a short video of the map being handled. Serves carte/ itself on a free port.
 // usage: node outils/carte_captures.mjs [video]
 import { createRequire } from 'node:module';
@@ -20,13 +20,13 @@ await new Promise(r => setTimeout(r, 700));
 const base = `http://127.0.0.1:${port}/`;
 
 // step 7, the map as chosen: [folder, name, address settings, element to capture alone (optional)]
-const PLANS = ['clair', 'sombre'].flatMap(t => [
-  ['carte', `${t}-dessus`, `theme=${t}&vitesse=0&heure=20:25`],
-  ['carte', `${t}-3d`, `theme=${t}&vitesse=0&heure=20:25&vue=3d`],
-  ['carte', `${t}-legende`, `theme=${t}&vitesse=0&heure=20:25&vue=3d&surligne=commandee`, '.pied'],
-  ['carte', `${t}-menu`, `theme=${t}&vitesse=0&heure=20:25&vue=3d&ouvert=${t === 'clair' ? 'style' : 'systeme'}`, '.r3'],
-  ['carte', `${t}-fiche`, `theme=${t}&vitesse=0&heure=20:25&vue=3d&fiche=15`, '#fiche'],
-]);
+const PLANS = [
+  ['carte', 'sombre-dessus', 'vitesse=0&heure=20:25'],
+  ['carte', 'sombre-3d', 'vitesse=0&heure=20:25&vue=3d'],
+  ['carte', 'sombre-legende', 'vitesse=0&heure=20:25&vue=3d&surligne=commandee', '.pied'],
+  ['carte', 'sombre-menu', 'vitesse=0&heure=20:25&vue=3d&ouvert=systeme', '.r3'],
+  ['carte', 'sombre-fiche', 'vitesse=0&heure=20:25&vue=3d&fiche=15', '#fiche'],
+];
 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
 const seul = process.argv[2];
@@ -56,7 +56,7 @@ if (seul === 'video' || seul === undefined) {
   // frames from Chrome's screencast, then a 30 fps video with the system ffmpeg
   const ctx = await b.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
-  await p.goto(`${base}?vitesse=120&heure=20:05&theme=clair`);
+  await p.goto(`${base}?vitesse=120&heure=20:05`);
   await p.waitForFunction(() => window.carte?.pret, null, { timeout: 60000 });
   await p.waitForTimeout(500);
   const cdp = await ctx.newCDPSession(p), images = [];
@@ -87,10 +87,9 @@ if (seul === 'video' || seul === undefined) {
   await p.hover('.l1-c[data-e="servie"]'); await p.waitForTimeout(1300);
   await p.hover('.l1-c[data-e="commandee"]'); await p.waitForTimeout(1300);
   await p.click('#legende-b'); await p.waitForTimeout(600);
-  await p.click('#theme'); await p.waitForTimeout(2200);
   await p.click('#outils button[data-action="recentrer"]'); await p.waitForTimeout(1200);
   await p.click('#vues button[data-vue="dessus"]'); await p.waitForTimeout(2200);
-  await p.click('#theme'); await p.waitForTimeout(1200);
+  await p.waitForTimeout(1200);
   await cdp.send('Page.stopScreencast');
   await ctx.close();
   const dos = path.join(OUT, '_images'); fs.mkdirSync(dos, { recursive: true });

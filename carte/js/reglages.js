@@ -1,6 +1,6 @@
 // The settings of the map: three settings, chosen at step 6 with their options (the first one is the default), in
 // the command bar chosen at step 7 (R3): at the bottom right, with the clock; each menu opens upwards and says what
-// each option does. Light by default, dark with the theme of the interface.
+// each option does. Dark, like the whole interface.
 export const REGLAGES = {
   style: { titre: 'Style', options: [
     ['fantome', 'Fantôme', 'Les murs pleins jusqu’à 1,20 m, le haut en transparence'],

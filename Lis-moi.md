@@ -16,18 +16,18 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 - **Le rez-de-chaussée** reprend la géométrie du modèle 3D, banquette jardinière comprise.
 - **Le 1er étage** est relevé sur `floor2.png` : ses murs sont vectorisés (`modele/etage1-murs.json`) et son mobilier mesuré. Ces relevés serviront à le modéliser.
 
-**Étape 7 : la carte telle que choisie, en clair et en sombre.** Validée, avec quatre retouches :
+**Étape 7 : la carte telle que choisie.** Validée, avec cinq retouches :
 - le bar suivi tabouret par tabouret ;
 - le minuteur en alerte qui pulse sur place ;
 - le survol de la légende en noir léger ;
-- le sombre limité à l'interface.
+- le sombre limité à l'interface ;
+- puis l'interface en sombre seulement : le mode clair et son bouton sont retirés (24/11). La carte elle-même reste claire.
 
 - **L'espace du bar :** la banquette jardinière (Z4) est maintenant dans le modèle, avec les tables 14 à 17. Les autres propositions sont retirées du script.
-- **Les réglages** sont dans la barre de commande, en bas à droite, en clair.
+- **Les réglages** sont dans la barre de commande, en bas à droite.
 - **La légende** se replie derrière son bouton, en bas à gauche, et s'ouvre vers le haut.
-- **Le bouton en haut à droite** passe la carte et l'interface en sombre. Le choix est gardé sur l'appareil.
 - **Les autres dessins** de réglages et de légende sont retirés de la carte.
-- **Les rendus :** les captures en clair et en sombre, et la vidéo, sont dans `rendus/9-carte-finale/`.
+- **Les rendus :** les captures et la vidéo sont dans `rendus/9-carte-finale/`. Les captures `sombre-*` montrent l'interface actuelle ; les `clair-*` restent comme trace de l'étape 7.
 - **La page :** `pages/7-carte-finale.png`.
 
 **Étape 6 : les réglages, et l'espace du bar.** Validée : Z4, R3 en clair, L1 repliable, avec un thème sombre en plus.
@@ -117,7 +117,7 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 4-elements-fixes/ (les éléments fixes, en fantôme, en fil de fer et en vues rapprochées),
                 5-mobilier/ (le mobilier, les numéros des tables), 6-carte/ (les captures et la vidéo de la carte),
                 7-espace-du-bar/ (les propositions pour la place des mange-debout), 8-reglages-legende/,
-                9-carte-finale/ (la carte telle que choisie, en clair et en sombre, et la vidéo),
+                9-carte-finale/ (la carte telle que choisie, et la vidéo),
                 10-plans/ (les plans redessinés du rez-de-chaussée et du 1er étage, SVG et PNG 4K)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
@@ -149,7 +149,7 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `export=carte/modele/floor1-fantome.glb` (avec `variante=fantome mobilier=1`) ou `floor1-entier.glb` (avec `variante=fil-de-fer mobilier=1`) exporte le modèle de la carte. Chaque objet garde son rôle et le numéro de sa table. Il faut ensuite recopier `modele/floor1-tables.json` dans `carte/donnees/`.
 - **Numéroter les tables :** `numeros_tables.py` pose le numéro de chaque table sur la vue du haut en fantôme.
 - **Redessiner les plans :** `outils/plans/plans.py [rdc] [etage1]` écrit les SVG et les PNG 4K de `rendus/10-plans/`. Il s'appuie sur trois fichiers : `dessin.py` (le kit de dessin), `rdc.py` et `etage1.py` (un étage chacun). Les murs du 1er étage sont vectorisés par `outils/vectoriser_etage1.py`.
-- **La carte :** `carte_captures.mjs` sert la carte, fait toutes les captures de `rendus/6-carte/`, puis la vidéo (`node outils/carte_captures.mjs video` pour la vidéo seule). Les réglages passent aussi par l'adresse de la carte : `?vue=3d&theme=sombre&style=fil-de-fer&systeme=B&numeros=5&legende=1&ouvert=style&heure=20:40&vitesse=0&fiche=6`.
+- **La carte :** `carte_captures.mjs` sert la carte, fait toutes les captures de `rendus/6-carte/`, puis la vidéo (`node outils/carte_captures.mjs video` pour la vidéo seule). Les réglages passent aussi par l'adresse de la carte : `?vue=3d&style=fil-de-fer&systeme=B&numeros=5&legende=1&ouvert=style&heure=20:40&vitesse=0&fiche=6`.
 
   Le `.blend` n'est jamais enregistré à la main : c'est le script qui le refait.
 - **La recherche :**

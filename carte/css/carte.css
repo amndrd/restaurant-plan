@@ -2,30 +2,24 @@
 @font-face{font-family:"Inter";font-weight:500;src:url(../polices/inter-latin-500-normal.woff2) format("woff2")}
 @font-face{font-family:"Inter";font-weight:600;src:url(../polices/inter-latin-600-normal.woff2) format("woff2")}
 
-/* the two themes of the interface: light by default, dark with the button at the top right (the map stays light) */
+/* the interface is dark (the map itself stays light) */
 :root{
-  --fond:#f4f3f1; --panneau:#fff; --texte:#151515; --texte2:#444; --gris:#6f6f6f; --gris-clair:#a3a3a3; --trait:#e4e4e2;
-  --sub:#f1f0ee; --sub2:#f7f7f5; --inv:#151515; --inv-tx:#fff;
-  --ombre:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.07); --ombre-pop:0 2px 6px rgba(0,0,0,.06),0 18px 48px rgba(0,0,0,.16);
-  --libre:#c9c9c7; --reservee:#7c8ce0; --installee:#f0a630; --commandee:#3d8bd9; --servie:#43a36b;
-  --addition:#a672d6; --debarrasser:#9b9b98; --alerte:#e5484d;
-}
-body.sombre{
   --fond:#161618; --panneau:#1f1f22; --texte:#f2f2f3; --texte2:#c7c7cc; --gris:#9a9aa0; --gris-clair:#6e6e73; --trait:#323236;
   --sub:#2a2a2e; --sub2:#262629; --inv:#f2f2f3; --inv-tx:#151515;
   --ombre:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); --ombre-pop:0 2px 6px rgba(0,0,0,.3),0 18px 48px rgba(0,0,0,.5);
+  --libre:#c9c9c7; --reservee:#7c8ce0; --installee:#f0a630; --commandee:#3d8bd9; --servie:#43a36b;
+  --addition:#a672d6; --debarrasser:#9b9b98; --alerte:#e5484d;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;background:var(--fond)}
 body{font-family:"Inter",system-ui,sans-serif;color:var(--texte);font-size:13px;line-height:1.4;
-  -webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;touch-action:none;transition:background .3s}
+  -webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;touch-action:none}
 button,select{font:inherit;color:inherit}
 svg{display:block}
 canvas#vue{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
 canvas#vue.prise{cursor:grabbing}
 canvas#vue.survol{cursor:pointer}
 #calque{position:fixed;inset:0;pointer-events:none;overflow:hidden}
-.panneau,.marque,.groupe,.outils,.r3,.legende-b,.legende,.theme{transition:background .3s,color .3s,box-shadow .3s}
 
 /* ---- top bar */
 .barre{position:fixed;top:20px;left:20px;right:20px;display:flex;align-items:center;gap:12px;pointer-events:none}
@@ -40,10 +34,6 @@ canvas#vue.survol{cursor:pointer}
 .groupe button.on{background:var(--inv);color:var(--inv-tx)}
 .groupe button:not(.on):not(:disabled):hover{background:var(--sub);color:var(--texte)}
 .groupe button:disabled{color:var(--gris-clair);opacity:.6;cursor:default}
-.theme{width:44px;height:44px;border:0;border-radius:12px;background:var(--panneau);box-shadow:var(--ombre);color:var(--texte);
-  display:grid;place-items:center;cursor:pointer}
-.theme svg{width:20px;height:20px}
-.theme:hover{color:var(--gris)}
 
 /* ---- panels */
 .panneau{position:fixed;background:var(--panneau);border-radius:14px;box-shadow:var(--ombre)}
