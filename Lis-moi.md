@@ -8,7 +8,20 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (24/11/2026)
 
-**Étape 2 : le style blanc, vu du haut et en 3D.** En attente de ton choix.
+**Étape 3 : les éléments fixes, d'après les photos.** En attente de ta validation.
+
+- **Le style retenu** à l'étape 2 : le fantôme par défaut. L'équipe pourra choisir une autre variante dans l'application, le fil de fer par exemple. L'orientation de la vue du haut est validée.
+- **Les éléments fixes** (`rendus/4-elements-fixes/`) :
+  - le bar et l'arrière-bar ;
+  - les banquettes des quatre tambours ;
+  - l'escalier détaillé, avec la sculpture en miroir ;
+  - les façades en pavés de verre ;
+  - le jardin de pierres ;
+  - l'accueil et les rideaux.
+- **Les rendus :** les deux vues de la carte en fantôme et en fil de fer, et quatre vues rapprochées en blanc, à pleine hauteur.
+- **La page** `pages/3-elements-fixes.png` met chaque élément à côté de la photo d'après laquelle il est modélisé.
+
+**Étape 2 : le style blanc, vu du haut et en 3D.** Validée : le fantôme.
 
 - **Cinq variantes** (`rendus/3-styles-blancs/`), chacune dans les deux vues de la carte : blanc, blanc sur grille, fantôme, transparent, fil de fer.
 - **Le passage animé** de la vue du haut à la vue 3D, sur la variante fantôme : `passage-dessus-3d-fantome.mp4`.
@@ -31,7 +44,8 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 floor1.png … 3d-2.png, plan-design.mp4   tes fichiers de départ (les plans, la coupe, l'axonométrie, la vidéo)
 analyse/        _controle-murs.png : les murs vectorisés posés sur le plan, pour vérifier
 modele/         floor1-murs.json (les murs, poteaux et tambours lus sur le plan), floor1-coque.blend
-rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variantes blanches et la vidéo du passage)
+rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variantes blanches et la vidéo du passage),
+                4-elements-fixes/ (les éléments fixes, en fantôme, en fil de fer et en vues rapprochées)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md)
@@ -52,20 +66,21 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `style=trait|trait-sombre|maquette|jeu` applique un style ;
   - `samples=128` règle la qualité ;
   - `save=<fichier.blend>` enregistre la scène ;
-  - `variante=blanc|blanc-grille|fantome|transparent|fil-de-fer` rend une variante blanche dans les deux vues ; avec `transition=1 images=36`, il rend les images du passage entre les deux vues.
+  - `variante=blanc|blanc-grille|fantome|transparent|fil-de-fer` rend une variante blanche dans les deux vues ; avec `transition=1 images=36`, il rend les images du passage entre les deux vues ;
+  - `elements=1` ajoute les éléments fixes de l'étape 3 (pavés de verre, escalier détaillé, bar, banquettes, jardin, accueil, rideaux) ; avec `variante=detail plans=bar,banquette,escalier,facade`, il rend les vues rapprochées.
 
   Le `.blend` n'est jamais enregistré à la main : c'est le script qui le refait.
 - **La recherche :**
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py`, `page_etape2.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py`, `page_etape2.py`, `page_etape3.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
 Le dépôt ne contient pas le contenu de tiers :
 - les plans, la coupe, l'axonométrie et la vidéo. Les plans sont ceux de RENESA, publiés sur ArchDaily, et doivent être cités ;
-- les photos d'ArchDaily (© Avesh Gaur), et la page de l'étape 2 qui en montre six ;
+- les photos d'ArchDaily (© Avesh Gaur), et les pages des étapes 2 et 3 qui en montrent ;
 - les images de la recherche (Pinterest), dont `recherche/sources.json` garde les liens ;
 - les rendus et pages qui montrent le dessin du plan.
 
