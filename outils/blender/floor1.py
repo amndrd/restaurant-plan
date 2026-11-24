@@ -4,6 +4,8 @@
 #
 # usage: blender -b -P floor1.py -- [vue=dessus,iso,coupe,entree] [coupe=1.2] [plan=1] [ech=100]
 #                                    [save=<file.blend>] [rendu=1] [out=<dossier>]
+#        blender -b -P floor1.py -- variante=blanc|blanc-grille|fantome|transparent|fil-de-fer [samples=96]
+#            (step 2: the white styles, each rendered in the two views of the map, top and 3D)
 import bpy, bmesh, json, math, sys
 from pathlib import Path
 from mathutils import Vector
@@ -11,7 +13,7 @@ from mathutils import Vector
 ICI = Path(__file__).resolve().parent
 RACINE = ICI.parents[1]
 ARGS = dict(a.split('=', 1) for a in (sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []) if '=' in a)
-VUES = ARGS.get('vue', 'dessus,iso,coupe,entree').split(',')
+VUES = ARGS.get('vue', '' if 'variante' in ARGS else 'dessus,iso,coupe,entree').split(',')
 ECH = int(ARGS.get('ech', 100))
 OUT = Path(ARGS.get('out', RACINE / 'rendus' / '1-coque'))
 
@@ -125,7 +127,7 @@ def ring(name, cx, cy, r_out, r_in, a0, a1, z0, z1, collection, material, seg=96
     return obj(name, me, collection, material)
 
 
-def helix_band(name, cx, cy, r_out, r_in, a0, a1, dz_per_deg, top, depth=0.28, seg=200):
+def helix_band(name, cx, cy, r_out, r_in, a0, a1, dz_per_deg, top, depth=0.28, seg=200, bas=0.0):
     """Outer stringer of the spiral stair: a band that rises with the treads."""
     bm = bmesh.new()
     rows = []
@@ -136,7 +138,9 @@ def helix_band(name, cx, cy, r_out, r_in, a0, a1, dz_per_deg, top, depth=0.28, s
             break
         c, s_ = math.cos(math.radians(a)), math.sin(math.radians(a))
         zt = min(z + 0.05, top)
-        zb = max(min(z - depth, top), 0.0)
+        zb = max(min(z - depth, top), bas)
+        if zt <= bas:
+            continue
         rows.append([bm.verts.new(P(cx + r * c, cy + r * s_, zz)) for r, zz in
                      ((r_out, zb), (r_out, zt), (r_in, zt), (r_in, zb))])
     for k in range(len(rows) - 1):
@@ -168,9 +172,16 @@ def cylinder(name, cx, cy, r, z0, z1, collection, material, seg=64):
     return obj(name, me, collection, material)
 
 
-def build(cut):
-    """Shell of floor1. cut = height at which walls are cut (None = full storey height)."""
+def build(cut, bas=0.0):
+    """Shell of floor1. cut = height at which walls are cut (None = full storey height).
+    bas = height the walls start from (0 = the floor; above 0 only the upper part is built, no plan, no floors)."""
     top = H if cut is None else cut
+    if bas == 0.0:
+        build_sols()
+    build_coque(cut, top, bas)
+
+
+def build_sols():
 
     # ---- the plan on the ground (calibration image, 1 px = 1/120 m)
     W, Hh = DATA['taille']
@@ -202,25 +213,28 @@ def build(cut):
     extrude_loops('gravier', [[(855, 2040), (960, 2060), (1040, 2100), (1082, 2172), (1262, 2172), (1273, 2368),
                                (855, 2368)]], 0.0, 0.03, 'Sols', M_GRAVIER)
 
+
+def build_coque(cut, top, bas):
     # ---- walls (vectorised from the plan, see outils/vectoriser.py)
     for k, mu in enumerate(DATA['murs']):
-        o = extrude_loops(f"mur-{mu['id']}-{k}", [mu['contour']] + mu['trous'], 0.0, top, 'Coque', M_MUR)
+        o = extrude_loops(f"mur-{mu['id']}-{k}", [mu['contour']] + mu['trous'], bas, top, 'Coque', M_MUR)
 
     # ---- columns: two in the street facades (dia 1.1 m), two on the inner grid (dia 0.8 m)
     for p in DATA['poteaux']:
         cx, cy, r = p['cx'], p['cy'], p['r']
         if p['id'] == 41:                       # half hidden in the corner pier: same column as 257
             cx, r = 405.1, 49.2
-        cylinder(f"poteau-{p['id']}", cx, cy, r, 0.0, top, 'Coque', M_POTEAU)
+        cylinder(f"poteau-{p['id']}", cx, cy, r, bas, top, 'Coque', M_POTEAU)
 
     # ---- glazed facades: glass + black frame, mullions about every 1.2 m
     def facade(name, x, y0, y1, x_ep=3.0):
         n = max(1, round((y1 - y0) * PX / 1.2))
-        box(name + '-verre', x - 1.2, y0, x + 1.2, y1, 0.0, top, 'Vitrages', M_VERRE)
+        box(name + '-verre', x - 1.2, y0, x + 1.2, y1, bas, top, 'Vitrages', M_VERRE)
         for k in range(n + 1):
             y = y0 + (y1 - y0) * k / n
-            box(f'{name}-montant-{k}', x - x_ep, y - 3, x + x_ep, y + 3, 0.0, top, 'Vitrages', M_CADRE)
-        box(name + '-seuil', x - x_ep, y0, x + x_ep, y1, 0.0, 0.06, 'Vitrages', M_CADRE)
+            box(f'{name}-montant-{k}', x - x_ep, y - 3, x + x_ep, y + 3, bas, top, 'Vitrages', M_CADRE)
+        if bas == 0.0:
+            box(name + '-seuil', x - x_ep, y0, x + x_ep, y1, 0.0, 0.06, 'Vitrages', M_CADRE)
         if cut is None:
             box(name + '-imposte', x - x_ep, y0, x + x_ep, y1, top - 0.08, top, 'Vitrages', M_CADRE)
 
@@ -230,22 +244,26 @@ def build(cut):
     facade('facade-droite', 1452, 870, 1450)
     facade('facade-droite-b', 1452, 1583, 2230)
     facade('facade-droite-haut', 1452, 737, 740)
-    box('entree-verre', 1068, 2404, 1308, 2409, 0.0, top, 'Vitrages', M_VERRE)
-    box('entree-cadre', 1068, 2402, 1308, 2411, 0.0, 0.06, 'Vitrages', M_CADRE)
+    box('entree-verre', 1068, 2404, 1308, 2409, bas, top, 'Vitrages', M_VERRE)
+    if bas == 0.0:
+        box('entree-cadre', 1068, 2402, 1308, 2411, 0.0, 0.06, 'Vitrages', M_CADRE)
 
     # ---- booth drums: a tall dark cylinder. Low part (0 - 2.2 m) = half shell open to the room,
-    #      with short straight returns; high part (2.2 - 3.0 m) = full ring, closed on top (seen from floor2)
+    #      with short straight returns; high part (2.2 - 3.0 m) = a full ring hung over the booth (photo 24).
+    #      Left open on top, so the booths stay visible from above on the map
     for t in DATA['tambours']:
         cx, cy = t['cx'], t['cy']
         r_out, r_in = 152, 131
         h_bas, h_haut = 2.2, 3.0
         zt = min(h_bas, top)
-        ring(f"tambour-{t['id']}-bas", cx, cy, r_out, r_in, 90, 270, 0.0, zt, 'Tambours', M_TAMBOUR)
-        for s in (-1, 1):                       # straight returns to x = 444
-            box(f"tambour-{t['id']}-retour{s}", cx, cy + s * r_in, 444, cy + s * r_out, 0.0, zt, 'Tambours', M_TAMBOUR)
+        if bas < h_bas:
+            ring(f"tambour-{t['id']}-bas", cx, cy, r_out, r_in, 90, 270, bas, zt, 'Tambours', M_TAMBOUR)
+            for s in (-1, 1):                   # straight returns to x = 444
+                box(f"tambour-{t['id']}-retour{s}", cx, cy + s * r_in, 444, cy + s * r_out, bas, zt, 'Tambours',
+                    M_TAMBOUR)
         if top > h_bas:
-            ring(f"tambour-{t['id']}-haut", cx, cy, r_out, r_in, 0, 360, h_bas, min(h_haut, top), 'Tambours',
-                 M_TAMBOUR, cap=(cut is None))
+            ring(f"tambour-{t['id']}-haut", cx, cy, r_out, r_in, 0, 360, max(h_bas, bas), min(h_haut, top),
+                 'Tambours', M_TAMBOUR)
 
     # ---- spiral stair: hub (1082, 2172), treads from r 40 to 180 px, first riser at -55.5 deg,
     #      clockwise in plan; 19 risers of 0.176 m and 21 deg: the stair turns about 400 deg and arrives
@@ -257,10 +275,12 @@ def build(cut):
         z = rise * (k + 1)
         if z - rise > top:
             break
+        if z - 0.05 < bas:
+            continue
         ring(f'marche-{k:02d}', cx, cy, r1, r0, a + k * step_a, a + (k + 1) * step_a + 1.5, z - 0.05, z, 'Escalier',
              M_MARCHE, seg=120)
-    helix_band('limon', cx, cy, r1 + 5, r1, a, a + (n - 1) * step_a, rise / step_a, top)
-    cylinder('fut', cx, cy, r0, 0.0, min(H, top), 'Escalier', M_MARCHE)
+    helix_band('limon', cx, cy, r1 + 5, r1, a, a + (n - 1) * step_a, rise / step_a, top, bas=bas)
+    cylinder('fut', cx, cy, r0, bas, min(H, top), 'Escalier', M_MARCHE)
 
     # curves -> meshes (cleaner for the later line styles)
     for o in list(bpy.data.objects):
@@ -452,3 +472,188 @@ if 'coupe' in VUES:
     else:
         show(collections_hidden=('Sols',))
         render('3-coque-coupee-sur-le-plan', cam, (2000, 1500))
+
+
+# ---------------------------------------------------------------- step 2: the white styles, two views
+# Each variant is rendered in the two views of the staff map: from the top (a plan, long side across the
+# screen, entry on the right) and in 3D (the same corner as the axonometry, 16:10 like a tablet).
+VARIANTES = {
+    # cut: wall height of the solid model (None = full storey); grid: 1 m / 5 m grid on the ground and floors;
+    # alpha: opacity of the walls, drums, stair; ghost: upper part of the walls above the cut, see-through;
+    # hidden: colour of the hidden lines (seen through), None = not drawn
+    'blanc':        dict(cut=1.2,  grid=False, alpha=1.0,  ghost=False, hidden=None),
+    'blanc-grille': dict(cut=1.2,  grid=True,  alpha=1.0,  ghost=False, hidden=None),
+    'fantome':      dict(cut=1.2,  grid=True,  alpha=1.0,  ghost=True,  hidden=(0.72,) * 3),
+    'transparent':  dict(cut=None, grid=True,  alpha=0.42, ghost=False, hidden=(0.66,) * 3),
+    'fil-de-fer':   dict(cut=None, grid=True,  alpha=0.03, ghost=False, hidden=(0.62,) * 3),
+}
+
+
+def set_mat(name, rgb, rough=0.85, alpha=1.0):
+    b = next(n for n in bpy.data.materials[name].node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    b.inputs['Base Color'].default_value = (*rgb, 1)
+    b.inputs['Roughness'].default_value = rough
+    b.inputs['Transmission Weight'].default_value = 0.0
+    b.inputs['Alpha'].default_value = alpha
+
+
+def mat_grille(name, base, line, minor, major, origin, fade=None):
+    """Matte material with a 1 m grid (strength `minor`) and a 5 m grid (strength `major`), in world metres.
+    fade = (r0, r1): the grid fades out between r0 and r1 metres from `origin`."""
+    m = mat(name, base, 0.9)
+    nt = m.node_tree; N = nt.nodes; L = nt.links
+    b = next(n for n in N if n.type == 'BSDF_PRINCIPLED')
+    geo = N.new('ShaderNodeNewGeometry')
+    sep = N.new('ShaderNodeSeparateXYZ'); L.new(geo.outputs['Position'], sep.inputs[0])
+
+    def op(kind, a, b_=None):
+        n = N.new('ShaderNodeMath'); n.operation = kind
+        for i, v in enumerate((a, b_)):
+            if v is None:
+                continue
+            if isinstance(v, (int, float)):
+                n.inputs[i].default_value = v
+            else:
+                L.new(v, n.inputs[i])
+        return n.outputs[0]
+
+    def lines(axis, o, step, half):
+        u = op('SUBTRACT', sep.outputs[axis], o)
+        d = op('MULTIPLY', op('ABSOLUTE', op('SUBTRACT', op('FRACT', op('ADD', op('DIVIDE', u, step), 0.5)), 0.5)), step)
+        mr = N.new('ShaderNodeMapRange'); L.new(d, mr.inputs['Value'])
+        mr.inputs['From Min'].default_value = half; mr.inputs['From Max'].default_value = half + 0.009
+        mr.inputs['To Min'].default_value = 1.0; mr.inputs['To Max'].default_value = 0.0
+        return mr.outputs['Result']
+
+    g1 = op('MULTIPLY', op('MAXIMUM', lines(0, origin.x, 1.0, 0.004), lines(1, origin.y, 1.0, 0.004)), minor)
+    g5 = op('MULTIPLY', op('MAXIMUM', lines(0, origin.x, 5.0, 0.008), lines(1, origin.y, 5.0, 0.008)), major)
+    g = op('MAXIMUM', g1, g5)
+    if fade:
+        dist = N.new('ShaderNodeVectorMath'); dist.operation = 'DISTANCE'
+        L.new(geo.outputs['Position'], dist.inputs[0]); dist.inputs[1].default_value = (origin.x, origin.y, 0)
+        mr = N.new('ShaderNodeMapRange'); L.new(dist.outputs['Value'], mr.inputs['Value'])
+        mr.inputs['From Min'].default_value, mr.inputs['From Max'].default_value = fade
+        mr.inputs['To Min'].default_value = 1.0; mr.inputs['To Max'].default_value = 0.0
+        g = op('MULTIPLY', g, mr.outputs['Result'])
+    mix = N.new('ShaderNodeMix'); mix.data_type = 'RGBA'
+    L.new(g, mix.inputs[0])
+    mix.inputs[6].default_value = (*base, 1); mix.inputs[7].default_value = (*line, 1)
+    L.new(mix.outputs[2], b.inputs['Base Color'])
+    return m
+
+
+def ground(material):
+    me = bpy.data.meshes.new('terrain'); bm_ = bmesh.new()
+    bm_.faces.new([bm_.verts.new((x, y, -0.052)) for x, y in ((-200, -200), (200, -200), (200, 200), (-200, 200))])
+    bm_.to_mesh(me); bm_.free()
+    return obj('terrain', me, 'Sols', material)
+
+
+def freestyle_lines(visible, hidden, thickness=1.0):
+    sc.render.use_freestyle = True
+    sc.render.line_thickness_mode = 'ABSOLUTE'
+    sc.render.line_thickness = 1.0
+    vl = sc.view_layers[0]
+    vl.use_freestyle = True
+    fs = vl.freestyle_settings
+    fs.crease_angle = math.radians(140)
+    sets = [('visibles', 'VISIBLE', visible, 1.15 * thickness)]
+    if hidden:
+        sets.append(('cachees', 'HIDDEN', hidden, 0.75 * thickness))
+    for k, (nom, vis, col, ep) in enumerate(sets):
+        ls = fs.linesets[k] if len(fs.linesets) > k else fs.linesets.new(nom)
+        ls.select_by_visibility = True
+        ls.visibility = vis
+        ls.select_silhouette = ls.select_border = ls.select_crease = True
+        ls.linestyle = bpy.data.linestyles.new(nom)
+        ls.linestyle.color = col
+        ls.linestyle.thickness = ep
+
+
+if ARGS.get('variante'):
+    nom = ARGS['variante']
+    V = VARIANTES[nom]
+    num = list(VARIANTES).index(nom) + 1
+    OUT = Path(ARGS.get('out', RACINE / 'rendus' / '3-styles-blancs'))
+    sc.collection.children.link(bpy.data.collections.new('Fantome'))
+
+    build(V['cut'])
+    if V['ghost']:                              # the walls above the cut, see-through
+        avant = set(bpy.data.objects)
+        build(None, bas=V['cut'] + 0.004)     # 4 mm gap: no face shared with the top of the solid walls
+        m_ghost = mat('fantome', (0.98, 0.98, 0.98), 0.6, alpha=0.16)
+        for o in set(bpy.data.objects) - avant:
+            for c in o.users_collection:
+                c.objects.unlink(o)
+            coll('Fantome').objects.link(o)
+            o.data.materials.clear(); o.data.materials.append(m_ghost)
+            o.visible_shadow = False            # only the solid walls cast shadows: no grey smudges seen from above
+
+    # materials: white, the floors a touch warmer than the walls, the ground a light grey
+    a = V['alpha']
+    for name, rgb in (('mur', (0.965,) * 3), ('tete-de-mur', (0.98,) * 3), ('poteau', (0.96,) * 3),
+                      ('tambour', (0.93, 0.93, 0.925)), ('marche', (0.90,) * 3)):
+        set_mat(name, rgb, 0.85, a)
+    set_mat('cadre', (0.80,) * 3, 0.6, max(a, 0.25) if a < 1 else 1.0)
+    set_mat('verre', (0.97, 0.98, 0.99), 0.3, 0.16 if a == 1.0 else min(a, 0.16))
+    set_mat('gravier', (0.88, 0.875, 0.865), 0.95)
+    o_c = P(837, 1278)
+    if V['grid']:
+        m_int = mat_grille('sol-grille', (0.975, 0.972, 0.965), (0.80, 0.80, 0.80), 0.35, 0.55, o_c)
+        m_ext = mat_grille('terrain-grille', (0.90, 0.898, 0.89), (0.66, 0.66, 0.66), 0.45, 0.8, o_c, fade=(14, 30))
+    else:
+        m_int = mat('sol-blanc', (0.975, 0.972, 0.965), 0.9)
+        m_ext = mat('terrain-blanc', (0.90, 0.898, 0.89), 0.9)
+    for o_name in ('sol', 'sol-clair'):
+        me_ = bpy.data.objects[o_name].data
+        me_.materials.clear(); me_.materials.append(m_int)
+    ground(m_ext)
+
+    # light: soft sky + a soft sun; display in Standard so the whites stay white
+    sc.view_settings.view_transform = 'Standard'
+    sc.view_settings.look = 'None'
+    bg = sc.world.node_tree.nodes['Background']
+    bg.inputs['Color'].default_value = (0.97, 0.965, 0.955, 1)
+    bg.inputs['Strength'].default_value = 0.67        # sky + sun sized so the floor lands near 0.93, not clipped
+    sun = bpy.data.objects['soleil']
+    sun.data.energy = 1.25
+    sun.data.angle = math.radians(25)
+    sc.cycles.transparent_max_bounces = 24
+    freestyle_lines((0.30, 0.30, 0.30), V['hidden'], 1.25 if nom == 'fil-de-fer' else 1.0)
+    show(collections_hidden=('Plan',))
+
+    # one sun fixed in the world for both views, as in the live map: high, from the left of the 3D camera
+    sun.rotation_euler = (math.radians(35), 0, math.radians(-121))
+
+    # top view: straight down, the long side across the screen (screen up = +x, entry on the right)
+    cam_top = camera('cam-dessus', o_c + Vector((0, 0, 60)), o_c, ortho=21.6)
+    cam_top.rotation_euler = (0, 0, math.radians(-90))
+    # 3D view: the corner of the axonometry
+    d = Vector((-1, -1.05, 1.15)).normalized()
+    c3 = o_c + Vector((0, 0, 0.9))
+    cam_3d = camera('cam-3d', c3 + d * 60, c3, ortho=25.5)
+
+    if ARGS.get('transition'):
+        # the switch from the top view to the 3D view: rotation slerped, scale and target eased
+        q0 = cam_top.rotation_euler.to_quaternion(); q1 = cam_3d.rotation_euler.to_quaternion()
+        n_img = int(ARGS.get('images', 48))
+        dossier = OUT / f'transition-{nom}'
+        sc.render.resolution_x, sc.render.resolution_y = 1600, 1000
+        sc.render.resolution_percentage = 100
+        sc.camera = cam_top
+        for k in range(n_img + 1):
+            t = k / n_img
+            e = t * t * (3 - 2 * t)
+            q = q0.slerp(q1, e)
+            cible = o_c.lerp(c3, e)
+            cam_top.rotation_euler = q.to_euler()
+            cam_top.location = cible - (q @ Vector((0, 0, -1))) * 60
+            cam_top.data.ortho_scale = 21.6 + (25.5 - 21.6) * e
+            sc.render.filepath = str(dossier / f'{k:03d}.png')
+            bpy.ops.render.render(write_still=True)
+            print('image', k)
+    else:
+        render(f'{num}-{nom}-dessus', cam_top, (2000, 1250))
+        render(f'{num}-{nom}-3d', cam_3d, (2000, 1250))
+    if ARGS.get('save'):
+        bpy.ops.wm.save_as_mainfile(filepath=ARGS['save'])
