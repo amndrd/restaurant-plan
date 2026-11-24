@@ -8,7 +8,19 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (24/11/2026)
 
-**Étape 3 : les éléments fixes, d'après les photos.** En attente de ta validation.
+**Étape 4 : le mobilier.** En attente de ta validation.
+
+- **Le mobilier** (`rendus/5-mobilier/`), placé d'après le plan :
+  - 13 tables de service : 4 tables rondes dans les tambours, 2 dans la rangée, 3 dans la salle et 4 tables hautes le long de la façade droite ;
+  - 3 mange-debout en bois, les 7 tabourets du bar et son repose-pieds ;
+  - les chaises, les fauteuils et les tabourets, 3 jardinières avec un arbre, les suspensions et les lampes de table ;
+  - la tablette de la façade droite et la console de l'alcôve.
+- **Les numéros de la carte :** `rendus/5-mobilier/tables-numerotees.png`. La liste des tables, avec leurs places et leurs positions, est dans `modele/floor1-tables.json` : c'est ce que lira la couche en direct.
+- **Les rendus :** les deux vues de la carte en fantôme et en fil de fer, et trois vues rapprochées cadrées comme les photos 10, 8 et 31.
+- **Trois corrections de l'étape 3 :** le rideau de l'alcôve, refait en drapé ; l'assise des banquettes des tambours, ramenée à la profondeur du plan ; la tablette de la façade droite, qui manquait.
+- **La page** `pages/4-mobilier.png`.
+
+**Étape 3 : les éléments fixes, d'après les photos.** Validée. On garde les rideaux et la sculpture.
 
 - **Le style retenu** à l'étape 2 : le fantôme par défaut. L'équipe pourra choisir une autre variante dans l'application, le fil de fer par exemple. L'orientation de la vue du haut est validée.
 - **Les éléments fixes** (`rendus/4-elements-fixes/`) :
@@ -43,9 +55,11 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 ```
 floor1.png … 3d-2.png, plan-design.mp4   tes fichiers de départ (les plans, la coupe, l'axonométrie, la vidéo)
 analyse/        _controle-murs.png : les murs vectorisés posés sur le plan, pour vérifier
-modele/         floor1-murs.json (les murs, poteaux et tambours lus sur le plan), floor1-coque.blend
+modele/         floor1-murs.json (les murs, poteaux et tambours lus sur le plan), floor1-tables.json (les tables de
+                la carte en direct), floor1-coque.blend
 rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variantes blanches et la vidéo du passage),
-                4-elements-fixes/ (les éléments fixes, en fantôme, en fil de fer et en vues rapprochées)
+                4-elements-fixes/ (les éléments fixes, en fantôme, en fil de fer et en vues rapprochées),
+                5-mobilier/ (le mobilier, les numéros des tables)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md)
@@ -67,20 +81,22 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `samples=128` règle la qualité ;
   - `save=<fichier.blend>` enregistre la scène ;
   - `variante=blanc|blanc-grille|fantome|transparent|fil-de-fer` rend une variante blanche dans les deux vues ; avec `transition=1 images=36`, il rend les images du passage entre les deux vues ;
-  - `elements=1` ajoute les éléments fixes de l'étape 3 (pavés de verre, escalier détaillé, bar, banquettes, jardin, accueil, rideaux) ; avec `variante=detail plans=bar,banquette,escalier,facade,rideau`, il rend les vues rapprochées.
+  - `elements=1` ajoute les éléments fixes de l'étape 3 (pavés de verre, escalier détaillé, bar, banquettes, jardin, accueil, rideaux) ; avec `variante=detail plans=bar,banquette,escalier,facade,rideau`, il rend les vues rapprochées ;
+  - `mobilier=1` ajoute le mobilier de l'étape 4 et écrit `modele/floor1-tables.json` ; avec `variante=detail plans=salle,tabourets,tambour`, il rend les vues rapprochées.
+- **Numéroter les tables :** `numeros_tables.py` pose le numéro de chaque table sur la vue du haut en fantôme.
 
   Le `.blend` n'est jamais enregistré à la main : c'est le script qui le refait.
 - **La recherche :**
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py`, `page_etape2.py`, `page_etape3.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py` à `page_etape4.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
 Le dépôt ne contient pas le contenu de tiers :
 - les plans, la coupe, l'axonométrie et la vidéo. Les plans sont ceux de RENESA, publiés sur ArchDaily, et doivent être cités ;
-- les photos d'ArchDaily (© Avesh Gaur), et les pages des étapes 2 et 3 qui en montrent ;
+- les photos d'ArchDaily (© Avesh Gaur), et les pages des étapes 2 à 4 qui en montrent ;
 - les images de la recherche (Pinterest), dont `recherche/sources.json` garde les liens ;
 - les rendus et pages qui montrent le dessin du plan.
 
