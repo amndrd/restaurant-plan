@@ -2,11 +2,19 @@
 
 Un projet du studio, qui sera présenté sur son site. À partir des plans d'un restaurant, on modélise le lieu en 3D dans Blender, dans un style de carte de jeu en vue isométrique. Le but : un système de gestion où l'équipe voit la salle en direct. On y suit les tables libres et prises, depuis combien de temps les clients attendent, et les plats commandés à chaque table.
 
+Les plans sont ceux du **LAIR Restaurant & Bar** (Gurugram, Inde, 2024), conçu par **RENESA Architecture Design Interiors Studio**, avec des photos d'Avesh Gaur, publié sur ArchDaily. Le détail est dans `recherche/11-lair-archdaily/source.md`. Le restaurant de la démo sera fictif : son nom, sa carte et son équipe seront inventés.
+
 On travaille étage par étage, en commençant par **floor1**, le rez-de-chaussée avec l'entrée, l'accueil, la salle et le bar. On avance étape par étape : chaque étape est montrée en captures et validée avant la suivante.
 
 ## Où en est-on (24/11/2026)
 
-**Étape 1 : le plan lu, mesuré, et la coque.** En attente de ta validation.
+**Étape 2 : le style blanc, vu du haut et en 3D.** En attente de ton choix.
+
+- **Cinq variantes** (`rendus/3-styles-blancs/`), chacune dans les deux vues de la carte : blanc, blanc sur grille, fantôme, transparent, fil de fer.
+- **Le passage animé** de la vue du haut à la vue 3D, sur la variante fantôme : `passage-dessus-3d-fantome.mp4`.
+- **La page** `pages/2-styles-blancs.png` réunit les variantes, mon avis, la source et ce que les photos ont appris.
+
+**Étape 1 : le plan lu, mesuré, et la coque.** Validée.
 
 - **L'analyse** (`pages/1-plan-et-coque.png`) :
   - l'échelle du plan, déduite de cinq objets de taille connue : 120 px = 1 m ;
@@ -23,9 +31,10 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 floor1.png … 3d-2.png, plan-design.mp4   tes fichiers de départ (les plans, la coupe, l'axonométrie, la vidéo)
 analyse/        _controle-murs.png : les murs vectorisés posés sur le plan, pour vérifier
 modele/         floor1-murs.json (les murs, poteaux et tambours lus sur le plan), floor1-coque.blend
-rendus/         1-coque/, 2-styles-sur-la-coque/
+rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variantes blanches et la vidéo du passage)
 pages/          la page de chaque étape, en PNG
-recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri)
+recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
+                11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md)
 outils/         les scripts (voir plus bas)
 ```
 
@@ -42,19 +51,21 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `coupe=1.2` donne la hauteur de coupe des murs ;
   - `style=trait|trait-sombre|maquette|jeu` applique un style ;
   - `samples=128` règle la qualité ;
-  - `save=<fichier.blend>` enregistre la scène.
+  - `save=<fichier.blend>` enregistre la scène ;
+  - `variante=blanc|blanc-grille|fantome|transparent|fil-de-fer` rend une variante blanche dans les deux vues ; avec `transition=1 images=36`, il rend les images du passage entre les deux vues.
 
   Le `.blend` n'est jamais enregistré à la main : c'est le script qui le refait.
 - **La recherche :**
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py`, `page_etape2.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
 Le dépôt ne contient pas le contenu de tiers :
-- les plans, la coupe, l'axonométrie et la vidéo, dont la source est à confirmer et à citer ;
+- les plans, la coupe, l'axonométrie et la vidéo. Les plans sont ceux de RENESA, publiés sur ArchDaily, et doivent être cités ;
+- les photos d'ArchDaily (© Avesh Gaur), et la page de l'étape 2 qui en montre six ;
 - les images de la recherche (Pinterest), dont `recherche/sources.json` garde les liens ;
 - les rendus et pages qui montrent le dessin du plan.
 
