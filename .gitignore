@@ -18,6 +18,7 @@ recherche/**/*.png
 recherche/_tri/
 # - the plan check image and the renders that show the plan drawing
 analyse/_controle-murs.png
+analyse/_controle-etage1.png
 rendus/1-coque/1-calage-vue-de-dessus.png
 rendus/1-coque/3-coque-coupee-sur-le-plan.png
 pages/1-plan-et-coque.png
