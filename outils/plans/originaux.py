@@ -210,18 +210,35 @@ def faire(nom, image):
     m = ((g4 > bg4 + 0.5 * (pk4 - bg4)) & (pk4 - bg4 > 28) & (sans > 0)).astype(np.uint8)
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
     del g4
-    # thick parts (wider than ~3.7 px of the original) are traced as shapes, the rest becomes centrelines
-    epais = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15)))
+    # thick parts (wider than ~5.7 px of the original: dots, arrows, leaves) are traced as shapes, the rest becomes
+    # centrelines
+    # (a part wider than ~3.7 px is traced whole when it reaches ~5.7 px somewhere, like the shaded backs of the
+    # armchairs; the lines that are only a little wide stay lines)
+    large = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15)))
+    tres = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (23, 23)))
+    n_, lab_ = cv2.connectedComponents(large, connectivity=8)
+    garde = np.zeros(n_, bool); garde[np.unique(lab_[tres > 0])] = True; garde[0] = False
+    epais = garde[lab_].astype(np.uint8)
+    del lab_, large, tres
     fin = m & (1 - cv2.dilate(epais, np.ones((3, 3), np.uint8)))
     dist = cv2.distanceTransform(m, cv2.DIST_L2, 5)
     sk = skeletonize(fin > 0)
     ch, deg = chaines(sk)
     print(f'  {nom}: {len(ch)} traits bruts')
 
+    # the width of a line, measured away from its ends (a junction widens it); the short pieces between two
+    # junctions take the usual width of the plan
+    def largeur(c):
+        d = [dist[p] for p in c]
+        k = min(len(d) // 3, 8)
+        return 2 * float(np.median(d[k:len(d) - k] if len(d) > 2 * k + 2 else d))
+    usuelle = float(np.median([largeur(c) for c in ch if len(c) > 40]))
     traits = []
     for c in ch:
-        larg = 2 * float(np.median([dist[p] for p in c]))       # width, 4x px
+        larg = largeur(c)                                        # width, 4x px
         L = len(c)
+        if L < 3 * usuelle:
+            larg = min(larg, usuelle)
         bouts = [deg.get(c[0], 2), deg.get(c[-1], 2)]
         if L < 4 and 1 in bouts:
             continue
@@ -229,7 +246,7 @@ def faire(nom, image):
             continue
         ton = float(np.median([pk4[p] for p in c]))
         pts = rdp(lisser(c), 0.6)
-        larg_o = min(max(larg / K, 1.3), 3.4)                    # width in original px
+        larg_o = min(max(larg / K, 1.2), 5.2)                    # width in original px
         traits.append((round(ton / 8) * 8, round(larg_o * 4) / 4, pts))
     del pk4, bg4
     # grouped by tone and width, in output pixels
