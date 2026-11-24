@@ -8,6 +8,18 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (24/11/2026)
 
+**1er étage, étape 1 : la coque.** En attente de ta validation.
+
+- **`outils/blender/floor2.py`** construit la mezzanine dans le repère du rez-de-chaussée. Le z 0 est le dessus de sa dalle, 3,35 m au-dessus du rez-de-chaussée.
+- **La coque comprend :**
+  - les murs vectorisés depuis `floor2.png` (`modele/etage1-murs.json`), les poteaux et les façades vitrées avec leurs montants ;
+  - la dalle, percée du vide sur la salle, du vide sur le jardin de pierres et de l'ouverture ronde de l'escalier ;
+  - les garde-corps vitrés au bord des vides ;
+  - les deux demi-tambours des banquettes, l'escalier droit qui monte vers le toit et le haut de l'escalier hélicoïdal ;
+  - le volume plein au-dessus de l'entrée, noir sur le plan et blanc sur l'axonométrie de l'architecte.
+- **Les rendus** sont dans `rendus/12-etage-coque/` : le calage sur le plan (hors dépôt, il montre le plan), l'axonométrie et la coque coupée à 1,20 m comme sur la carte.
+- **Hypothèses :** 3,00 m sous plafond, des demi-tambours de 2,20 m, des retours du bar omakase pleine hauteur.
+
 **Les plans redessinés, pour le site.** En attente de ta validation.
 
 - **Les deux plans du client**, le rez-de-chaussée et le 1er étage, sont redessinés en traits exacts dans `rendus/10-plans/`. Chacun existe en SVG vectoriel et en PNG 4K (3840 × 2160).
@@ -136,7 +148,7 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `grille.py` découpe le plan avec une grille de coordonnées, pour mesurer ;
   - `composantes.py` numérote les zones sombres du plan (murs, poteaux, extérieur) ;
   - `vectoriser.py` trace les murs retenus en polygones, et retrouve les cercles des poteaux et des tambours. Il écrit `modele/floor1-murs.json`.
-- **Modéliser :** `blender/floor1.py` construit floor1 et fait les rendus. On le lance avec `blender -b -P outils/blender/floor1.py --` suivi des options :
+- **Modéliser :** `blender/floor1.py` construit floor1 et fait les rendus ; `blender/floor2.py` construit la mezzanine (`-- vue=dessus,iso,coupe`). On le lance avec `blender -b -P outils/blender/floor1.py --` suivi des options :
   - `vue=dessus,iso,coupe,entree` choisit les vues ;
   - `coupe=1.2` donne la hauteur de coupe des murs ;
   - `style=trait|trait-sombre|maquette|jeu` applique un style ;
