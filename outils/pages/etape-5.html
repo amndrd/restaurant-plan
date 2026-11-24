@@ -1,0 +1,61 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="style.css">
+<style>.lead{max-width:820px} td:first-child{white-space:nowrap;font-weight:600}</style></head><body>
+<div class="colw">
+<section style="width:1680px">
+  <div class="stitle">Restaurant · floor1 · étape 5 : la carte interactive</div>
+  <div class="snote">24/11/2026 · une application web, le modèle de Blender en three.js, un service simulé</div>
+  <div class="txt lead">Les hauteurs sont validées, et la numérotation reste dans les données sans s'afficher. Voici la
+  carte qu'on manipule. C'est le modèle de Blender, exporté tel quel, avec les mêmes vues, le même soleil et les traits
+  redessinés en direct. Pour l'ouvrir, double-clic sur <code>carte/ouvrir-la-carte.command</code>. En attendant les
+  vraies données, un service simulé fait vivre la salle de 18h30 à la fermeture (données provisoires).</div>
+  <div class="row"><figure><img src="../../rendus/6-carte/carte-dessus.png" width="800"><div class="cap">La vue du haut, le système A</div></figure><figure><img src="../../rendus/6-carte/carte-3d.png" width="800"><div class="cap">La vue 3D</div></figure></div>
+</section>
+<section style="width:1680px">
+  <div class="stitle">La fiche d'une table, et ce qu'on peut faire</div>
+  <div class="row">
+    <figure><img src="../../rendus/6-carte/carte-fiche.png" width="1000"><div class="cap">Un clic sur la grande table : son état, les personnes, l'attente, la commande plat par plat</div></figure>
+    <div class="col" style="width:580px">
+      <table><tr><td>Glisser</td><td>déplace la carte</td></tr><tr><td>Clic droit, Maj + glisser, deux doigts</td><td>tourne autour de la salle et l'incline</td></tr><tr><td>Molette, pincer</td><td>zoome vers le pointeur</td></tr><tr><td>Haut · 3D</td><td>bascule entre les deux vues, avec la transition animée</td></tr><tr><td>⟲ ⟳ ◎</td><td>tourne de 45°, recentre</td></tr><tr><td>Clic sur une table</td><td>ouvre sa fiche</td></tr><tr><td>RDC · 1er</td><td>change d'étage (le 1er arrive à l'étape suivante)</td></tr><tr><td>Horloge</td><td>met le service en pause, ou l'accélère (×1, ×30, ×120)</td></tr><tr><td>Réglages</td><td>le style, le système des états, les numéros</td></tr></table>
+      <div class="txt">Une vidéo montre la carte en main : <code>rendus/6-carte/manipulation.mp4</code>.</div>
+    </div>
+  </div>
+</section>
+<section style="width:1680px">
+  <div class="stitle">Les styles, au choix dans les réglages</div>
+  <div class="row"><figure><img src="../../rendus/6-carte/style-fil-de-fer.png" width="515"><div class="cap">Fil de fer</div></figure><figure><img src="../../rendus/6-carte/style-transparent.png" width="515"><div class="cap">Transparent, système B</div></figure>
+  <figure><img src="../../rendus/6-carte/style-blanc.png" width="515"><div class="cap">Blanc, sans les hauts en fantôme</div></figure></div>
+</section>
+</div>
+<div class="colw">
+<section style="width:1680px">
+  <div class="stitle">L'état des tables : quatre prototypes</div>
+  <div class="txt lead">Sept états suivent le service : libre, réservée, installée (à commander), en attente des plats,
+  servie, addition, à débarrasser. Une table passe en alerte après 8 min sans commande, ou 22 min d'attente des plats :
+  un anneau rouge pulse autour d'elle, dans tous les prototypes.</div>
+  <div class="row wrap"><div class="col" style="width:780px"><figure><img src="../../rendus/6-carte/etats-A-halo.png" width="780"><div class="cap">A · Halo au sol</div></figure><div class="txt">Une tache de couleur sous la table et ses chaises. Elle se lit aussi bien d'en haut qu'en 3D, de loin comme de près, et laisse le modèle blanc.</div></div><div class="col" style="width:780px"><figure><img src="../../rendus/6-carte/etats-B-plateau.png" width="780"><div class="cap">B · Plateau</div></figure><div class="txt">Seul le plateau prend la couleur. C'est le plus discret : très lisible en 3D, plus petit vu du haut.</div></div><div class="col" style="width:780px"><figure><img src="../../rendus/6-carte/etats-C-places.png" width="780"><div class="cap">C · Places occupées</div></figure><div class="txt">Chaque place occupée prend la couleur : on compte les clients d'un coup d'œil. Pour les tambours, les fauteuils puis la banquette.</div></div><div class="col" style="width:780px"><figure><img src="../../rendus/6-carte/etats-D-minuteur.png" width="780"><div class="cap">D · Minuteur</div></figure><div class="txt">Un anneau au-dessus de la table se remplit avec le temps passé dans l'état. On lit les minutes, l'alerte pulse en rouge.</div></div></div>
+  <div class="row"><figure><img src="../../rendus/6-carte/etats-A-proche.png" width="510"><div class="cap">A, de près</div></figure><figure><img src="../../rendus/6-carte/etats-C-proche.png" width="510"><div class="cap">C, de près</div></figure><figure><img src="../../rendus/6-carte/etats-D-proche.png" width="510"><div class="cap">D, de près</div></figure></div>
+</section>
+</div>
+<div class="colw">
+<section style="width:1680px">
+  <div class="stitle">Les numéros : cinq dessins, cachés par défaut</div>
+  <div class="row"><figure><img src="../../rendus/6-carte/numeros-1-dessus.png" width="620"></figure><figure><img src="../../rendus/6-carte/numeros-1-proche.png" width="620"></figure><div class="col" style="width:300px"><div class="lbl">1 · Peints au sol</div><div class="txt">Le numéro est peint dans l'allée, comme la signalétique d'une salle de spectacle (Futura, gris).</div></div></div><div class="row"><figure><img src="../../rendus/6-carte/numeros-2-dessus.png" width="620"></figure><figure><img src="../../rendus/6-carte/numeros-2-proche.png" width="620"></figure><div class="col" style="width:300px"><div class="lbl">2 · Plaque sur la table</div><div class="txt">Un petit disque de laiton gravé, posé au bord de la table (Didot). C'est aussi un objet pour le vrai lieu.</div></div></div><div class="row"><figure><img src="../../rendus/6-carte/numeros-3-dessus.png" width="620"></figure><figure><img src="../../rendus/6-carte/numeros-3-proche.png" width="620"></figure><div class="col" style="width:300px"><div class="lbl">3 · Étiquette</div><div class="txt">Une pastille noire au-dessus de la table, reliée par un fil fin : une légende de carte, toujours face à l'écran.</div></div></div><div class="row"><figure><img src="../../rendus/6-carte/numeros-4-dessus.png" width="620"></figure><figure><img src="../../rendus/6-carte/numeros-4-proche.png" width="620"></figure><div class="col" style="width:300px"><div class="lbl">4 · Repère d'architecte</div><div class="txt">Un cercle au trait et une courte attache vers la table : le langage des plans, dans le style de la carte.</div></div></div><div class="row"><figure><img src="../../rendus/6-carte/numeros-5-dessus.png" width="620"></figure><figure><img src="../../rendus/6-carte/numeros-5-proche.png" width="620"></figure><div class="col" style="width:300px"><div class="lbl">5 · Zones</div><div class="txt">Une lettre de zone et un numéro : T tambours, R rangée, S salle, F façade, D debout. Utile pour répartir le service.</div></div></div>
+</section>
+</div>
+<div class="colw">
+<section style="width:820px">
+  <div class="stitle">Pour les données : ce que je propose ensuite</div>
+  <ul class="list"><li><b>Les serveurs</b> : une couleur par serveur, sa zone sur la carte et sa charge (tables, couverts, alertes).</li><li><b>Placer un groupe</b> : on tape « 6 personnes », la carte éclaire les tables libres qui conviennent.</li><li><b>Les réservations</b> : la table se teinte 30 min avant, avec le nom et l'heure au survol, et une frise de la soirée.</li><li><b>La cuisine</b> : les plats en cours, table par table, triés par temps d'attente, sur un écran mural.</li><li><b>Assembler et séparer les tables</b> : la grande table en 6a, 6b, 6c, ou deux tables poussées l'une contre l'autre.</li><li><b>Rejouer le service</b> : une barre de temps pour revoir la soirée, les rotations et les temps morts.</li><li><b>Les seuils d'alerte</b> réglables, et des notes client sur la fiche (allergie, anniversaire).</li><li><b>Le chiffre par table</b>, si la caisse est reliée.</li></ul>
+</section>
+<section style="width:820px">
+  <div class="stitle">Questions</div>
+  <ol class="list"><li>Quel système d'états retenir ? Je propose A, le halo au sol, avec les minutes de D seulement pour les tables en alerte et pour la table choisie. C pourrait rester un mode « couverts » dans les réglages.</li><li>Les numéros restent cachés par défaut, comme tu l'as demandé. Si l'un des cinq dessins te plaît pour plus tard, je pencherais pour le 4 sur la carte, et le 2 comme objet du vrai lieu.</li><li>Parmi les idées pour les données, lesquelles veux-tu en premier ?</li><li>Ensuite, le 1er étage (la mezzanine du plan floor2), avec le même système et le changement d'étage. On y va ?</li></ol>
+</section>
+<section style="width:820px">
+  <div class="stitle">Références</div>
+  <div class="txt">Les états et les minuteurs des logiciels de salle (SevenRooms, Square, Toast, Oracle Simphony,
+  Infor), le sélecteur d'étages de Mapbox, les cartes 3D de salles et de stades (3D Digital Venue, StadiView) et les
+  numéros de table en laiton gravé. Les liens sont dans <code>recherche/12-carte-interactive/sources.md</code>.</div>
+</section>
+</div>
+</body></html>

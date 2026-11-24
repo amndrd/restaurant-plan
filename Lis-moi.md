@@ -8,7 +8,22 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (24/11/2026)
 
-**Étape 4 : le mobilier.** En attente de ta validation.
+**Étape 5 : la carte interactive.** En attente de tes choix.
+
+- **La carte** (`carte/`) est une application web en three.js. Pour l'ouvrir : double-clic sur `carte/ouvrir-la-carte.command`. Elle reprend le modèle de Blender exporté en glTF, avec les mêmes vues, le même soleil et les traits redessinés en direct.
+- **Ce qu'on y fait :**
+  - déplacer, tourner, incliner et zoomer, à la souris, au trackpad ou au doigt ;
+  - basculer entre la vue du haut et la vue 3D ;
+  - ouvrir la fiche d'une table : son état, les personnes, l'attente et la commande ;
+  - changer le style ;
+  - choisir l'étage (le 1er étage arrive ensuite).
+- **Le service est simulé** pour l'instant, avec des données provisoires.
+- **Quatre prototypes pour l'état des tables :** A halo au sol, B plateau, C places occupées, D minuteur.
+- **Cinq dessins de numéros :** cachés par défaut, à choisir dans les réglages.
+- **Les rendus :** les captures et la vidéo de manipulation sont dans `rendus/6-carte/`.
+- **La page :** `pages/5-carte-interactive.png`.
+
+**Étape 4 : le mobilier.** Validée : les hauteurs sont justes. La numérotation est gardée dans les données, mais pas affichée.
 
 - **Le mobilier** (`rendus/5-mobilier/`), placé d'après le plan :
   - 13 tables de service : 4 tables rondes dans les tambours, 2 dans la rangée, 3 dans la salle et 4 tables hautes le long de la façade droite ;
@@ -59,11 +74,14 @@ modele/         floor1-murs.json (les murs, poteaux et tambours lus sur le plan)
                 la carte en direct), floor1-coque.blend
 rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variantes blanches et la vidéo du passage),
                 4-elements-fixes/ (les éléments fixes, en fantôme, en fil de fer et en vues rapprochées),
-                5-mobilier/ (le mobilier, les numéros des tables)
+                5-mobilier/ (le mobilier, les numéros des tables), 6-carte/ (les captures et la vidéo de la carte)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
-                11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md)
+                11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
+                12-carte-interactive/sources.md (les références de la carte)
 outils/         les scripts (voir plus bas)
+carte/          la carte interactive : index.html, js/, css/, modele/ (le modèle en glTF), donnees/, vendor/three (three.js,
+                licence MIT), ouvrir-la-carte.command
 ```
 
 ## Les outils (`outils/`)
@@ -82,15 +100,17 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `save=<fichier.blend>` enregistre la scène ;
   - `variante=blanc|blanc-grille|fantome|transparent|fil-de-fer` rend une variante blanche dans les deux vues ; avec `transition=1 images=36`, il rend les images du passage entre les deux vues ;
   - `elements=1` ajoute les éléments fixes de l'étape 3 (pavés de verre, escalier détaillé, bar, banquettes, jardin, accueil, rideaux) ; avec `variante=detail plans=bar,banquette,escalier,facade,rideau`, il rend les vues rapprochées ;
-  - `mobilier=1` ajoute le mobilier de l'étape 4 et écrit `modele/floor1-tables.json` ; avec `variante=detail plans=salle,tabourets,tambour`, il rend les vues rapprochées.
+  - `mobilier=1` ajoute le mobilier de l'étape 4 et écrit `modele/floor1-tables.json` ; avec `variante=detail plans=salle,tabourets,tambour`, il rend les vues rapprochées ;
+  - `export=carte/modele/floor1-fantome.glb` (avec `variante=fantome mobilier=1`) ou `floor1-entier.glb` (avec `variante=fil-de-fer mobilier=1`) exporte le modèle de la carte. Chaque objet garde son rôle et le numéro de sa table. Il faut ensuite recopier `modele/floor1-tables.json` dans `carte/donnees/`.
 - **Numéroter les tables :** `numeros_tables.py` pose le numéro de chaque table sur la vue du haut en fantôme.
+- **La carte :** `carte_captures.mjs` sert la carte, fait toutes les captures de `rendus/6-carte/`, puis la vidéo (`node outils/carte_captures.mjs video` pour la vidéo seule). Les réglages passent aussi par l'adresse de la carte : `?vue=3d&style=fil-de-fer&systeme=C&numeros=4&heure=20:40&vitesse=0&fiche=6`.
 
   Le `.blend` n'est jamais enregistré à la main : c'est le script qui le refait.
 - **La recherche :**
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py` à `page_etape4.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py` à `page_etape5.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
