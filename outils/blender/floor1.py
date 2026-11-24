@@ -6,6 +6,9 @@
 #                                    [save=<file.blend>] [rendu=1] [out=<dossier>]
 #        blender -b -P floor1.py -- variante=blanc|blanc-grille|fantome|transparent|fil-de-fer [samples=96]
 #            (step 2: the white styles, each rendered in the two views of the map, top and 3D)
+#        blender -b -P floor1.py -- variante=fantome elements=1 [plans=bar,banquette,escalier,facade]
+#            (step 3: the fixed elements modelled from the photos: bar, booths, stair, glass blocks,
+#             rock garden, concierge desk, curtains; plans = close-ups in the solid white model)
 import bpy, bmesh, json, math, sys
 from pathlib import Path
 from mathutils import Vector
@@ -21,6 +24,7 @@ DATA = json.loads((RACINE / 'modele' / 'floor1-murs.json').read_text())
 PX = 1 / DATA['echelle_px_par_m']        # metres per plan pixel (120 px = 1 m, see analyse/)
 CX, CY = 837, 1230                       # plan pixel placed at the world origin
 H = 3.35                                 # ground floor storey height (floor to the mezzanine slab), from the section
+ELEMENTS = ARGS.get('elements') == '1'   # step 3: fixed elements (glass blocks, detailed stair, bar, booths...)
 
 
 def P(x, y, z=0.0):
@@ -30,7 +34,7 @@ def P(x, y, z=0.0):
 # ---------------------------------------------------------------- scene
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
-for c in ('Plan', 'Coque', 'Sols', 'Vitrages', 'Tambours', 'Escalier'):
+for c in ('Plan', 'Coque', 'Sols', 'Vitrages', 'Paves', 'Tambours', 'Escalier'):
     sc.collection.children.link(bpy.data.collections.new(c))
 
 
@@ -181,6 +185,14 @@ def build(cut, bas=0.0):
     build_coque(cut, top, bas)
 
 
+# the rock garden at the foot of the stair; with the detailed stair it goes round the core (r 42 px)
+GRAVIER_HAUT = [(855, 2040), (912, 2046), (960, 2060), (1003, 2078), (1040, 2100)]
+GRAVIER = GRAVIER_HAUT + [(1082, 2172), (1262, 2172), (1273, 2368), (855, 2368)]
+if ELEMENTS:
+    GRAVIER = GRAVIER_HAUT + [(1082 + 42 * math.cos(math.radians(a)), 2172 + 42 * math.sin(math.radians(a)))
+                              for a in range(240, -1, -15)] + [(1262, 2172), (1273, 2368), (855, 2368)]
+
+
 def build_sols():
 
     # ---- the plan on the ground (calibration image, 1 px = 1/120 m)
@@ -210,8 +222,7 @@ def build_sols():
     extrude_loops('sol', [sol], -0.05, 0.0, 'Sols', M_SOL_SOMBRE)
     extrude_loops('sol-clair', [[(231, 728), (857, 728), (857, 1894), (604, 1894), (604, 2275), (231, 2275)]],
                   0.0, 0.004, 'Sols', M_SOL_CLAIR)
-    extrude_loops('gravier', [[(855, 2040), (960, 2060), (1040, 2100), (1082, 2172), (1262, 2172), (1273, 2368),
-                               (855, 2368)]], 0.0, 0.03, 'Sols', M_GRAVIER)
+    extrude_loops('gravier', [GRAVIER], 0.0, 0.03, 'Sols', M_GRAVIER)
 
 
 def build_coque(cut, top, bas):
@@ -229,10 +240,17 @@ def build_coque(cut, top, bas):
     # ---- glazed facades: glass + black frame, mullions about every 1.2 m
     def facade(name, x, y0, y1, x_ep=3.0):
         n = max(1, round((y1 - y0) * PX / 1.2))
-        box(name + '-verre', x - 1.2, y0, x + 1.2, y1, bas, top, 'Vitrages', M_VERRE)
+        if ELEMENTS and bas == 0.0:             # glass blocks (photos 2, 8, 9, 37) in deeper steel frames;
+            x_ep = 5.0                          # above the map cut (bas > 0) a plain see-through pane is lighter
+            paves(name, 'y', x, [(y0 + (y1 - y0) * k / n + 3, y0 + (y1 - y0) * (k + 1) / n - 3) for k in range(n)],
+                  bas, top)
+        else:
+            box(name + '-verre', x - 1.2, y0, x + 1.2, y1, bas, top, 'Vitrages', M_VERRE)
+        m_bas = max(bas, 0.06) if ELEMENTS else bas
+        m_top = top - 0.08 if (ELEMENTS and cut is None) else top
         for k in range(n + 1):
             y = y0 + (y1 - y0) * k / n
-            box(f'{name}-montant-{k}', x - x_ep, y - 3, x + x_ep, y + 3, bas, top, 'Vitrages', M_CADRE)
+            box(f'{name}-montant-{k}', x - x_ep, y - 3, x + x_ep, y + 3, m_bas, m_top, 'Vitrages', M_CADRE)
         if bas == 0.0:
             box(name + '-seuil', x - x_ep, y0, x + x_ep, y1, 0.0, 0.06, 'Vitrages', M_CADRE)
         if cut is None:
@@ -244,7 +262,10 @@ def build_coque(cut, top, bas):
     facade('facade-droite', 1452, 870, 1450)
     facade('facade-droite-b', 1452, 1583, 2230)
     facade('facade-droite-haut', 1452, 737, 740)
-    box('entree-verre', 1068, 2404, 1308, 2409, bas, top, 'Vitrages', M_VERRE)
+    if ELEMENTS and bas == 0.0:
+        paves('entree', 'x', 2406.5, [(1068 + 3, 1308 - 3)], bas, top)
+    else:
+        box('entree-verre', 1068, 2404, 1308, 2409, bas, top, 'Vitrages', M_VERRE)
     if bas == 0.0:
         box('entree-cadre', 1068, 2402, 1308, 2411, 0.0, 0.06, 'Vitrages', M_CADRE)
 
@@ -271,7 +292,7 @@ def build_coque(cut, top, bas):
     cx, cy, r0, r1 = 1082, 2172, 40, 180
     n, step_a, rise = 19, 21.0, H / 19
     a = -55.5
-    for k in range(n - 1):
+    for k in range(0 if ELEMENTS else n - 1):  # step 3: replaced by the detailed stair (escalier_detail)
         z = rise * (k + 1)
         if z - rise > top:
             break
@@ -279,8 +300,9 @@ def build_coque(cut, top, bas):
             continue
         ring(f'marche-{k:02d}', cx, cy, r1, r0, a + k * step_a, a + (k + 1) * step_a + 1.5, z - 0.05, z, 'Escalier',
              M_MARCHE, seg=120)
-    helix_band('limon', cx, cy, r1 + 5, r1, a, a + (n - 1) * step_a, rise / step_a, top, bas=bas)
-    cylinder('fut', cx, cy, r0, bas, min(H, top), 'Escalier', M_MARCHE)
+    if not ELEMENTS:
+        helix_band('limon', cx, cy, r1 + 5, r1, a, a + (n - 1) * step_a, rise / step_a, top, bas=bas)
+        cylinder('fut', cx, cy, r0, bas, min(H, top), 'Escalier', M_MARCHE)
 
     # curves -> meshes (cleaner for the later line styles)
     for o in list(bpy.data.objects):
@@ -289,6 +311,364 @@ def build_coque(cut, top, bas):
     bpy.context.view_layer.objects.active = next((o for o in bpy.data.objects if o.type == 'CURVE'), None)
     if bpy.context.view_layer.objects.active:
         bpy.ops.object.convert(target='MESH')
+
+
+
+# ---------------------------------------------------------------- step 3: the fixed elements, from the photos
+# Built at full height as closed meshes (world metres, identity transforms); the map styles cut them afterwards
+# at the plan height (separer): the solid part below, the see-through part above.
+M_BANQUETTE = mat('banquette', (0.11, 0.10, 0.09), 0.6)
+M_PIERRE = mat('pierre', (0.20, 0.19, 0.18), 0.95)
+M_COMPTOIR = mat('comptoir', (0.05, 0.05, 0.05), 0.3)
+M_MEUBLE = mat('meuble', (0.09, 0.085, 0.08), 0.5)
+M_PAVE = mat('pave', (0.80, 0.84, 0.85), 0.15, transmission=0.9)
+M_MIROIR = mat('miroir', (0.92, 0.92, 0.92), 0.05)
+M_ROCHER = mat('rocher', (0.24, 0.24, 0.23), 0.9)
+M_RIDEAU = mat('rideau', (0.07, 0.07, 0.07), 0.8)
+M_BORDURE = mat('bordure', (0.10, 0.10, 0.10), 0.5)
+
+
+def relief(m, scale, strength):
+    """Bump from a noise texture in object space (rough stone, gravel)."""
+    nt = m.node_tree
+    b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED')
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    nz = nt.nodes.new('ShaderNodeTexNoise')
+    nz.inputs['Scale'].default_value = scale
+    nz.inputs['Detail'].default_value = 6
+    nt.links.new(tc.outputs['Object'], nz.inputs['Vector'])
+    bu = nt.nodes.new('ShaderNodeBump')
+    bu.inputs['Strength'].default_value = strength
+    nt.links.new(nz.outputs['Fac'], bu.inputs['Height'])
+    nt.links.new(bu.outputs['Normal'], b.inputs['Normal'])
+
+
+if ELEMENTS:
+    relief(M_PIERRE, 18, 0.7)                   # the lava stone band of the booths (photos 17, 23)
+    relief(M_GRAVIER, 90, 0.45)
+
+
+def mesh_obj(name, bm, collection, material):
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me); bm.free()
+    return obj(name, me, collection, material)
+
+
+def bm_box(bm, x0, y0, x1, y1, z0, z1):
+    """Box given by two plan corners (px) and two heights (m)."""
+    a, b = P(x0, y0), P(x1, y1)
+    X0, X1, Y0, Y1 = min(a.x, b.x), max(a.x, b.x), min(a.y, b.y), max(a.y, b.y)
+    vs = [bm.verts.new((x, y, z)) for z in (z0, z1) for y in (Y0, Y1) for x in (X0, X1)]
+    for f in ((0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)):
+        bm.faces.new([vs[i] for i in f])
+
+
+def prisme(bm, pts, z0, z1):
+    """Vertical prism on a plan polygon (px)."""
+    lo = [bm.verts.new(P(x, y, z0)) for x, y in pts]
+    hi = [bm.verts.new(P(x, y, z1)) for x, y in pts]
+    bm.faces.new(list(reversed(lo))); bm.faces.new(hi)
+    for k in range(len(pts)):
+        j = (k + 1) % len(pts)
+        bm.faces.new((lo[k], lo[j], hi[j], hi[k]))
+
+
+def blocs(bm, axe, d0, d1, u0, u1, z0, z1, pas_u=0.2, pas_z=0.2, bas=0.0, top=99.0, joint=0.012):
+    """A grid of glass blocks: axe 'y' = wall plane x in [d0, d1] running along y in [u0, u1] (px),
+    axe 'x' = wall plane y in [d0, d1] running along x. Heights z0 - z1, blocks clipped to [bas, top]."""
+    cols = max(1, round((u1 - u0) * PX / pas_u)); pu = (u1 - u0) / cols
+    rows = max(1, round((z1 - z0) / pas_z)); pz = (z1 - z0) / rows
+    j = joint / 2
+    for i in range(cols):
+        a, b = u0 + i * pu + j / PX, u0 + (i + 1) * pu - j / PX
+        for r in range(rows):
+            za, zb = max(z0 + r * pz + j, bas), min(z0 + (r + 1) * pz - j, top)
+            if zb - za < 0.004:
+                continue
+            if axe == 'y':
+                bm_box(bm, d0, a, d1, b, za, zb)
+            else:
+                bm_box(bm, a, d0, b, d1, za, zb)
+
+
+def paves(name, axe, c, travees, bas, top, ep=4.0):
+    """Glass block facade panels between the mullions (photos 2, 8, 9, 37): blocks of about 0.2 m,
+    from the sill (0.06 m) to the head of the frame (H - 0.08), clipped to [bas, top]."""
+    bm = bmesh.new()
+    for u0, u1 in travees:
+        if u1 - u0 > 6:
+            blocs(bm, axe, c - ep, c + ep, u0, u1, 0.06, H - 0.08, bas=bas, top=top)
+    if len(bm.verts):
+        return mesh_obj(name + '-paves', bm, 'Paves', M_PAVE)
+    bm.free()
+
+
+def sweep(name, path, profil, collection, material, ref=None):
+    """A closed profile [(d, z, smooth)] swept along a path of world points: d is the offset along the path's
+    normal, which points towards `ref` when given. smooth applies to the face from that point to the next."""
+    bm = bmesh.new()
+    n = len(path)
+    rings = []
+    for i, p in enumerate(path):
+        a_, b_ = path[max(i - 1, 0)], path[min(i + 1, n - 1)]
+        t = Vector((b_.x - a_.x, b_.y - a_.y, 0)).normalized()
+        nn = Vector((-t.y, t.x, 0))
+        if ref is not None and nn.dot(Vector((ref.x - p.x, ref.y - p.y, 0))) < 0:
+            nn = -nn
+        rings.append([bm.verts.new((p.x + nn.x * d, p.y + nn.y * d, z)) for d, z, _ in profil])
+    m = len(profil)
+    for i in range(n - 1):
+        A, B = rings[i], rings[i + 1]
+        for j in range(m):
+            k = (j + 1) % m
+            bm.faces.new((A[j], B[j], B[k], A[k])).smooth = profil[j][2]
+    bm.faces.new(rings[0]); bm.faces.new(list(reversed(rings[-1])))
+    return mesh_obj(name, bm, collection, material)
+
+
+def arrondi(cx_, cz, rd, rz, a0, a1, seg, lisse=True):
+    return [(cx_ + rd * math.cos(math.radians(a0 + (a1 - a0) * k / seg)),
+             cz + rz * math.sin(math.radians(a0 + (a1 - a0) * k / seg)), lisse) for k in range(seg + 1)]
+
+
+# ---- the bar (photos 6, 11, 25; plan zone 5): a counter 6.5 m long, the customer top at 1.08 m over a front of
+#      ribbed glass cells, the bartender's working shelf at 0.90 m behind; the back bar against the toilets block:
+#      two tall units, the base cabinet, two lit display steps for the decanters, a band of glass cells, a canopy
+def bar():
+    bm = bmesh.new()
+    bm_box(bm, 420, 630, 1183, 730, 0.0, 0.10)          # recessed plinth
+    bm_box(bm, 413, 623, 1190, 737, 0.10, 0.86)         # body
+    bm_box(bm, 413, 683, 1190, 737, 0.86, 1.03)         # upstand under the customer top
+    mesh_obj('bar-corps', bm, 'Bar', M_MEUBLE)
+    bm = bmesh.new()
+    bm_box(bm, 413, 623, 1190, 683, 0.86, 0.90)         # bartender's working shelf (the light band of the plan)
+    bm_box(bm, 409, 680, 1194, 752, 1.03, 1.08)         # customer top (the dark band of the plan)
+    mesh_obj('bar-plateaux', bm, 'Bar', M_COMPTOIR)
+    bm = bmesh.new()
+    blocs(bm, 'x', 737.5, 745, 413, 1190, 0.10, 1.02, pas_u=0.2, pas_z=0.23)
+    mesh_obj('bar-facade-verre', bm, 'Paves', M_PAVE)
+    # back bar
+    bm = bmesh.new()
+    bm_box(bm, 565, 422, 625, 488, 0.0, 2.196)          # tall units at both ends
+    bm_box(bm, 1110, 422, 1170, 488, 0.0, 2.196)
+    bm_box(bm, 627, 426, 1108, 482, 0.0, 0.10)          # plinth
+    bm_box(bm, 625.5, 422, 1109.5, 488, 0.10, 0.86)     # base cabinet
+    bm_box(bm, 625.5, 422, 1109.5, 425, 0.90, 2.196)    # back panel
+    bm_box(bm, 640, 425, 1095, 470, 0.90, 1.02)         # display steps (lit, photo 25)
+    bm_box(bm, 640, 425, 1095, 448, 1.02, 1.18)
+    bm_box(bm, 565, 422, 1170, 500, 2.20, 2.42)         # canopy with the lights
+    mesh_obj('arriere-bar', bm, 'Bar', M_MEUBLE)
+    bm = bmesh.new()
+    bm_box(bm, 625.5, 422, 1109.5, 490, 0.86, 0.90)     # worktop
+    mesh_obj('arriere-bar-plan', bm, 'Bar', M_COMPTOIR)
+    bm = bmesh.new()
+    blocs(bm, 'x', 425, 431, 640, 1095, 1.30, 1.74, pas_u=0.2, pas_z=0.22)   # band of glass cells
+    mesh_obj('arriere-bar-cases', bm, 'Paves', M_PAVE)
+
+
+# ---- the booths (photos 17, 20, 23, 24, 26): in each drum a U banquette along the shell, a plinth, the seat
+#      cushion with a rounded front, three rolls for the back; above it a band of rough lava stone
+def chemin_u(cx, cy, r, x_bout, seg=48):
+    pts = [P(x_bout, cy - r)]
+    for k in range(seg + 1):
+        a = math.radians(270 - 180 * k / seg)
+        pts.append(P(cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts + [P(x_bout, cy + r)]
+
+
+def banquettes():
+    base = [(0.005, 0.0, False), (0.50, 0.0, False), (0.50, 0.08, False), (0.56, 0.08, False), (0.56, 0.40, False),
+            (0.09, 0.40, False), (0.09, 0.98, False), (0.005, 0.98, False)]
+    coussin = [(0.09, 0.401, False), (0.56, 0.401, True)] + arrondi(0.56, 0.441, 0.04, 0.04, -90, 90, 8)[1:-1] + \
+              [(0.56, 0.481, False), (0.09, 0.481, False)]
+    for t in DATA['tambours']:
+        cx, cy, k = t['cx'], t['cy'], t['id']
+        ch = chemin_u(cx, cy, 131, 440)
+        c = P(cx, cy)
+        sweep(f'banquette-{k}-assise', ch, base, 'Banquettes', M_BANQUETTE, ref=c)
+        sweep(f'banquette-{k}-coussin', ch, coussin, 'Banquettes', M_BANQUETTE, ref=c)
+        for i, z in enumerate((0.56, 0.715, 0.87)):
+            sweep(f'banquette-{k}-boudin-{i}', ch, arrondi(0.168, z, 0.07, 0.075, 0, 360, 20)[:-1],
+                  'Banquettes', M_BANQUETTE, ref=c)
+        sweep(f'banquette-{k}-pierre', ch, [(0.005, 1.0, False), (0.04, 1.0, False), (0.04, 1.46, False),
+                                            (0.005, 1.46, False)], 'Banquettes', M_PIERRE, ref=c)
+
+
+# ---- the spiral stair (photos 2, 3, 4, 28, 30): solid steps with closed risers and a helical soffit, a solid
+#      parapet on the outer edge, and around the core the twisted mirror sculpture
+def escalier_detail():
+    cx, cy, r0, r1 = 1082, 2172, 40, 179.5
+    n, pas_a, rise, a0, T, m = 19, 21.0, H / 19, -55.5, 0.30, 6
+    rr = [r0 + (r1 - r0) * i / 6 for i in range(7)]    # the soffit is split radially: a twisted surface, kept smooth
+
+    def V(r, a, z):
+        return P(cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a)), z)
+
+    def nez(a):                                 # nosing line
+        return rise * ((a - a0) / pas_a + 1)
+
+    def zs(a):                                  # soffit
+        return max(0.0, nez(a) - T)
+
+    bm = bmesh.new()
+    last = None
+    for k in range(n - 1):
+        zt = rise * (k + 1)
+        for j in range(m + 1):
+            a = a0 + pas_a * (k + j / m)
+            if j == 0 and last is not None:     # riser: shares the bottom, the previous top becomes the middle
+                c = dict(B=last['B'], M=last['T'], T=(bm.verts.new(V(r0, a, zt)), bm.verts.new(V(r1, a, zt))))
+                bm.faces.new((c['M'][0], c['M'][1], c['T'][1], c['T'][0]))
+            else:
+                zb = zs(a)
+                c = dict(B=[bm.verts.new(V(r, a, zb)) for r in rr], M=None,
+                         T=(bm.verts.new(V(r0, a, zt)), bm.verts.new(V(r1, a, zt))))
+                if last is None:
+                    bm.faces.new(c['B'] + [c['T'][1], c['T'][0]])
+                else:
+                    for s, b_ in ((0, 0), (1, -1)):     # inner and outer sides
+                        f = [last['B'][b_], c['B'][b_], c['T'][s], last['T'][s]] + ([last['M'][s]] if last['M'] else [])
+                        bm.faces.new(f).smooth = True
+                    bm.faces.new((last['T'][0], c['T'][0], c['T'][1], last['T'][1]))
+                    for i in range(len(rr) - 1):
+                        bm.faces.new((last['B'][i], last['B'][i + 1], c['B'][i + 1], c['B'][i])).smooth = True
+            last = c
+    bm.faces.new(last['B'] + [last['T'][1], last['T'][0]])
+    mesh_obj('escalier-marches', bm, 'Escalier', M_MARCHE)
+
+    # parapet: a band 5 px thick from the soffit to 0.90 m over the nosings, stopped at the mezzanine floor
+    bm = bmesh.new()
+    a_fin, seg = a0 + pas_a * (n - 1), 180
+    rows = []
+    for i in range(seg + 1):
+        a = a0 + (a_fin - a0) * i / seg
+        zb, zt = zs(a), min(nez(a) + 0.90, H)
+        rows.append([bm.verts.new(V(r, a, z)) for r, z in ((r1 + 0.5, zb), (r1 + 0.5, zt), (r1 + 5.5, zt), (r1 + 5.5, zb))])
+    for i in range(seg):
+        A, B = rows[i], rows[i + 1]
+        for q in range(4):
+            w = (q + 1) % 4
+            bm.faces.new((A[q], B[q], B[w], A[w])).smooth = q in (0, 2)
+    bm.faces.new(rows[0]); bm.faces.new(list(reversed(rows[-1])))
+    mesh_obj('escalier-garde-corps', bm, 'Escalier', M_MARCHE)
+
+    # the mirror sculpture: a twisted column inside the treads (r 23 - 37 px, the treads start at 40)
+    bm = bmesh.new()
+    sa, sz = 72, 64
+    grid = []
+    for iz in range(sz + 1):
+        z = H * iz / sz
+        grid.append([bm.verts.new(V(30 + 7 * math.sin(2 * a + 2.4 * z + 0.9 * math.sin(3 * a - 1.3 * z)),
+                                    math.degrees(a), z)) for a in (2 * math.pi * ia / sa for ia in range(sa))])
+    for iz in range(sz):
+        for ia in range(sa):
+            ja = (ia + 1) % sa
+            bm.faces.new((grid[iz][ia], grid[iz][ja], grid[iz + 1][ja], grid[iz + 1][ia])).smooth = True
+    bm.faces.new(list(reversed(grid[0]))); bm.faces.new(grid[-1])
+    mesh_obj('sculpture-miroir', bm, 'Escalier', M_MIROIR)
+
+
+# ---- the rock garden (photos 4, 7, 30): a low curb round the gravel, a tall crystal-like rock and smaller stones
+def rocher(name, x, y, sx, sy, sz, seed, subdiv=2):
+    import random
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=1.0)
+    for v in bm.verts:                          # cut facets: the fine ones get a rougher noise
+        v.co *= 1 + rnd.uniform(-0.22, 0.22) * (1.0 if subdiv == 1 else 1.5)
+        v.co.z = max(v.co.z, -0.45)             # a flat base, laid on the gravel
+    zmin = min(v.co.z for v in bm.verts); zmax = max(v.co.z for v in bm.verts)
+    rot = rnd.uniform(0, math.tau)
+    c, s_ = math.cos(rot), math.sin(rot)
+    o_ = P(x, y)
+    for v in bm.verts:
+        px_, py_ = v.co.x * sx / 2, v.co.y * sy / 2
+        v.co = Vector((o_.x + c * px_ - s_ * py_, o_.y + s_ * px_ + c * py_, 0.03 + (v.co.z - zmin) / (zmax - zmin) * sz))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    return mesh_obj(name, bm, 'Jardin', M_ROCHER)
+
+
+def jardin():
+    bord = [P(1273, 2368), P(855, 2368), P(855, 2040)] + [P(x, y) for x, y in GRAVIER_HAUT[1:]]
+    sweep('bordure', bord, [(-0.05, 0.0, False), (-0.002, 0.0, False), (-0.002, 0.10, False), (-0.05, 0.10, False)],
+          'Jardin', M_BORDURE, ref=P(1000, 2300))
+    for k, (x, y, sx, sy, sz, sub) in enumerate((
+            (900, 2290, 0.55, 0.42, 0.85, 1), (935, 2335, 0.45, 0.38, 0.34, 2), (884, 2338, 0.24, 0.2, 0.17, 1),
+            (922, 2088, 0.42, 0.34, 0.52, 1), (1232, 2338, 0.34, 0.3, 0.28, 2), (1196, 2352, 0.2, 0.17, 0.14, 1),
+            (880, 2152, 0.22, 0.2, 0.16, 2), (960, 2250, 0.18, 0.15, 0.12, 1))):
+        rocher(f'rocher-{k}', x, y, sx, sy, sz, seed=k + 3, subdiv=sub)
+
+
+# ---- the entry (plan zones 1, 2): the concierge desk and a console with a rounded corner
+def accueil():
+    bm = bmesh.new()
+    bm_box(bm, 618, 2051, 716, 2089, 0.0, 0.08)
+    bm_box(bm, 613, 2046, 721, 2094, 0.08, 1.01)
+    bm_box(bm, 611, 2044, 723, 2096, 1.01, 1.05)
+    prisme(bm, [(611, 1908), (722, 1908)] + [(702 + 20 * math.cos(math.radians(a)), 1955 + 20 * math.sin(math.radians(a)))
+                                             for a in range(0, 91, 10)] + [(611, 1975)], 0.0, 0.90)
+    mesh_obj('accueil', bm, 'Accueil', M_MEUBLE)
+
+
+# ---- curtains (the wavy lines of the plan, photos 4, 30): from the floor to the mezzanine slab
+def rideau(name, p0, p1, amp=6.0, onde=0.16):
+    a, b = Vector(p0), Vector(p1)
+    L = (b - a).length * PX
+    t = (b - a).normalized(); nrm = Vector((-t.y, t.x))
+    k_ = max(8, int(L / onde * 8))
+    path = [P(*(a + (b - a) * (i / k_) + nrm * amp * math.sin(2 * math.pi * (i / k_) * L / onde))) for i in range(k_ + 1)]
+    sweep(name, path, [(-0.006, 0.02, False), (0.006, 0.02, True), (0.006, H - 0.06, False), (-0.006, H - 0.06, True)],
+          'Rideaux', M_RIDEAU)
+
+
+def rideaux():
+    rideau('rideau-accueil-a', (840, 2012), (840, 2100))
+    rideau('rideau-accueil-b', (840, 2255), (840, 2348))
+    rideau('rideau-salle', (455, 1878), (600, 1878))
+
+
+def build_elements():
+    """Step 3: the fixed elements, at full height. Returns the new objects."""
+    for c in ('Bar', 'Banquettes', 'Accueil', 'Rideaux', 'Jardin'):
+        if c not in bpy.data.collections:
+            sc.collection.children.link(bpy.data.collections.new(c))
+    avant = set(bpy.data.objects)
+    bar(); banquettes(); escalier_detail(); jardin(); accueil(); rideaux()
+    return [o for o in bpy.data.objects if o not in avant]
+
+
+def couper(o, z, garder):
+    """Bisect a closed mesh at height z, keep 'bas' or 'haut', and close the cut."""
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], dist=1e-6, plane_co=(0, 0, z),
+                           plane_no=(0, 0, 1), clear_outer=garder == 'bas', clear_inner=garder == 'haut')
+    bord = [e for e in bm.edges if e.is_boundary]
+    if bord:
+        for f in bmesh.ops.holes_fill(bm, edges=bord, sides=0)['faces']:
+            f.smooth = False
+    bm.to_mesh(o.data); bm.free()
+
+
+def separer(objs, cut, m_ghost=None):
+    """The map cut: below `cut` the element stays solid; above, a see-through copy (m_ghost) or nothing."""
+    for o in objs:
+        zz = [v.co.z for v in o.data.vertices]
+        if max(zz) <= cut:
+            continue
+        if m_ghost is not None:
+            g = o.copy(); g.data = o.data.copy(); g.name = o.name + '-fantome'
+            coll('Fantome').objects.link(g)
+            if any(c.name == 'Paves' for c in o.users_collection):
+                coll('Paves').objects.link(g)   # keeps the light block lines
+            if min(zz) < cut:
+                couper(g, cut + 0.004, 'haut')
+            g.data.materials.clear(); g.data.materials.append(m_ghost)
+            g.visible_shadow = False
+        if min(zz) >= cut:
+            bpy.data.objects.remove(o)
+        else:
+            couper(o, cut, 'bas')
 
 
 # ---------------------------------------------------------------- light, render
@@ -486,6 +866,15 @@ VARIANTES = {
     'fantome':      dict(cut=1.2,  grid=True,  alpha=1.0,  ghost=True,  hidden=(0.72,) * 3),
     'transparent':  dict(cut=None, grid=True,  alpha=0.42, ghost=False, hidden=(0.66,) * 3),
     'fil-de-fer':   dict(cut=None, grid=True,  alpha=0.03, ghost=False, hidden=(0.62,) * 3),
+    'detail':       dict(cut=None, grid=True,  alpha=1.0,  ghost=False, hidden=None),   # step 3 close-ups
+}
+
+# step 3 close-ups, each framed like a photo of the real place: camera (plan px, z), target (plan px, z), lens
+PLANS = {
+    'bar':       ((790, 1330, 1.55), (800, 560, 1.10), 32),    # photo 25
+    'banquette': ((690, 1313, 1.15), (410, 1313, 0.92), 26),   # photo 17, drum 2
+    'escalier':  ((1000, 1830, 1.55), (1040, 2210, 0.95), 24),  # photo 4
+    'facade':    ((930, 1250, 1.50), (1452, 1050, 1.30), 26),   # photos 8, 9
 }
 
 
@@ -560,11 +949,18 @@ def freestyle_lines(visible, hidden, thickness=1.0):
     sets = [('visibles', 'VISIBLE', visible, 1.15 * thickness)]
     if hidden:
         sets.append(('cachees', 'HIDDEN', hidden, 0.75 * thickness))
+    paves_ = 'Paves' in bpy.data.collections and len(bpy.data.collections['Paves'].all_objects) > 0
+    if paves_:                                  # glass blocks: thin light lines, so the grids don't fill the map
+        sets.append(('paves', 'VISIBLE', tuple(min(1.0, c_ + 0.30) for c_ in visible), 0.6 * thickness))
     for k, (nom, vis, col, ep) in enumerate(sets):
         ls = fs.linesets[k] if len(fs.linesets) > k else fs.linesets.new(nom)
         ls.select_by_visibility = True
         ls.visibility = vis
         ls.select_silhouette = ls.select_border = ls.select_crease = True
+        if paves_:
+            ls.select_by_collection = True
+            ls.collection = bpy.data.collections['Paves']
+            ls.collection_negation = 'INCLUSIVE' if nom == 'paves' else 'EXCLUSIVE'
         ls.linestyle = bpy.data.linestyles.new(nom)
         ls.linestyle.color = col
         ls.linestyle.thickness = ep
@@ -574,20 +970,24 @@ if ARGS.get('variante'):
     nom = ARGS['variante']
     V = VARIANTES[nom]
     num = list(VARIANTES).index(nom) + 1
-    OUT = Path(ARGS.get('out', RACINE / 'rendus' / '3-styles-blancs'))
+    OUT = Path(ARGS.get('out', RACINE / 'rendus' / ('4-elements-fixes' if ELEMENTS else '3-styles-blancs')))
     sc.collection.children.link(bpy.data.collections.new('Fantome'))
+    m_ghost = mat('fantome', (0.98, 0.98, 0.98), 0.6, alpha=0.16)
 
     build(V['cut'])
     if V['ghost']:                              # the walls above the cut, see-through
         avant = set(bpy.data.objects)
         build(None, bas=V['cut'] + 0.004)     # 4 mm gap: no face shared with the top of the solid walls
-        m_ghost = mat('fantome', (0.98, 0.98, 0.98), 0.6, alpha=0.16)
         for o in set(bpy.data.objects) - avant:
             for c in o.users_collection:
                 c.objects.unlink(o)
             coll('Fantome').objects.link(o)
             o.data.materials.clear(); o.data.materials.append(m_ghost)
             o.visible_shadow = False            # only the solid walls cast shadows: no grey smudges seen from above
+    if ELEMENTS:                                # the fixed elements, cut like the walls
+        nouveaux = build_elements()
+        if V['cut'] is not None:
+            separer(nouveaux, V['cut'], m_ghost if V['ghost'] else None)
 
     # materials: white, the floors a touch warmer than the walls, the ground a light grey
     a = V['alpha']
@@ -597,6 +997,13 @@ if ARGS.get('variante'):
     set_mat('cadre', (0.80,) * 3, 0.6, max(a, 0.25) if a < 1 else 1.0)
     set_mat('verre', (0.97, 0.98, 0.99), 0.3, 0.16 if a == 1.0 else min(a, 0.16))
     set_mat('gravier', (0.88, 0.875, 0.865), 0.95)
+    if ELEMENTS:
+        for name, rgb, rough in (('banquette', (0.955, 0.95, 0.94), 0.8), ('pierre', (0.915, 0.91, 0.90), 0.95),
+                                 ('comptoir', (0.935,) * 3, 0.5), ('meuble', (0.96,) * 3, 0.85),
+                                 ('miroir', (0.975,) * 3, 0.2), ('rocher', (0.905, 0.90, 0.89), 0.95),
+                                 ('rideau', (0.975, 0.972, 0.965), 0.9), ('bordure', (0.93,) * 3, 0.8)):
+            set_mat(name, rgb, rough, a)
+        set_mat('pave', (0.95, 0.97, 0.98), 0.25, 0.55 if a == 1.0 else min(a, 0.3))
     o_c = P(837, 1278)
     if V['grid']:
         m_int = mat_grille('sol-grille', (0.975, 0.972, 0.965), (0.80, 0.80, 0.80), 0.35, 0.55, o_c)
@@ -620,6 +1027,9 @@ if ARGS.get('variante'):
     sun.data.angle = math.radians(25)
     sc.cycles.transparent_max_bounces = 24
     freestyle_lines((0.30, 0.30, 0.30), V['hidden'], 1.25 if nom == 'fil-de-fer' else 1.0)
+    if ELEMENTS and a < 0.1:                    # a line drawing: the stacked panes must not cast grey shadows
+        for o in bpy.data.objects:
+            o.visible_shadow = False
     show(collections_hidden=('Plan',))
 
     # one sun fixed in the world for both views, as in the live map: high, from the left of the 3D camera
@@ -652,6 +1062,13 @@ if ARGS.get('variante'):
             sc.render.filepath = str(dossier / f'{k:03d}.png')
             bpy.ops.render.render(write_still=True)
             print('image', k)
+    elif ARGS.get('plans'):
+        for pl in ARGS['plans'].split(','):
+            (x0, y0, z0), (x1, y1, z1), lens = PLANS[pl]
+            render(f'plan-{pl}', camera(f'cam-{pl}', P(x0, y0, z0), P(x1, y1, z1), lens=lens), (1500, 1000))
+    elif ELEMENTS:
+        render(f'{nom}-dessus', cam_top, (2000, 1250))
+        render(f'{nom}-3d', cam_3d, (2000, 1250))
     else:
         render(f'{num}-{nom}-dessus', cam_top, (2000, 1250))
         render(f'{num}-{nom}-3d', cam_3d, (2000, 1250))
