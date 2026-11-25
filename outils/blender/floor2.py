@@ -17,6 +17,11 @@
 #            (the ivy on the island over the entry, where the block was, and the joined parapets, close up)
 #        blender -b -P floor2.py -- variante=fantome|fil-de-fer|detail mobilier=1 [plans=...]
 #            (step 3, the furniture, as floor1's step 4; also writes modele/floor2-tables.json)
+#        blender -b -P floor2.py -- variante=fantome|fil-de-fer mobilier=1 export=carte/modele/floor2-<x>.glb
+#                                   [dessous=carte/modele/floor1-sous-dalle.glb]
+#            (the model of the interactive map, and the ground floor under the slab as the map sets it under it)
+# Since 25/11 the two storeys are one building: the slab runs out under the outer walls of both, the ground floor
+# (floor1's whole model) stands under it in the same materials and lines, the columns go on up.
 import bpy, bmesh, json, math, random, sys
 from pathlib import Path
 from mathutils import Matrix, Vector
@@ -209,15 +214,15 @@ SOL = [(384, 140), (1457, 140), (1457, 2245), (1286, 2245), (1286, 2213), (861, 
        (576, 2276), (601, 2276), (601, 2245), (232, 2245), (232, 842), (384, 842)]          # with the island over the entry, where the block was
 # the void over the room: along the ledge (y 1172), round the corner, down the right side to the stair, whose opening
 # it meets (25/11: no more strip of slab between the void and the stair, so one parapet instead of two side by side)
-VIDE = [(237, 1172), (1012, 1172)] + arc(1012, 1242, 70, -90, 0, 12)[1:] + [(1082, 1986)] + \
-    arc(1082, 2172, 186, -90, -136, 16)[1:] + [(861, 2046), (861, 1896), (601, 1896), (601, 2250), (237, 2250)]
+VIDE = [(237, 1172), (1012, 1172)] + arc(1012, 1242, 70, -90, 0, 12)[1:] + [(1082, 1984)] + \
+    arc(1082, 2172, 188, -90, -136, 16)[1:] + [(861, 2046), (861, 1896), (601, 1896), (601, 2250), (237, 2250)]
 # the void over the rock garden (the gravel seen from above on floor2.png)
 JARDIN = [(861, 2040), (1057, 2040), (1057, 2126), (1238, 2126)] + arc(1238, 2187, 61, -90, 0, 10)[1:] + \
     [(1299, 2370), (861, 2370)]
-HX, HY, R_ESC = 1082, 2172, 184          # the spiral stair (floor1.py: hub, treads to r 180) and its opening
+HX, HY, R_ESC = 1082, 2172, 186          # the spiral stair (floor1.py: hub, treads to r 180, its rail to 185) and its opening
 ESCALIER_HAUT = (485, 140, 852, 247)     # the stair up to the roof floor, rising towards +x from x 572
 # the parapet, one line on the slab edge: round the corner of the void, down its right side, then on round the
-# stair's opening (r 188) to the stair's arrival (-40 deg); past the arrival, along the rock garden's opening to the
+# stair's opening (r 190) to the stair's arrival (-40 deg); past the arrival, along the rock garden's opening to the
 # wall 1064. Along the room side, the ledge (step 2) or, on the shell alone, the glass carries on to the lab.
 R_GC = R_ESC + 4
 A_GC = -math.degrees(math.acos(1.5 / R_GC))                  # where the ring meets the void's right side (x 1083.5)
@@ -225,6 +230,24 @@ GARDE_CORPS = arc(1012, 1242, 71.5, -90, 0, 32) + arc(HX, HY, R_GC, A_GC, -40, 3
 _jardin = [p_ for p_ in arc(1238, 2187, 62.5, -90, 0, 30) if math.hypot(p_[0] - HX, p_[1] - HY) >= R_GC]
 GARDE_CORPS_JARDIN = [(HX + R_GC * math.cos(math.atan2(_jardin[0][1] - HY, _jardin[0][0] - HX)),
                        HY + R_GC * math.sin(math.atan2(_jardin[0][1] - HY, _jardin[0][0] - HX)))] + _jardin + [(1300.5, 2209)]
+
+# ---- the whole building (25/11): the two floors are one building, not two models set one on the other.
+# The ground floor's walls (floor1.py's, vectorised from floor1.png, in the same pixels)
+DATA_RDC = json.loads((RACINE / 'modele' / 'floor1-murs.json').read_text())
+# The outer walls round the lab, which the plan leaves black
+MURS_LABO = [(200, 752, 384, 842), (200, 842, 232, 2276), (200, 2245, 599.5, 2276), (232, 1167, 384, 1173),
+             (569, 2276, 580, 2286)]          # the last one closes the 8 cm slit at the corner, before wall 1065
+# The lift shaft (4 on floor2.png) and the outer band of the right facade: drawn in dark grey on the plan, not in black,
+# so the vectorising missed them; measured on floor2.png. The shaft stands over the ground floor's room of the same
+# outline (floor1's wall 16), the band over floor1's (walls 17, 55, 288): the right facade reads on the two storeys.
+GAINE = [(1330, 277, 1458, 298), (1321, 286, 1330, 298), (1321, 298, 1342, 428), (1321, 589, 1342, 626),
+         (1428, 298, 1458, 626), (1321, 626, 1445.5, 644)]       # openings at y 428 - 480 and 538 - 589 (wall 770 between)
+BANDE_EST = [(1458, 140, 1481, 750), (1458, 1584, 1481, 2246)]   # wall 860 between, the two columns at the joints
+# The columns: the ground floor's go on up (floor1.py's positions); the one in the void (257) is one shaft, from the
+# ground floor through the slab's level to the mezzanine's ceiling
+POTEAUX = {841: (405.1, 805.7, 49.2), 995: (405.1, 1516.5, 49.2)}
+# The ground floor's little room past the right facade (floor1's wall 437): under the slab, roofed by it
+COUVERT = [(1326, 2277.5, 1481, 2392)]
 
 
 def dans(pt, poly):
@@ -257,9 +280,39 @@ def build_plan_image():
     obj('plan', me, 'Plan', m)
 
 
+def unir(o, outils):
+    """Boolean union (exact) of o with the tools, joined first into one mesh; the tools removed afterwards."""
+    bpy.ops.object.select_all(action='DESELECT')
+    for t in outils:
+        t.select_set(True)
+    bpy.context.view_layer.objects.active = outils[0]
+    bpy.ops.object.join()
+    t = bpy.context.view_layer.objects.active
+    md = o.modifiers.new('plus', 'BOOLEAN')
+    md.operation = 'UNION'
+    md.solver = 'EXACT'
+    md.use_self = True
+    md.object = t
+    bpy.context.view_layer.objects.active = o
+    bpy.ops.object.modifier_apply(modifier=md.name)
+    bpy.data.objects.remove(t, do_unlink=True)
+    return o
+
+
 def build_dalle():
-    """The slab with its openings: the void over the room, the rock garden, the round opening of the stair."""
+    """The slab with its openings: the void over the room, the rock garden, the round opening of the stair. It runs
+    out under the outer walls of both storeys, to the faces of the building (25/11): one band of slab all round,
+    between the ground floor's walls and the mezzanine's, as on the section of the place (3d-1.png)."""
     dalle = to_mesh(extrude_loops('dalle', [SOL], -DALLE, 0.0, 'Sols', M_SOL))
+    pieds = [mu['contour'] for mu in DATA['murs'] + DATA_RDC['murs']]
+    pieds += [[(x0, y0), (x1, y0), (x1, y1), (x0, y1)] for x0, y0, x1, y1 in MURS_LABO + GAINE + BANDE_EST + COUVERT]
+    outils = [to_mesh(extrude_loops(f't-pied-{k}', [c], -DALLE, 0.0, 'Sols', M_SOL)) for k, c in enumerate(pieds)]
+    for k, p in enumerate(DATA['poteaux'] + DATA_RDC['poteaux']):
+        cx, cy, r = POTEAUX.get(p['id'], (p['cx'], p['cy'], p['r']))
+        if p['id'] == 41:                       # floor1.py's own correction: the corner column, half in the pier
+            cx, r = 405.1, 49.2
+        outils.append(cylinder(f't-poteau-{k}', cx, cy, r, -DALLE, 0.0, 'Sols', M_SOL))
+    unir(dalle, outils)
     outils = [to_mesh(extrude_loops('t-vide', [VIDE], -1, 1, 'Sols', M_SOL)),
               to_mesh(extrude_loops('t-jardin', [JARDIN], -1, 1, 'Sols', M_SOL)),
               cylinder('t-escalier', HX, HY, R_ESC, -1, 1, 'Sols', M_SOL, seg=120)]
@@ -422,13 +475,19 @@ def build_coque(top, bas=0.0):
     #      is closed on the void side like wall 952
     for k, mu in enumerate(DATA['murs']):
         extrude_loops(f"mur-{mu['id']}-{k}", [mu['contour']] + mu['trous'], bas, top, 'Coque', M_MUR)
-    for k, (x0, y0, x1, y1) in enumerate(((200, 752, 384, 842), (200, 842, 232, 2276), (200, 2245, 599.5, 2276),
-                                          (232, 1167, 384, 1173))):
+    for k, (x0, y0, x1, y1) in enumerate(MURS_LABO):
         box(f'mur-labo-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
-    # ---- columns
+    # the lift shaft and the outer band of the right facade, over the ground floor's (the whole building, 25/11)
+    for k, (x0, y0, x1, y1) in enumerate(GAINE):
+        box(f'mur-gaine-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
+    for k, (x0, y0, x1, y1) in enumerate(BANDE_EST):
+        box(f'mur-est-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
+    # ---- columns, on the ground floor's: the one standing in the void goes down through the slab's level to meet its
+    #      ground floor part (cut under the slab, dessous)
     for c in DATA['poteaux']:
-        cx, cy, r = (407.5, 801.5, 49.5) if c['id'] == 841 else (c['cx'], c['cy'], c['r'])
-        cylinder(f"poteau-{c['id']}", cx, cy, r, bas, top, 'Coque', M_POTEAU)
+        cx, cy, r = POTEAUX.get(c['id'], (c['cx'], c['cy'], c['r']))
+        z0 = -DALLE - 0.002 if (bas == 0.0 and dans((cx, cy), VIDE)) else bas
+        cylinder(f"poteau-{c['id']}", cx, cy, r, z0, top, 'Coque', M_POTEAU)
 
     # ---- facades: between steel mullions (measured on the plan), plain glass on the shell, glass blocks at step 2
     #      (as floor1: the blocks below the map cut, a plain see-through pane above it)
@@ -797,12 +856,17 @@ ILE = (601, 1896, 861, 2403)          # the planted island: the block's footprin
 LIERRE_TAILLE = (0.045, 0.085)        # leaf lengths (m), the model's 10th - 90th percentiles at real size
 
 
+LEGER = bool(ARGS.get('export'))       # the map's model: the same ivy, lighter (8-point leaves, 4-sided stems)
+
+
 def feuille_lierre(variante):
     """An ivy leaf in its own frame (base at the origin, along +y, length 1, face +z): five lobes, a heart-shaped
     base, the halves folded a little along the midrib. Three variants: lobes more or less deep."""
     p_ = (0.0, 0.10, 0.20)[variante]
     droite = [(0.0, 0.06), (0.16, -0.03), (0.31, 0.06), (0.30 - p_ * 0.3, 0.22), (0.52, 0.40 + p_ * 0.1),
               (0.30 - p_, 0.54), (0.20, 0.72), (0.0, 1.0)]
+    if LEGER:                                   # the lobes' tips and the sinuses between them only
+        droite = [(0.0, 0.06), (0.31, 0.06), (0.52, 0.40 + p_ * 0.1), (0.26 - p_, 0.58), (0.0, 1.0)]
     contour = droite + [(-x, y) for x, y in reversed(droite[1:-1])]
     def z(x, y):
         return -0.07 * abs(x) + 0.04 * (y - 0.5) ** 2           # the fold along the midrib, a slight cup
@@ -815,7 +879,7 @@ def feuille_lierre(variante):
 FEUILLES = [feuille_lierre(k) for k in range(3)]
 
 
-def tube(bm, pts, r0, r1, n=6):
+def tube(bm, pts, r0, r1, n=4 if LEGER else 6):
     """A stem: a tube along world points, its radius going from r0 to r1."""
     anneaux = []
     for i, p_ in enumerate(pts):
@@ -960,14 +1024,18 @@ def build_elements():
     return [o for o in bpy.data.objects if o not in avant]
 
 
-# ---- the ground floor under the mezzanine: floor1's map model (the fantôme, its see-through tops included, so its
-#      walls rise to the slab), in one light grey without lines, 3.35 m down, stopped under the slab: seen from
-#      above it shows only through the voids, seen from the side it is the building the mezzanine stands on
+# ---- the ground floor under the mezzanine (25/11: the whole building): floor1's whole model (the map's, uncut, with
+#      its furniture), 3.35 m down, stopped under the slab, its stair 1 m under the mezzanine's floor where this
+#      floor's stair takes over. Each piece keeps its material (the same names as here, so the same whites) and its
+#      place in the line sets: the ground floor is drawn as the mezzanine is, the storey the mezzanine stands on.
+SOUS_DALLE = -DALLE - 0.002
+
+
 def dessous():
-    chemin = RACINE / 'carte' / 'modele' / 'floor1-fantome.glb'
-    avant = set(bpy.data.objects)
+    import re
+    chemin = RACINE / 'carte' / 'modele' / 'floor1-entier.glb'
+    avant, avant_m = set(bpy.data.objects), set(bpy.data.materials)
     bpy.ops.import_scene.gltf(filepath=str(chemin))
-    m = mat('dessous', (0.90, 0.90, 0.89), 0.9)
     for o in [o for o in bpy.data.objects if o not in avant]:
         for c in list(o.users_collection):
             c.objects.unlink(o)
@@ -975,16 +1043,27 @@ def dessous():
             bpy.data.objects.remove(o)
             continue
         coll('Dessous').objects.link(o)
+        if o.get('fin'):
+            coll('Traits-fins').objects.link(o)
         o.data = o.data.copy()
         o.data.transform(o.matrix_world); o.matrix_world.identity()
-        o.data.transform(__import__('mathutils').Matrix.Translation((0, 0, -H_RDC)))
-        if max(v.co.z for v in o.data.vertices) > -DALLE - 0.002:
-            couper(o, -DALLE - 0.002, 'bas')
-        if not len(o.data.vertices):
+        o.data.transform(Matrix.Translation((0, 0, -H_RDC)))
+        haut = -1.0 if o.get('role') == 'escalier' else SOUS_DALLE
+        if max(v.co.z for v in o.data.vertices) > haut:
+            couper(o, haut, 'bas')
+        if not len(o.data.polygons):
             bpy.data.objects.remove(o)
             continue
-        o.data.materials.clear(); o.data.materials.append(m)
-        o.visible_shadow = False
+        for i, m in enumerate(o.data.materials):            # this floor's material of the same name, if it has one
+            nom = re.sub(r'\.\d+$', '', m.name)
+            ici = bpy.data.materials.get(nom)
+            if ici is None:
+                m.name = nom
+            elif ici is not m:
+                o.data.materials[i] = ici
+    for m in set(bpy.data.materials) - avant_m:
+        if m.users == 0:
+            bpy.data.materials.remove(m)
 
 
 # ---------------------------------------------------------------- step 3: the furniture (as floor1's step 4)
@@ -1339,6 +1418,10 @@ PLANS = {
     'grande':    ((1160, 1140, 1.55), (800, 820, 0.70), 22),     # the long table and the omakase bar beyond
     'demi':      ((1080, 1180, 1.40), (1290, 900, 0.75), 24),    # the two half drums
     'facade':    ((1150, 2090, 1.55), (1330, 1350, 0.95), 26),   # the high tables along the facade
+    # the whole building (25/11), from the street: the two storeys and the slab's band between them
+    'facade-ouest': ((-760, 2960, 0.40), (260, 1250, -1.70), 24),   # along the left facade, from its far corner
+    'angle-entree': ((180, 3060, 0.60), (880, 2250, -1.60), 20),    # the corner of the entry, the island over it
+    'est':          ((2080, 1180, 0.90), (1460, 470, -0.90), 20),   # the right facade, the lift shaft's band
 }
 
 
@@ -1403,7 +1486,7 @@ def ground(material, z):
 
 
 def freestyle_lines(visible, hidden, thickness=1.0):
-    """As floor1, except that the ground floor seen through the voids (Dessous) is drawn without lines."""
+    """As floor1; the ground floor under the slab (Dessous) is drawn as the mezzanine is (the whole building)."""
     sc.render.use_freestyle = True
     sc.render.line_thickness_mode = 'ABSOLUTE'
     sc.render.line_thickness = 1.0
@@ -1411,15 +1494,17 @@ def freestyle_lines(visible, hidden, thickness=1.0):
     vl.use_freestyle = True
     fs = vl.freestyle_settings
     fs.crease_angle = math.radians(140)
-    exclus = coll('Sans-trait-plein')               # the thin-line objects and the ground floor: not in the main lines
+    exclus = coll('Sans-trait-plein')               # the thin-line objects and the ivy: not in the main lines
     lierre_ = [o for o in coll('Ile').objects if o.name.startswith('ile-lierre')] if 'Ile' in bpy.data.collections else []
-    if ARGS.get('variante') != 'detail':            # on the map views, the ivy is shaded without lines: thousands of
-        for o in lierre_:                           # leaves would only make a grey mass, and take an hour to draw
+    proches = {'ile', 'ile-bas', 'lierre', 'garde-corps'}      # the close-ups of the ivy keep its lines
+    if not (ARGS.get('variante') == 'detail' and proches & set(ARGS.get('plans', '').split(','))):
+        for o in lierre_:       # elsewhere it is shaded without lines: thousands of leaves would only make a grey
+                                # mass, and take an hour to draw
             if o.name in coll('Traits-fins').objects:
                 coll('Traits-fins').objects.unlink(o)
-            if o.name not in coll('Dessous').objects:
-                coll('Dessous').objects.link(o)
-    for o in list(coll('Traits-fins').objects) + list(coll('Dessous').objects):
+            if o.name not in coll('Sans-trait').objects:
+                coll('Sans-trait').objects.link(o)
+    for o in list(coll('Traits-fins').objects) + list(coll('Sans-trait').objects):
         if o.name not in exclus.objects:
             exclus.objects.link(o)
     sets = [('visibles', 'VISIBLE', visible, 1.15 * thickness)]
@@ -1441,6 +1526,50 @@ def freestyle_lines(visible, hidden, thickness=1.0):
         ls.linestyle = bpy.data.linestyles.new(nom)
         ls.linestyle.color = col
         ls.linestyle.thickness = ep
+
+
+# ---------------------------------------------------------------- the model of the interactive map (as floor1's step 5)
+# glTF export of the built variant (fantôme: the mezzanine cut at 1.2 m with its see-through tops; fil-de-fer: uncut),
+# raised by 3.35 m so it stands on the ground floor's frame of the map. Each object carries its role, 'fin' for the
+# thin-line objects, 'feuillage' for the ivy (shaded without lines), its table number (18 - 23, 100 the omakase bar's
+# stools, 101 the ledge's) and, on the two counters, the bar they belong to. The ground floor under the slab, as these
+# renders show it, goes to its own file (dessous=...): the map sets it under the mezzanine.
+ROLES = {'Coque': 'mur', 'Vitrages': 'vitrage', 'Tambours': 'tambour', 'Escalier': 'escalier', 'Sols': 'sol',
+         'Bar': 'element', 'Banquettes': 'element', 'Rideaux': 'element', 'Vide': 'element', 'Ile': 'element',
+         'Mobilier': 'element', 'Tables': 'table', 'Assises': 'assise', 'Suspensions': 'suspension'}
+BARS = {'omakase-plateaux': 100, 'tablette-vide-plateau': 101}
+
+
+def export_web(chemin, objets, dessous=False):
+    import re
+    chemin = Path(chemin) if Path(chemin).is_absolute() else RACINE / chemin
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    bpy.ops.object.select_all(action='DESELECT')
+    monter = Matrix.Translation((0, 0, H_RDC))
+    for o in objets:
+        cs = [c.name for c in o.users_collection]
+        if not dessous:
+            o['role'] = 'fantome' if 'Fantome' in cs else next((ROLES[c] for c in cs if c in ROLES), 'fin' if 'Traits-fins' in cs else 'element')
+            o['fin'] = int('Traits-fins' in cs and not o.name.startswith('ile-lierre'))
+            o['feuillage'] = int(o.name.startswith('ile-lierre'))
+            m = re.match(r'^(table|chaise|lampe|suspension)-(\d\d)', o.name)
+            if m:
+                o['table'] = int(m.group(2))
+            elif o.name.startswith('tabouret-omakase'):
+                o['table'] = 100
+            elif o.name.startswith('tabouret-vide'):
+                o['table'] = 101
+            if o.name in BARS:
+                o['bar'] = BARS[o.name]
+        elif 'table' in o:
+            del o['table']                      # under the slab, the ground floor's tables are decor
+        o.matrix_world = monter @ o.matrix_world
+        o.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=str(chemin), export_format='GLB', use_selection=True, export_extras=True,
+                              export_apply=True, export_yup=True, export_cameras=False, export_lights=False)
+    for o in objets:
+        o.matrix_world = monter.inverted() @ o.matrix_world
+    print('export', chemin, len(objets), 'objets,', sum(len(o.data.polygons) for o in objets), 'faces')
 
 
 setup_render()
@@ -1523,6 +1652,10 @@ else:
                                  ('terre', (0.86, 0.85, 0.83), 1.0), ('ecorce', (0.88, 0.87, 0.85), 0.9)):
             set_mat(name, rgb, rough, a)
         set_mat('pave', (0.95, 0.97, 0.98), 0.25, 0.55 if a == 1.0 else min(a, 0.3))
+    for name, rgb, rough in (('bordure', (0.93,) * 3, 0.6), ('pot', (0.95,) * 3, 0.85),
+                             ('rocher', (0.92, 0.915, 0.905), 0.95)):       # the ground floor's own (floor1's whites)
+        if name in bpy.data.materials:
+            set_mat(name, rgb, rough, a)
     if MOBILIER:                                # the furniture in the same whites as floor1's
         for name, rgb, rough in (('plateau', (0.90,) * 3, 0.5), ('acier', (0.74,) * 3, 0.5),
                                  ('cuir', (0.955, 0.95, 0.94), 0.8), ('bois', (0.93, 0.92, 0.905), 0.8),
@@ -1533,6 +1666,10 @@ else:
     m_ext = mat_grille('terrain-grille', (0.90, 0.898, 0.89), (0.66, 0.66, 0.66), 0.45, 0.8, o_c, fade=(14, 30))
     dalle = bpy.data.objects['dalle']
     dalle.data.materials[0] = m_int             # the walking surface; its edge and underside stay 'dalle'
+    for o in coll('Dessous').objects:           # the ground floor's floors: the same grid
+        for i, m in enumerate(o.data.materials):
+            if m.name == 'sol-grille':
+                o.data.materials[i] = m_int
     ground(m_ext, -H_RDC - 0.052)
 
     sc.view_settings.view_transform = 'Standard'
@@ -1558,7 +1695,14 @@ else:
     d = Vector((-1, -1.05, 1.15)).normalized()
     c3 = o_c + Vector((0, 0, 0.9))
     cam_3d = camera('cam-3d', c3 + d * 60, c3, ortho=25.5)
-    if ARGS.get('plans'):
+    if ARGS.get('export'):
+        maillages = [o for o in bpy.data.objects if o.type == 'MESH' and o.name != 'terrain'
+                     and not any(c.name == 'Plan' for c in o.users_collection)]
+        sous = [o for o in maillages if 'Dessous' in [c.name for c in o.users_collection]]
+        export_web(ARGS['export'], [o for o in maillages if o not in sous])
+        if ARGS.get('dessous'):
+            export_web(ARGS['dessous'], sous, dessous=True)
+    elif ARGS.get('plans'):
         for pl in ARGS['plans'].split(','):
             (x0, y0, z0), (x1, y1, z1), lens, *res = PLANS[pl]
             render(f'{pre}plan-{pl}', camera(f'cam-{pl}', P(x0, y0, z0), P(x1, y1, z1), lens=lens),
