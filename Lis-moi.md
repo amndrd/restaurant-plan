@@ -6,9 +6,25 @@ Les plans sont ceux du **LAIR Restaurant & Bar** (Gurugram, Inde, 2024), conçu 
 
 On travaille étage par étage, en commençant par **floor1**, le rez-de-chaussée avec l'entrée, l'accueil, la salle et le bar. On avance étape par étape : chaque étape est montrée en captures et validée avant la suivante.
 
-## Où en est-on (24/11/2026)
+## Où en est-on (25/11/2026)
 
-**1er étage, étape 1 : la coque.** En attente de ta validation.
+**1er étage, étape 2 : les éléments fixes, d'après les photos.** En attente de ta validation.
+
+- **Faite comme l'étape 3 du rez-de-chaussée,** avec les mêmes fonctions, matériaux, styles et caméras : `floor2.py -- variante=fantome|fil-de-fer elements=1`, puis `variante=detail plans=omakase,banquette,rebord,bloc,escalier` pour les gros plans.
+- **Les éléments :**
+  - les façades en pavés de verre ;
+  - le bar omakase : la grille de 24 × 3 casiers à bouteilles (photos 11 et 12), le plan des barmen à 0,90 m et le plateau client à 1,08 m ;
+  - les banquettes des deux demi-tambours, comme celles du bas ;
+  - la tablette au bord du vide, à 1,08 m, dont le corps plein sert de garde-corps ;
+  - le comptoir du laboratoire, fermé côté vide par un mur ;
+  - les deux rideaux ;
+  - le haut de l'escalier hélicoïdal et sa sculpture en miroir, qui monte jusqu'au plafond.
+- **Le volume au-dessus de l'entrée :** aucune photo ne le montre. Il est habillé comme le portail d'entrée côté rue (photo 37) : du métal noir à joints debout tous les 0,30 m, un creux d'ombre au pied et une couvertine.
+- **Sous la mezzanine,** le rez-de-chaussée (`carte/modele/floor1-fantome.glb`) est affiché en gris clair, sans trait. Vu du haut, il n'apparaît qu'à travers les vides ; vu en 3D, c'est le bâtiment qui porte la mezzanine.
+- **Aucun élément n'en traverse un autre.** Il ne reste que des faces posées les unes contre les autres.
+- **Les rendus** sont dans `rendus/13-etage-elements-fixes/`. La page, `pages/9-etage-elements-fixes.png`, montre chaque gros plan à côté de sa photo ; elle reste hors du dépôt à cause des photos.
+
+**1er étage, étape 1 : la coque.** Validée. La page est `pages/8-etage-coque.png`, hors dépôt car elle montre le plan. L'escalier droit a les 7 marches du plan.
 
 - **`outils/blender/floor2.py`** construit la mezzanine dans le repère du rez-de-chaussée. Le z 0 est le dessus de sa dalle, 3,35 m au-dessus du rez-de-chaussée.
 - **La coque comprend :**
@@ -20,7 +36,7 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 - **Les rendus** sont dans `rendus/12-etage-coque/` : le calage sur le plan (hors dépôt, il montre le plan), l'axonométrie et la coque coupée à 1,20 m comme sur la carte.
 - **Hypothèses :** 3,00 m sous plafond, des demi-tambours de 2,20 m, des retours du bar omakase pleine hauteur.
 
-**Les plans redessinés, pour le site.** En attente de ta validation.
+**Les plans redessinés, pour le site.**
 
 - **Les deux plans du client**, le rez-de-chaussée et le 1er étage, sont redessinés en traits exacts dans `rendus/10-plans/`. Chacun existe en SVG vectoriel et en PNG 4K (3840 × 2160).
 - **Ils sont orientés comme la vue du haut de la carte,** le bar à gauche et l'entrée à droite, avec le même cadrage pour les deux étages.
@@ -125,12 +141,15 @@ floor1.png … 3d-2.png, plan-design.mp4   tes fichiers de départ (les plans, l
 analyse/        _controle-murs.png : les murs vectorisés posés sur le plan, pour vérifier
 modele/         floor1-murs.json (les murs, poteaux et tambours lus sur le plan), floor1-tables.json (les tables de
                 la carte en direct), floor1-coque.blend
+                etage1-murs.json (les murs et poteaux du 1er étage, lus sur floor2.png)
 rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variantes blanches et la vidéo du passage),
                 4-elements-fixes/ (les éléments fixes, en fantôme, en fil de fer et en vues rapprochées),
                 5-mobilier/ (le mobilier, les numéros des tables), 6-carte/ (les captures et la vidéo de la carte),
                 7-espace-du-bar/ (les propositions pour la place des mange-debout), 8-reglages-legende/,
                 9-carte-finale/ (la carte telle que choisie, et la vidéo),
                 10-plans/ (les plans redessinés du rez-de-chaussée et du 1er étage, SVG et PNG 4K)
+                11-plans-d-origine/ (les copies 4K des plans du client, hors dépôt),
+                12-etage-coque/ (la coque du 1er étage), 13-etage-elements-fixes/ (ses éléments fixes)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
@@ -148,7 +167,7 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `grille.py` découpe le plan avec une grille de coordonnées, pour mesurer ;
   - `composantes.py` numérote les zones sombres du plan (murs, poteaux, extérieur) ;
   - `vectoriser.py` trace les murs retenus en polygones, et retrouve les cercles des poteaux et des tambours. Il écrit `modele/floor1-murs.json`.
-- **Modéliser :** `blender/floor1.py` construit floor1 et fait les rendus ; `blender/floor2.py` construit la mezzanine (`-- vue=dessus,iso,coupe`). On le lance avec `blender -b -P outils/blender/floor1.py --` suivi des options :
+- **Modéliser :** `blender/floor1.py` construit floor1 et fait les rendus ; `blender/floor2.py` construit la mezzanine : `-- vue=dessus,iso,coupe` pour la coque, puis `-- variante=fantome|fil-de-fer|detail elements=1` pour les éléments fixes, comme floor1. On le lance avec `blender -b -P outils/blender/floor1.py --` suivi des options :
   - `vue=dessus,iso,coupe,entree` choisit les vues ;
   - `coupe=1.2` donne la hauteur de coupe des murs ;
   - `style=trait|trait-sombre|maquette|jeu` applique un style ;
