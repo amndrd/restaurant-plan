@@ -9,6 +9,7 @@ const TONS = {
   banquette: 0xf6f5f3, pierre: 0xeeedeb, comptoir: 0xf0f0f0, meuble: 0xf7f7f7, miroir: 0xfafafa, rocher: 0xedecea,
   rideau: 0xf9f8f6, bordure: 0xefefef, gravier: 0xf0efed, plateau: 0xeaeaea, acier: 0xc5c5c5, cuir: 0xf6f5f3,
   bois: 0xf1f0ed, pot: 0xf4f4f4, terre: 0xe9e8e5, feuillage: 0xeef2ea, laiton: 0xfafafa,
+  dalle: 0xf3f3f2, lumiere: 0xfdfcf8, ecorce: 0xe8e6e2,
 };
 const SOLEIL = new THREE.Vector3(-0.492, 0.819, -0.296).normalize();   // Blender (35°, 0, -121°), y-up
 const ORIGINE = new THREE.Vector3(0, 0, 0.4);                           // centre of the grid, P(837, 1278)
@@ -63,6 +64,7 @@ export class Scene3D {
     this.scene.add(sol);
 
     this.etages = [];            // one group per floor
+    this.actif = 0;              // the floor on show (the 1st floor brings the ground floor under its slab)
     this.style = 'fantome';
     this._passe();
     this.taille();
@@ -114,7 +116,8 @@ void main() {
     this.composite.uniforms.pas.value = pr >= 2 ? 1.5 : 1;
   }
 
-  // ---- loading a floor: two models, cut (fantôme) and whole (transparent, fil de fer)
+  // ---- loading a floor: two models, cut (fantôme) and whole (transparent, fil de fer); the 1st floor's also has the
+  //      ground floor under its slab (dessous), shown in every style
   async chargerEtage(n, fichiers) {
     const charge = new GLTFLoader();
     const g = new THREE.Group(); g.name = `etage-${n}`;
@@ -139,6 +142,7 @@ void main() {
       let p = o; while (p && p.userData.role === undefined) p = p.parent;
       const ud = p ? p.userData : {};
       o.userData.role = ud.role; o.userData.fin = ud.fin; o.userData.table = ud.table; o.userData.noeud = p ? p.name : o.name;
+      o.userData.bar = ud.bar; o.userData.feuillage = ud.feuillage;
       const nomMat = (o.material.name || '').replace(/\.\d+$/, '');
       o.userData.mat = nomMat;
       o.castShadow = o.receiveShadow = true;
@@ -146,16 +150,19 @@ void main() {
     });
   }
 
+  montrerEtage(n) { this.actif = n; this.appliquerStyle(this.style); }
+
   appliquerStyle(style) {
     this.style = style;
     const entier = style === 'transparent' || style === 'fil-de-fer';
-    for (const e of this.etages) {
-      if (!e) continue;
+    this.etages.forEach((e, n) => {
+      if (!e) return;
+      e.groupe.visible = n === this.actif;
       for (const [cle, racine] of Object.entries(e.modeles)) {
-        racine.visible = (cle === 'entier') === entier;
-        if (racine.visible) racine.traverse(o => { if (o.isMesh) this._habiller(o, style); });
+        racine.visible = cle === 'dessous' || (cle === 'entier') === entier;
+        if (racine.visible && e.groupe.visible) racine.traverse(o => { if (o.isMesh) this._habiller(o, style); });
       }
-    }
+    });
     this.composite.uniforms.encre.value.set(style === 'fil-de-fer' ? 0x5a5a5a : 0x4d4d4d);
   }
 
@@ -174,6 +181,11 @@ void main() {
     if (role === 'sol') {
       mat = grille(0xf9f8f6, 0xcfcfcf, 0.35, 0.55);
       o.layers.enable(1);
+    } else if (ud.feuillage) {   // the ivy: shaded, no lines (thousands of leaves would only make a grey mass)
+      mat = style === 'fantome' ? new THREE.MeshStandardMaterial({ color: ton, roughness: 0.9 })
+        : new THREE.MeshStandardMaterial({ color: ton, transparent: true, opacity: style === 'transparent' ? 0.42 : 0.22,
+          depthWrite: false, roughness: 0.9 });
+      o.castShadow = style === 'fantome';
     } else if (style === 'fantome') {
       if (role === 'fantome') {
         mat = new THREE.MeshStandardMaterial({ color: 0xfbfbfb, transparent: true, opacity: 0.16,

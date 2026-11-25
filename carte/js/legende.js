@@ -25,6 +25,12 @@ export class Legende {
     this.maj();
   }
 
+  // the floor on show: its service and its tables
+  lier(service, systemes) {
+    if (this.sys && this.sys !== systemes) this.sys.surligne = null;
+    this.s = service; this.sys = systemes; this.sys.surligne = this.fixe; this.maj();
+  }
+
   ouvrir(oui) {
     this.el.classList.toggle('ferme', !oui);
     this.bouton.classList.toggle('on', oui);

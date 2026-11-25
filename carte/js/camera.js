@@ -20,6 +20,7 @@ export class CameraCarte {
     this.cible = VUES.dessus.cible.clone();
     this.az = VUES.dessus.az; this.el = VUES.dessus.el; this.largeur = VUES.dessus.largeur;
     this.vue = 'dessus';
+    this.niveau = 0;                     // the floor on show: its height, added to the views' targets
     this.anim = null;
     this.change = true;
     this.surChange = () => {};
@@ -39,7 +40,15 @@ export class CameraCarte {
     while (az1 - this.az > 180) az1 -= 360;
     while (az1 - this.az < -180) az1 += 360;
     this.anim = { t0: performance.now(), duree, de: { az: this.az, el: this.el, l: this.largeur, c: this.cible.clone() },
-      a: { az: az1, el: v.el, l: v.largeur, c: v.cible.clone() } };
+      a: { az: az1, el: v.el, l: v.largeur, c: v.cible.clone().setY(v.cible.y + this.niveau) } };
+  }
+
+  // another floor: the view moves up or down by the difference, the framing kept
+  changerNiveau(y, duree = 900) {
+    const d = y - this.niveau;
+    this.niveau = y;
+    this.anim = { t0: performance.now(), duree, de: { az: this.az, el: this.el, l: this.largeur, c: this.cible.clone() },
+      a: { az: this.az, el: this.el, l: this.largeur, c: this.cible.clone().setY(this.cible.y + d) } };
   }
 
   tourner(deg, duree = 500) {
@@ -105,12 +114,12 @@ export class CameraCarte {
     if (avant && apres) { this.cible.add(avant.sub(apres)); this.change = true; }
   }
 
-  _sol(x, y) {   // the point of the floor (y = 0) under a screen point
+  _sol(x, y) {   // the point of the floor on show under a screen point
     const r = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     const ray = new THREE.Raycaster(); ray.setFromCamera(ndc, this.cam);
     const p = new THREE.Vector3();
-    return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), p) ? p : null;
+    return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.niveau), p) ? p : null;
   }
 
   _entrees() {

@@ -23,6 +23,7 @@ const CARTE = {           // provisional menu
   comptoir: ['Olives et focaccia', 'Croquetas', 'Planche de charcuterie'],
 };
 const EQUIPE = { tambour: 'Léa', table: 'Hugo', 'table haute': 'Inès', bar: 'Inès' };
+const EQUIPE_BARS = { 100: 'Sacha', 101: 'Inès' };       // 1st floor: the omakase bar, the ledge over the void
 const NOMS = ['Martin', 'Bernard', 'Dubois', 'Laurent', 'Moreau', 'Garcia', 'Roux', 'Fournier', 'Lambert', 'Bonnet'];
 
 function graine(a) {       // mulberry32
@@ -38,9 +39,11 @@ export class Service {
     this.t = debut;
     this.tables = tables.filter(t => t.type !== 'bar').map(t => ({ ...t, etat: 'libre', depuis: debut, invites: 0,
       plats: [], commandeA: null, fin: 0, resa: null, alerte: false, serveur: EQUIPE[t.type] }));
-    // the bar: guests alone or in twos, each group on free stools side by side (sieges[k] = the group on stool k)
-    const bar = tables.find(t => t.type === 'bar');
-    this.bar = { ...bar, invites: 0, serveur: EQUIPE.bar, sieges: Array(bar.places).fill(null), groupes: [], n: 0 };
+    // the bars (the ground floor's, the 1st floor's omakase bar and ledge): guests alone or in twos, each group on free
+    // stools side by side (sieges[k] = the group on stool k)
+    this.bars = tables.filter(t => t.type === 'bar').map(bar => ({ ...bar, invites: 0,
+      serveur: EQUIPE_BARS[bar.id] ?? EQUIPE.bar, sieges: Array(bar.places).fill(null), groupes: [], n: 0 }));
+    this.bar = this.bars[0];
     this.resas = this._reservations();
     this.avancerJusqua(heure);
   }
@@ -111,11 +114,10 @@ export class Service {
       const attente = this.t - t.depuis;
       t.alerte = (t.etat === 'installee' && attente > SEUILS.installee) || (t.etat === 'commandee' && attente > SEUILS.commandee);
     }
-    this._bar(dt, affluence);
+    for (const b of this.bars) this._bar(b, dt, affluence);
   }
 
-  _bar(dt, affluence) {
-    const b = this.bar;
+  _bar(b, dt, affluence) {
     if (this.rnd() < dt * (0.012 + affluence * 0.09)) {          // someone comes to the bar, alone or in twos
       const n = this.rnd() < 0.55 ? 2 : 1;
       const libres = [];
@@ -167,13 +169,15 @@ export class Service {
   attente(t) { return this.t - t.depuis; }
 
   chiffres() {
-    const T = this.tables, places = T.reduce((s, t) => s + t.places, 0) + this.bar.places;
-    const couverts = T.reduce((s, t) => s + t.invites, 0) + this.bar.invites;
+    const B = this.bars, barPlaces = B.reduce((s, b) => s + b.places, 0), bar = B.reduce((s, b) => s + b.invites, 0);
+    const T = this.tables, places = T.reduce((s, t) => s + t.places, 0) + barPlaces;
+    const couverts = T.reduce((s, t) => s + t.invites, 0) + bar;
     const cmd = T.filter(t => t.etat === 'commandee');
     const parEtat = Object.fromEntries(Object.keys(ETATS).map(e => [e, T.filter(t => t.etat === e).length]));
     const prochaine = this.resas.find(r => !r.arrivee && r.heure >= this.t - 15);
     return { couverts, places, parEtat, libres: parEtat.libre, total: T.length,
       attente: cmd.length ? cmd.reduce((s, t) => s + (this.t - t.depuis), 0) / cmd.length : 0, enAttente: cmd.length,
-      alertes: T.filter(t => t.alerte).length + this.bar.groupes.filter(g => g.alerte).length, bar: this.bar.invites, prochaine };
+      alertes: T.filter(t => t.alerte).length + B.reduce((s, b) => s + b.groupes.filter(g => g.alerte).length, 0),
+      bar, barPlaces, bars: B.length, prochaine };
   }
 }

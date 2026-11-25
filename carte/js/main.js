@@ -19,28 +19,33 @@ const s3 = new Scene3D(canvas);
 const cam = new CameraCarte(canvas);
 
 const ETAGES = [
-  { nom: 'Rez-de-chaussée', fichiers: { fantome: 'modele/floor1-fantome.glb', entier: 'modele/floor1-entier.glb' },
-    tables: 'donnees/floor1-tables.json' },
+  { nom: 'Rez-de-chaussée', sol: 0, graine: 11, tables: 'donnees/floor1-tables.json',
+    fichiers: { fantome: 'modele/floor1-fantome.glb', entier: 'modele/floor1-entier.glb' } },
+  // the 1st floor stands on the ground floor: its model is raised by 3.35 m and brings the ground floor under its slab
+  { nom: '1er étage', sol: 3.35, graine: 23, tables: 'donnees/floor2-tables.json',
+    fichiers: { fantome: 'modele/floor2-fantome.glb', entier: 'modele/floor2-entier.glb', dessous: 'modele/floor1-sous-dalle.glb' } },
 ];
 const BANQUETTES = { 49: 1, 114: 2, 306: 3, 413: 4 };   // drum (plan id) -> table
 if (P.get('nu')) document.body.classList.add('nu');     // the map alone, without the interface
 
 function groupes(modeles, tables) {
   const G = new Map();
-  for (const t of tables) {           // the bar is a group too (id 0): its seven stools and its counter
+  for (const t of tables) {           // the bars are groups too (0, 100, 101): their stools and their counter
     G.set(t.id, { ...t, boite: new THREE.Box3(), plateaux: { fantome: [], entier: [] }, sieges: { fantome: [], entier: [] },
       banquette: { fantome: [], entier: [] }, boitePlateau: new THREE.Box3() });
   }
-  for (const [cle, racine] of Object.entries(modeles)) {
+  for (const cle of ['fantome', 'entier']) {
+    const racine = modeles[cle];
     racine.updateMatrixWorld(true);
     const sieges = new Map();
     racine.traverse(o => {
       if (!o.isMesh) return;
       const ud = o.userData;
       const mb = /^banquette-(\d+)-coussin/.exec(ud.noeud || '');
-      if (mb && BANQUETTES[mb[1]]) { G.get(BANQUETTES[mb[1]]).banquette[cle].push(o); return; }
-      if (ud.noeud === 'bar-plateaux' && cle === 'fantome') {           // the counter: where the bar's label stands
-        G.get(0).boite.expandByObject(o); G.get(0).boitePlateau.expandByObject(o); return;
+      if (mb && BANQUETTES[mb[1]] && G.has(BANQUETTES[mb[1]])) { G.get(BANQUETTES[mb[1]]).banquette[cle].push(o); return; }
+      const idBar = ud.bar ?? (ud.noeud === 'bar-plateaux' ? 0 : undefined);
+      if (idBar !== undefined && cle === 'fantome' && G.has(idBar)) {   // a counter: where its bar's label stands
+        G.get(idBar).boite.expandByObject(o); G.get(idBar).boitePlateau.expandByObject(o); return;
       }
       if (ud.table === undefined || ud.role === 'fantome' || ud.role === 'suspension') return;
       const g = G.get(ud.table); if (!g) return;
@@ -67,29 +72,7 @@ function groupes(modeles, tables) {
 }
 
 async function demarrer() {
-  const e = ETAGES[0];
-  const modeles = await s3.chargerEtage(0, e.fichiers);
-  const donnees = await (await fetch(e.tables)).json();
-  const tables = donnees.tables;
-  const G = groupes(modeles, tables);
-
   const [h, m] = (P.get('heure') || '20:10').split(':').map(Number);
-  const service = new Service(tables, { heure: h * 60 + m });
-  const sys = new Systemes(s3.scene, G, calque);
-  const num = new Numeros(G, calque);
-  const ui = new Interface(service);
-
-  // selection: a black band around the chosen table
-  const choix = new THREE.Mesh(undefined, new THREE.MeshBasicMaterial({ color: 0x151515, transparent: true, opacity: 0.95, depthWrite: false }));
-  choix.renderOrder = 2;
-  choix.visible = false; s3.scene.add(choix);
-  const choisir = id => {
-    const g = G.get(id);
-    if (!g) { choix.visible = false; ui.cacher(); return; }
-    choix.geometry = g.anneau.geometry; choix.position.copy(g.anneau.position); choix.position.y = 0.007; choix.visible = true;
-    ui.montrer(id);
-  };
-  ui.surFermer = () => { choix.visible = false; };
 
   // ---- the settings: style, tables, numbers (first option = default), in the chosen design
   const valeurs = {};
@@ -97,17 +80,65 @@ async function demarrer() {
     const v = P.get(cle);
     valeurs[cle] = r.options.some(o => o[0] === v) ? v : r.options[0][0];
   }
+
+  // ---- the floors, each with its model, its tables, its service and its markers; the 1st floor loads on demand
+  const etats = [];
+  const chargement = document.getElementById('chargement');
+  async function preparer(n) {
+    if (etats[n]) return etats[n];
+    const e = ETAGES[n];
+    if (n) { chargement.textContent = `Chargement du ${e.nom.toLowerCase()}…`; chargement.classList.remove('fini'); }
+    const modeles = await s3.chargerEtage(n, e.fichiers);
+    const tables = (await (await fetch(e.tables)).json()).tables;
+    const G = groupes(modeles, tables);
+    const service = new Service(tables, { heure: etats[0] ? etats[0].service.t : h * 60 + m, graine: e.graine });
+    const sys = new Systemes(s3.scene, G, calque, e.sol);
+    const num = new Numeros(G, calque);
+    sys.regler(valeurs.systeme); num.regler(valeurs.numeros);
+    sys.montrer(false); num.montrer(false);
+    chargement.classList.add('fini');
+    return (etats[n] = { G, service, sys, num });
+  }
+  const e0 = await preparer(0);
+  const ui = new Interface(e0.service);
+  const legende = new Legende(e0.service, e0.sys);
+  let actif = 0;
+
+  // selection: a black band around the chosen table
+  const choix = new THREE.Mesh(undefined, new THREE.MeshBasicMaterial({ color: 0x151515, transparent: true, opacity: 0.95, depthWrite: false }));
+  choix.renderOrder = 2;
+  choix.visible = false; s3.scene.add(choix);
+  const choisir = id => {
+    const g = etats[actif].G.get(id);
+    if (!g) { choix.visible = false; ui.cacher(); return; }
+    choix.geometry = g.anneau.geometry; choix.position.copy(g.anneau.position);
+    choix.position.y = ETAGES[actif].sol + 0.007; choix.visible = true;
+    ui.montrer(id);
+  };
+  ui.surFermer = () => { choix.visible = false; };
+
+  // ---- showing a floor: its model (the 1st floor over the ground floor), its markers, its service in the panels
+  const activer = async (n, duree = 900) => {
+    const et = await preparer(n);
+    actif = n;
+    etats.forEach((x, k) => { if (x) { x.sys.montrer(k === n); x.num.montrer(k === n); } });
+    s3.montrerEtage(n);
+    choix.visible = false; ui.cacher();
+    ui.s = et.service; legende.lier(et.service, et.sys); ui.maj();
+    document.getElementById('etage-nom').textContent = `${ETAGES[n].nom} · service du soir`;
+    document.querySelectorAll('#etages button').forEach(x => x.classList.toggle('on', Number(x.dataset.etage) === n));
+    cam.changerNiveau(ETAGES[n].sol, duree);
+  };
+
   const appliquer = (cle, v) => {
     if (cle === 'style') s3.appliquerStyle(v);
-    if (cle === 'systeme') sys.regler(v);
-    if (cle === 'numeros') num.regler(v);
+    if (cle === 'systeme') etats.forEach(x => x && x.sys.regler(v));
+    if (cle === 'numeros') etats.forEach(x => x && x.num.regler(v));
   };
   Object.entries(valeurs).forEach(([cle, v]) => appliquer(cle, v));
   const reglages = new Reglages(valeurs, appliquer);
-  const legende = new Legende(service, sys);
   if (P.get('ouvert')) reglages.ouvrir(P.get('ouvert'));
   if (P.get('legende')) legende.ouvrir(true);
-  if (P.get('surligne')) { legende.ouvrir(true); legende.surligner(P.get('surligne')); }
 
   let vitesse = Number(P.get('vitesse') ?? 30);
   const sv = document.getElementById('vitesse'), lecture = document.getElementById('lecture');
@@ -121,7 +152,10 @@ async function demarrer() {
   const boutons = (id, attr, f) => document.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
     document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle('on', x === b)); f(b.dataset[attr]); });
   boutons('vues', 'vue', v => cam.allerA(v));
-  boutons('etages', 'etage', () => {});
+  document.querySelectorAll('#etages button').forEach(b => b.onclick = () => {
+    const n = Number(b.dataset.etage);
+    if (n !== actif) activer(n).catch(err => console.error(err));
+  });
   document.querySelectorAll('#outils button[data-action]').forEach(b => b.onclick = () => {
     const a = b.dataset.action;
     if (a === 'zoom+') cam.zoomer(1.4); else if (a === 'zoom-') cam.zoomer(1 / 1.4);
@@ -129,12 +163,14 @@ async function demarrer() {
     else cam.allerA(cam.vue);
   });
   const vue = P.get('vue') || 'dessus';
+  await activer(Number(P.get('etage')) === 1 ? 1 : 0, 0);
   cam.allerA(vue, 0);
   document.querySelectorAll('#vues button').forEach(x => x.classList.toggle('on', x.dataset.vue === vue));
   if (P.get('cam')) {
     const [az, el, l, x, y, z] = P.get('cam').split(',').map(Number);
     Object.assign(cam, { az, el, largeur: l, anim: null }); cam.cible.set(x, y, z); cam.change = true;
   }
+  if (P.get('surligne')) { legende.ouvrir(true); legende.surligner(P.get('surligne')); }
 
   // ---- picking: click a table for its card, hover shows the hand
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -142,7 +178,7 @@ async function demarrer() {
     const r = canvas.getBoundingClientRect();
     ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, cam.cam);
-    const hit = ray.intersectObjects(sys.picks, false)[0];
+    const hit = ray.intersectObjects(etats[actif].sys.picks, false)[0];
     return hit ? hit.object.userData.table : null;
   };
   canvas.addEventListener('pointerup', ev => { if (cam.clicPossible) { choisir(viser(ev)); } });
@@ -151,22 +187,24 @@ async function demarrer() {
 
   window.addEventListener('resize', () => { s3.taille(); cam.change = true; });
 
-  // ---- the loop
+  // ---- the loop: every floor's service runs on the same clock; the floor on show is drawn
   let avant = performance.now(), tick = 0;
   const boucle = now => {
     const dt = Math.min(0.1, (now - avant) / 1000); avant = now;
-    if (vitesse) service.avancer(dt * vitesse / 60);
+    if (vitesse) etats.forEach(x => x && x.service.avancer(dt * vitesse / 60));
     cam.maj(now);
-    sys.maj(service, cam.cam, canvas, now, s3.style);
-    num.maj(cam.cam, canvas);
+    const et = etats[actif];
+    et.sys.maj(et.service, cam.cam, canvas, now, s3.style);
+    et.num.maj(cam.cam, canvas);
     if (now - tick > 250) { ui.maj(); legende.maj(); tick = now; }
     s3.rendre(cam.cam);
     requestAnimationFrame(boucle);
   };
   ui.maj();
   requestAnimationFrame(boucle);
-  document.getElementById('chargement').classList.add('fini');
-  window.carte = { s3, cam, service, sys, num, ui, G, choisir, reglages, legende, hhmm, pret: true };
+  chargement.classList.add('fini');
+  window.carte = { s3, cam, etats, activer, get actif() { return actif; }, ui, choisir, reglages, legende, hhmm,
+    get service() { return etats[actif].service; }, get G() { return etats[actif].G; }, pret: true };
 }
 
 demarrer().catch(err => {

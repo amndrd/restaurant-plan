@@ -33,7 +33,7 @@ export class Interface {
         <dt>En attente des plats</dt><dd>${c.enAttente}</dd>
         <dt>Attente moyenne</dt><dd>${c.enAttente ? Math.round(c.attente) + ' min' : '—'}</dd>
         <dt>Alertes</dt><dd class="${c.alertes ? 'alerte' : ''}">${c.alertes}</dd>
-        <dt>Au bar</dt><dd>${c.bar} / 7</dd>
+        <dt>${c.bars > 1 ? 'Aux comptoirs' : 'Au bar'}</dt><dd>${c.bar} / ${c.barPlaces}</dd>
       </dl>
       ${p ? `<div class="resa">Prochaine réservation <b>${hhmm(p.heure)}</b> · ${p.nom}, ${p.couverts} pers. · ${nomTable(tp)}</div>` : ''}`;
     if (this.choix !== null) this.montrer(this.choix);
@@ -41,7 +41,7 @@ export class Interface {
 
   montrer(id) {
     this.choix = id;
-    if (id === 0) return this.montrerBar();
+    if (this.s.bars.some(b => b.id === id)) return this.montrerBar(id);
     const t = this.s.tables.find(x => x.id === id);
     if (!t) return this.cacher();
     const e = ETATS[t.etat], min = Math.round(this.s.attente(t));
@@ -68,9 +68,9 @@ export class Interface {
     this.fiche.querySelector('.fermer').onclick = () => this.cacher();
   }
 
-  // the bar: each group of guests on its stools, with its state and its order
-  montrerBar() {
-    const b = this.s.bar, enCours = b.groupes.filter(g => g.etat === 'commandee');
+  // a bar: each group of guests on its stools, with its state and its order
+  montrerBar(id) {
+    const b = this.s.bars.find(x => x.id === id), enCours = b.groupes.filter(g => g.etat === 'commandee');
     const attente = enCours.length ? Math.round(Math.max(...enCours.map(g => this.s.t - g.depuis))) : null;
     const alerte = b.groupes.some(g => g.alerte);
     const groupes = [...b.groupes].sort((x, y) => x.sieges[0] - y.sieges[0]).map(g => {
@@ -83,7 +83,7 @@ export class Interface {
     }).join('');
     this.fiche.innerHTML = `
       <div class="tete">
-        <div><h2>Bar</h2><p>${b.places} tabourets · service ${b.serveur}</p></div>
+        <div><h2>${b.nom}</h2><p>${b.places} tabourets · service ${b.serveur}</p></div>
         <button class="fermer" title="Fermer">×</button>
       </div>
       <div class="chiffres">
@@ -91,7 +91,7 @@ export class Interface {
         <div><b>${enCours.length}</b><span>en attente</span></div>
         <div class="${alerte ? 'alerte' : ''}"><b>${attente === null ? '—' : attente + '′'}</b><span>plus longue attente</span></div>
       </div>
-      ${groupes ? `<h3>Au comptoir, par tabouret</h3><ul>${groupes}</ul>` : '<div class="note">Personne au bar pour l’instant.</div>'}
+      ${groupes ? `<h3>Au comptoir, par tabouret</h3><ul>${groupes}</ul>` : '<div class="note">Personne au comptoir pour l’instant.</div>'}
       <div class="note">Données provisoires : le service est simulé.</div>`;
     this.fiche.hidden = false;
     this.fiche.querySelector('.fermer').onclick = () => this.cacher();

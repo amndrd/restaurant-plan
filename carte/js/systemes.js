@@ -21,8 +21,8 @@ export function rondRect(w, d, r) {
 const mel = (hex, blanc) => new THREE.Color(hex).lerp(new THREE.Color(0xffffff), blanc);
 
 export class Systemes {
-  constructor(scene, groupes, calque) {
-    this.groupes = groupes; this.variante = 'C'; this.surligne = null;
+  constructor(scene, groupes, calque, sol = 0) {
+    this.groupes = groupes; this.variante = 'C'; this.surligne = null; this.sol = sol;   // sol: the floor's height
     this.racine = new THREE.Group(); this.racine.name = 'systemes'; scene.add(this.racine);
     this.cache = new Map();
     for (const g of groupes.values()) {
@@ -33,15 +33,15 @@ export class Systemes {
       // D: a light grey footprint under the occupied tables
       const halo = new THREE.Mesh(new THREE.ShapeGeometry(forme, 10).rotateX(-Math.PI / 2),
         new THREE.MeshLambertMaterial({ color: 0xe7e6e2, transparent: true, opacity: 0.92, depthWrite: false }));
-      halo.position.set(g.centre.x, 0.004, g.centre.z); halo.receiveShadow = true; halo.renderOrder = -1;
+      halo.position.set(g.centre.x, sol + 0.004, g.centre.z); halo.receiveShadow = true; halo.renderOrder = -1;
       // a 6 cm band around the footprint: the alerts, and the tables picked out from the legend
       const s = rondRect(w + 0.12, d + 0.12, r + 0.06);
       s.holes.push(new THREE.Path(forme.getPoints(12)));
       const anneau = new THREE.Mesh(new THREE.ShapeGeometry(s, 10).rotateX(-Math.PI / 2),
         new THREE.MeshBasicMaterial({ color: ALERTE, transparent: true, opacity: 0.9, depthWrite: false }));
-      anneau.position.set(g.centre.x, 0.006, g.centre.z);
+      anneau.position.set(g.centre.x, sol + 0.006, g.centre.z);
       const pick = new THREE.Mesh(new THREE.BoxGeometry(w, 1.3, d), new THREE.MeshBasicMaterial({ visible: false }));
-      pick.position.set(g.centre.x, 0.65, g.centre.z); pick.userData.table = g.id;
+      pick.position.set(g.centre.x, sol + 0.65, g.centre.z); pick.userData.table = g.id;
       this.racine.add(halo, anneau, pick);
       Object.assign(g, { halo, anneau, pick });
       const el = document.createElement('div');
@@ -58,6 +58,12 @@ export class Systemes {
 
   regler(v) { this.variante = v; }
 
+  // only the floor on show: its bands, its timers and its picking
+  montrer(oui) {
+    this.actif = oui; this.racine.visible = oui;
+    if (!oui) for (const g of this.groupes.values()) g.badge.hidden = true;
+  }
+
   _teinter(o, couleur, force = 1) {
     const base = o.userData.matBase;
     if (!base) return;
@@ -73,6 +79,7 @@ export class Systemes {
   }
 
   maj(service, cam, canvas, now, style) {
+    if (this.actif === false) return;
     const v = this.variante, pouls = 0.55 + 0.45 * Math.sin(now / 260);
     const traverse = style === 'fil-de-fer' || style === 'transparent';   // see-through styles: the colours too
     const modele = traverse ? 'entier' : 'fantome';
@@ -113,9 +120,9 @@ export class Systemes {
     }
   }
 
-  // the bar, in every system: each stool takes the state of the guests sitting on it; a red band if one waits too long
+  // a bar, in every system: each stool takes the state of the guests sitting on it; a red band if one waits too long
   _bar(g, service, modele, pouls) {
-    const b = service.bar;
+    const b = service.bars.find(x => x.id === g.id);
     g.halo.visible = false; g.badge.hidden = true;
     const alerte = b.groupes.some(x => x.alerte);
     const surligne = !!this.surligne && b.groupes.some(x => this.surligne === 'alerte' ? x.alerte : x.etat === this.surligne);
