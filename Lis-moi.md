@@ -21,7 +21,19 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 - **Les tables sont numérotées** après celles du bas : 18 à 23, puis 100 pour le bar omakase et 101 pour la tablette, suivis tabouret par tabouret. Il y a 37 places à l'étage. La liste est dans `modele/floor2-tables.json`, et `outils/numeros_tables.py etage1` fait l'image des numéros.
 - **Les rendus** sont dans `rendus/15-etage-mobilier/`. La page, `pages/11-etage-mobilier.png`, reste hors dépôt (photos).
 
-**1er étage : le vide au-dessus des tambours, quatre prototypes.** En attente de ton choix.
+**1er étage : l'îlot au-dessus de l'entrée, à la place du bloc.** En attente de ton choix.
+
+- **Le bloc est retiré** (25/11). Il reste un îlot de 2,1 × 4,0 m, le toit de l'accueil du rez-de-chaussée, entouré par le vide sur trois côtés et inaccessible depuis la mezzanine. La dalle le couvre maintenant jusqu'à la rue.
+- **Quatre décors végétaux** (`floor2.py -- ... bloc=1..4`, `bloc=0` pour l'îlot nu) :
+  - B1, le jardin suspendu ;
+  - B2, le rideau végétal ;
+  - B3, le grand arbre ;
+  - B4, le mur végétal.
+- **Les rendus** sont dans `rendus/16-etage-prototypes-ile/`, la page est `pages/12-etage-ilot.png`.
+
+**1er étage : le vide au-dessus des tambours.** Choix fait : les trois colonnes (V2). Les tambours montent jusqu'au plafond, ils font maintenant partie des éléments fixes. Les autres prototypes sont retirés du script ; leurs rendus restent dans `rendus/14-etage-prototypes-vide/`.
+
+**Les prototypes du vide**, pour mémoire :
 
 - **Le constat :** dans le vrai lieu, les tambours se lisent sur toute la double hauteur, et des câbles tendus portent de petites lampes (photo 33). Dans le modèle, rien n'était fait au-dessus de 3 m.
 - **Les quatre prototypes** (`floor2.py -- ... vide=1..4`) :
@@ -173,7 +185,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 10-plans/ (les plans redessinés du rez-de-chaussée et du 1er étage, SVG et PNG 4K)
                 11-plans-d-origine/ (les copies 4K des plans du client, hors dépôt),
                 12-etage-coque/ (la coque du 1er étage), 13-etage-elements-fixes/ (ses éléments fixes),
-                14-etage-prototypes-vide/ (les prototypes pour le vide), 15-etage-mobilier/ (son mobilier)
+                14-etage-prototypes-vide/ (les prototypes pour le vide), 15-etage-mobilier/ (son mobilier),
+                16-etage-prototypes-ile/ (les décors pour l'îlot, à la place du bloc)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
