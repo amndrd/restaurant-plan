@@ -21,7 +21,19 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 - **Les tables sont numérotées** après celles du bas : 18 à 23, puis 100 pour le bar omakase et 101 pour la tablette, suivis tabouret par tabouret. Il y a 37 places à l'étage. La liste est dans `modele/floor2-tables.json`, et `outils/numeros_tables.py etage1` fait l'image des numéros.
 - **Les rendus** sont dans `rendus/15-etage-mobilier/`. La page, `pages/11-etage-mobilier.png`, reste hors dépôt (photos).
 
-**1er étage : l'îlot au-dessus de l'entrée, à la place du bloc.** En attente de ton choix.
+**1er étage : le lierre sur le toit de l'entrée, et un seul garde-corps.** En attente de ta validation.
+
+- **Le lierre** vient de ton modèle `ivy-for-walls.zip`, rangé dans `outils/assets/` et gardé hors dépôt.
+  - **L'analyse :** un panneau mural de 430 000 faces, dont les 40 000 feuilles sont des octogones plats, à l'échelle 1/10 (6,6 cm une fois remis à taille réelle).
+  - **L'extraction :** `outils/blender/lierre_feuilles.py` en tire les mesures dans `outils/assets/ivy-for-walls/feuilles.json`, hors dépôt.
+  - **Le lierre remodélisé :** `floor2.py` dessine une vraie feuille de lierre (cinq lobes, base en cœur, en trois variantes) et fait pousser la plante sur l'îlot, de 2,2 × 4,2 m jusqu'au mur de façade. Les tiges partent d'un bac bas de 26 cm, couvrent le toit, passent le rebord et retombent dans le vide sur les trois côtés, jusqu'à 1,40 m. Rien ne touche les colonnes, les garde-corps ni les murs de l'accueil du bas.
+- **Le garde-corps :**
+  - la bande de dalle entre le vide et l'escalier est supprimée ;
+  - une seule ligne va du coin du vide jusqu'à l'arrivée de l'escalier, et une autre longe le jardin de pierres ;
+  - le même dessin partout : sabot d'acier, verre et main courante à 1,06 m, chaque ligne tirée d'un seul tenant.
+- **Les rendus** sont dans `rendus/17-etage-lierre-et-garde-corps/`, la page est `pages/13-etage-lierre.png`.
+
+**1er étage : l'îlot au-dessus de l'entrée, quatre premiers décors.** Remplacés par le lierre ; leurs rendus restent dans `rendus/16-etage-prototypes-ile/`.
 
 - **Le bloc est retiré** (25/11). Il reste un îlot de 2,1 × 4,0 m, le toit de l'accueil du rez-de-chaussée, entouré par le vide sur trois côtés et inaccessible depuis la mezzanine. La dalle le couvre maintenant jusqu'à la rue.
 - **Quatre décors végétaux** (`floor2.py -- ... bloc=1..4`, `bloc=0` pour l'îlot nu) :
@@ -186,7 +198,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 11-plans-d-origine/ (les copies 4K des plans du client, hors dépôt),
                 12-etage-coque/ (la coque du 1er étage), 13-etage-elements-fixes/ (ses éléments fixes),
                 14-etage-prototypes-vide/ (les prototypes pour le vide), 15-etage-mobilier/ (son mobilier),
-                16-etage-prototypes-ile/ (les décors pour l'îlot, à la place du bloc)
+                16-etage-prototypes-ile/ (les décors pour l'îlot, à la place du bloc),
+                17-etage-lierre-et-garde-corps/ (le lierre, le garde-corps, l'étage tel qu'il est)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),

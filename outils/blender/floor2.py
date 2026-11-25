@@ -13,8 +13,8 @@
 #             detailed spiral stair; in the two views of the map, the ground floor seen through the voids)
 #        blender -b -P floor2.py -- variante=detail elements=1 plans=omakase,banquette,rebord,bloc,escalier
 #            (the close-ups of step 2, in the solid white model)
-#        blender -b -P floor2.py -- variante=fantome|fil-de-fer elements=1 bloc=0..4 [vues=3d] [plans=ile,ile-bas]
-#            (the prototypes for the island over the entry, where the block was)
+#        blender -b -P floor2.py -- variante=detail elements=1 plans=ile,ile-bas,garde-corps [prefixe=...]
+#            (the ivy on the island over the entry, where the block was, and the joined parapets, close up)
 #        blender -b -P floor2.py -- variante=fantome|fil-de-fer|detail mobilier=1 [plans=...]
 #            (step 3, the furniture, as floor1's step 4; also writes modele/floor2-tables.json)
 import bpy, bmesh, json, math, random, sys
@@ -37,7 +37,6 @@ DALLE = 0.30                             # the slab
 ELEMENTS = ARGS.get('elements') == '1'   # step 2: the fixed elements
 MOBILIER = ARGS.get('mobilier') == '1'   # step 3: the furniture (and its table numbers for the map)
 ELEMENTS = ELEMENTS or MOBILIER
-BLOC_P = int(ARGS.get('bloc', 0))        # the island over the entry, where the block was: 0 empty, 1-4 the prototypes
 
 
 def P(x, y, z=0.0):
@@ -206,21 +205,26 @@ def mur_suivant(name, pts, z0, z1, ep, collection, material):
 
 
 # ---------------------------------------------------------------- the plan of the floor
-SOL = [(384, 140), (1457, 140), (1457, 2245), (1286, 2245), (1286, 2213), (856, 2213), (856, 2373), (601, 2373),
-       (601, 2245), (232, 2245), (232, 842), (384, 842)]          # with the island over the entry, where the block was
-# the void over the room: along the ledge (y 1172), round the corner, down the right side, then round the stair
-VIDE = [(237, 1172), (1012, 1172)] + arc(1012, 1242, 70, -90, 0, 12)[1:] + [(1082, 1917)] + \
-    arc(1020, 1917, 62, 0, 90, 12)[1:] + [(1000, 1990), (861, 2044), (861, 1896), (601, 1896), (601, 2250), (237, 2250)]
+SOL = [(384, 140), (1457, 140), (1457, 2245), (1286, 2245), (1286, 2213), (861, 2213), (861, 2403), (576, 2403),
+       (576, 2276), (601, 2276), (601, 2245), (232, 2245), (232, 842), (384, 842)]          # with the island over the entry, where the block was
+# the void over the room: along the ledge (y 1172), round the corner, down the right side to the stair, whose opening
+# it meets (25/11: no more strip of slab between the void and the stair, so one parapet instead of two side by side)
+VIDE = [(237, 1172), (1012, 1172)] + arc(1012, 1242, 70, -90, 0, 12)[1:] + [(1082, 1986)] + \
+    arc(1082, 2172, 186, -90, -136, 16)[1:] + [(861, 2046), (861, 1896), (601, 1896), (601, 2250), (237, 2250)]
 # the void over the rock garden (the gravel seen from above on floor2.png)
 JARDIN = [(861, 2040), (1057, 2040), (1057, 2126), (1238, 2126)] + arc(1238, 2187, 61, -90, 0, 10)[1:] + \
     [(1299, 2370), (861, 2370)]
 HX, HY, R_ESC = 1082, 2172, 184          # the spiral stair (floor1.py: hub, treads to r 180) and its opening
-BLOC = (601, 1896, 856, 2373)            # the island over the entry: the block of the plan, removed (25/11), the roof of the entry
 ESCALIER_HAUT = (485, 140, 852, 247)     # the stair up to the roof floor, rising towards +x from x 572
-# the glass parapet on the slab edge (1.5 px off the void, on the slab): round the corner, down the right side and
-# along the stair; along the room side, the ledge (step 2) or, on the shell alone, the glass carries on to the lab
-GARDE_CORPS = arc(1012, 1242, 71.5, -90, 0, 32) + [(1083.5, 1917)] + arc(1020, 1917, 63.5, 0, 90, 12)[1:] + \
-    [(1000.6, 1991.4), (861.5, 2045.4)]
+# the parapet, one line on the slab edge: round the corner of the void, down its right side, then on round the
+# stair's opening (r 188) to the stair's arrival (-40 deg); past the arrival, along the rock garden's opening to the
+# wall 1064. Along the room side, the ledge (step 2) or, on the shell alone, the glass carries on to the lab.
+R_GC = R_ESC + 4
+A_GC = -math.degrees(math.acos(1.5 / R_GC))                  # where the ring meets the void's right side (x 1083.5)
+GARDE_CORPS = arc(1012, 1242, 71.5, -90, 0, 32) + arc(HX, HY, R_GC, A_GC, -40, 30)
+_jardin = [p_ for p_ in arc(1238, 2187, 62.5, -90, 0, 30) if math.hypot(p_[0] - HX, p_[1] - HY) >= R_GC]
+GARDE_CORPS_JARDIN = [(HX + R_GC * math.cos(math.atan2(_jardin[0][1] - HY, _jardin[0][0] - HX)),
+                       HY + R_GC * math.sin(math.atan2(_jardin[0][1] - HY, _jardin[0][0] - HX)))] + _jardin + [(1300.5, 2209)]
 
 
 def dans(pt, poly):
@@ -448,26 +452,19 @@ def build_coque(top, bas=0.0):
     # the double-height facade over the void: its upper part, from the slab level
     facade('facade-vide', 238.5, [1172 + (2245 - 1172) * k / 9 for k in range(10)])
 
-    # ---- glass parapets on the edges of the void (1.05 m, 2 cm glass in a thin steel shoe)
-    if bas < 1.05:
-        # with the ledge, the glass starts where it leaves the ledge's rounded end (y 1176), the ledge guarding the rest
+    # ---- the parapets: one design everywhere (25/11), a steel shoe (5 cm, up to 8 cm), 2 cm of glass, a steel cap
+    #      (4 cm) at 1.06 m; one continuous line from the void's corner round to the stair's arrival, another from
+    #      the arrival along the rock garden's opening
+    if bas < 1.06:
         bord = [p_ for p_ in GARDE_CORPS if p_[1] >= 1176] if ELEMENTS else [(459.5, 1173.5), (1012, 1173.5)] + GARDE_CORPS[1:]
-        mur_suivant('garde-corps-vide', bord, max(bas, 0.0), min(top, 1.05), 2.4, 'Vitrages', M_VERRE)
-        mur_suivant('garde-corps-vide-sabot', bord, max(bas, 0.0), min(top, 0.06), 6, 'Vitrages', M_CADRE)
-        # round the stair opening where the slab borders it, open at the arrival (the stair ends at -18 deg)
-        pts = []
-        for a in range(-200, 160, 2):
-            x, y = HX + (R_ESC + 4) * math.cos(math.radians(a)), HY + (R_ESC + 4) * math.sin(math.radians(a))
-            sur_dalle = dans((x, y), SOL) and not dans((x, y), VIDE) and not dans((x, y), JARDIN)
-            if sur_dalle and not (-40 <= a <= 12):
-                pts.append((x, y))
-            elif len(pts) > 1:
-                mur_suivant(f'garde-corps-escalier-{a}', pts, max(bas, 0.0), min(top, 1.05), 2.4, 'Vitrages', M_VERRE)
-                pts = []
-            else:
-                pts = []
-        if len(pts) > 1:
-            mur_suivant('garde-corps-escalier-fin', pts, max(bas, 0.0), min(top, 1.05), 2.4, 'Vitrages', M_VERRE)
+        for nom, pts in (('garde-corps-vide', bord), ('garde-corps-jardin', GARDE_CORPS_JARDIN)):
+            chemin = [P(x, y) for x, y in pts]             # swept as one piece: smooth joints along the curves
+            for suffixe, demi, z0, z1, m in (('-sabot', 0.025, 0.0, 0.08, M_CADRE), ('', 0.01, 0.08, 1.02, M_VERRE),
+                                             ('-main-courante', 0.02, 1.02, 1.06, M_CADRE)):
+                z0, z1 = max(bas, z0), min(top, z1)
+                if z1 - z0 > 0.002:
+                    sweep(nom + suffixe, chemin, [(-demi, z0, False), (demi, z0, False), (demi, z1, False), (-demi, z1, False)],
+                          'Vitrages', m)
 
     # ---- the two half drums of the booths on the right (open to the room, the round side against the facade)
     for k, cy in enumerate((770, 1031)):
@@ -783,170 +780,172 @@ def vide_colonnes():
         mesh_obj(f'colonne-{k}-lumieres', bm, 'Vide', M_LUMIERE)
 
 
-# ---------------------------------------------------------------- the island over the entry, where the block was
-# The user removed the block (25/11) and asked for something else, plant-like. Once the block is gone, its footprint
-# is an island over the entry (2.1 x 4.0 m), the roof of the entry box of the ground floor, with the void on three
-# sides and no way in from the mezzanine: a place to look at, from above and from below. bloc=1 a hanging garden;
-# 2 a curtain of trailing plants falling into the double height; 3 a large tree whose crown spreads over the void;
-# 4 a green wall, the volume of the block kept but planted. Each in a planter whose rim is the island's edge.
-M_FEUILLE = mat('feuillage', (0.20, 0.26, 0.14), 0.8)
+# ---------------------------------------------------------------- the island over the entry: the ivy
+# The block of the plan is removed (25/11): its footprint, the roof of the entry box of the ground floor, is an island
+# (2.2 x 4.2 m) with the void on three sides and no way in from the mezzanine. After four plant prototypes, the user
+# asked for ivy, from a model they supplied (outils/assets/ivy-for-walls/, third-party, not in the repository).
+# Analysed (outils/blender/lierre_feuilles.py): a wall patch of 430,000 faces, 40,000 leaves that are flat octagons,
+# 6.6 cm long once at real size (the model is at 1/10; 4 to 8.5 cm), on ribbon stems. What is kept: the size and the
+# spread of the leaves, their density, stems carrying alternate leaves. What is modelled again: a real ivy leaf (five
+# pointed lobes, a heart-shaped base, a slight fold along the midrib), and the plant grown on the island itself:
+# runners from a low planter cover the roof, go over its rim and hang down into the double height on the three sides,
+# kept off the walls of the entry box below (y 1898, x 599) and 2.2 m over the ground floor.
+M_FEUILLE = mat('feuillage', (0.16, 0.24, 0.12), 0.7)
 M_TERRE = mat('terre', (0.10, 0.08, 0.06), 1.0)
 M_ECORCE = mat('ecorce', (0.15, 0.11, 0.08), 0.8)
+ILE = (601, 1896, 861, 2403)          # the planted island: the block's footprint, to the street facade (wall 1068)
+LIERRE_TAILLE = (0.045, 0.085)        # leaf lengths (m), the model's 10th - 90th percentiles at real size
 
 
-def touffe(bm, c, r, graine, sub=2, aplati=1.0):
-    """A lump of leaves: a noisy icosphere (as floor1's planters), a little flattened if asked."""
-    rnd = random.Random(graine)
-    tmp = bmesh.new(); bmesh.ops.create_icosphere(tmp, subdivisions=sub, radius=1.0)
-    ph = [rnd.uniform(0, math.tau) for _ in range(3)]
-    vs = {}
-    for v in tmp.verts:
-        k = r * (1 + 0.13 * math.sin(3 * v.co.x + ph[0]) * math.sin(3 * v.co.y + ph[1]) + 0.08 * math.sin(4 * v.co.z + ph[2]))
-        vs[v] = bm.verts.new(c + Vector((v.co.x * k, v.co.y * k, v.co.z * k * aplati)))
-    for f in tmp.faces:
-        bm.faces.new([vs[v] for v in f.verts]).smooth = True
-    tmp.free()
+def feuille_lierre(variante):
+    """An ivy leaf in its own frame (base at the origin, along +y, length 1, face +z): five lobes, a heart-shaped
+    base, the halves folded a little along the midrib. Three variants: lobes more or less deep."""
+    p_ = (0.0, 0.10, 0.20)[variante]
+    droite = [(0.0, 0.06), (0.16, -0.03), (0.31, 0.06), (0.30 - p_ * 0.3, 0.22), (0.52, 0.40 + p_ * 0.1),
+              (0.30 - p_, 0.54), (0.20, 0.72), (0.0, 1.0)]
+    contour = droite + [(-x, y) for x, y in reversed(droite[1:-1])]
+    def z(x, y):
+        return -0.07 * abs(x) + 0.04 * (y - 0.5) ** 2           # the fold along the midrib, a slight cup
+    vs = [(0.0, 0.45, z(0, 0.45) + 0.01)] + [(x, y, z(x, y)) for x, y in contour]
+    n = len(contour)
+    fs = [(0, 1 + k, 1 + (k + 1) % n) for k in range(n)]
+    return vs, fs
 
 
-def bac(h=0.45, e=10):
-    """The planter: a rim of e px round the island, h m high, and its soil 5 cm below the rim."""
-    x0, y0, x1, y1 = BLOC
+FEUILLES = [feuille_lierre(k) for k in range(3)]
+
+
+def tube(bm, pts, r0, r1, n=6):
+    """A stem: a tube along world points, its radius going from r0 to r1."""
+    anneaux = []
+    for i, p_ in enumerate(pts):
+        a_, b_ = pts[max(i - 1, 0)], pts[min(i + 1, len(pts) - 1)]
+        t = (b_ - a_).normalized()
+        u = t.orthogonal().normalized(); v = t.cross(u)
+        r = r0 + (r1 - r0) * i / max(1, len(pts) - 1)
+        anneaux.append([bm.verts.new(p_ + (u * math.cos(math.tau * k / n) + v * math.sin(math.tau * k / n)) * r)
+                        for k in range(n)])
+    for A, B in zip(anneaux, anneaux[1:]):
+        for k in range(n):
+            j = (k + 1) % n
+            bm.faces.new((A[k], A[j], B[j], B[k])).smooth = True
+    bm.faces.new(anneaux[0][::-1]); bm.faces.new(anneaux[-1])
+
+
+def poser_feuille(bm, base, y, z, taille, rnd):
+    """One leaf: its base at `base`, its midrib along y, its face towards z (world vectors)."""
+    y = y.normalized(); z = (z - y * z.dot(y)).normalized(); x = y.cross(z)
+    vs, fs = FEUILLES[rnd.randrange(3)]
+    vv = [bm.verts.new(base + (x * a + y * b + z * c) * taille) for a, b, c in vs]
+    for f in fs:
+        bm.faces.new([vv[i] for i in f]).smooth = True
+
+
+def bac_lierre():
+    """The planter of the ivy: a low rim (0.26 m) following the island, its soil at 0.24 m."""
+    x0, y0, x1, y1 = ILE
+    y1 -= 1                                       # clear of the street facade's wall (y 2403)
+    e = 8
     bm = bmesh.new()
-    bm_box(bm, x0, y0, x1, y0 + e, 0.0, h); bm_box(bm, x0, y1 - e, x1, y1, 0.0, h)
-    bm_box(bm, x0, y0 + e, x0 + e, y1 - e, 0.0, h); bm_box(bm, x1 - e, y0 + e, x1, y1 - e, 0.0, h)
+    bm_box(bm, x0, y0, x1, y0 + e, 0.0, 0.26); bm_box(bm, x0, y1 - e, x1, y1, 0.0, 0.26)
+    bm_box(bm, x0, y0 + e, x0 + e, y1 - e, 0.0, 0.26); bm_box(bm, x1 - e, y0 + e, x1, y1 - e, 0.0, 0.26)
     mesh_obj('ile-bac', bm, 'Ile', M_MEUBLE)
-    bm = bmesh.new(); bm_box(bm, x0 + e, y0 + e, x1 - e, y1 - e, 0.0, h - 0.05)
+    bm = bmesh.new(); bm_box(bm, x0 + e, y0 + e, x1 - e, y1 - e, 0.0, 0.24)
     mesh_obj('ile-terre', bm, 'Ile', M_TERRE)
 
 
-def massif(pas=30, rmin=0.14, rmax=0.22, z0=0.40, graine=1, nom='ile-massif'):
-    """A dense bed of low plants over the island."""
-    x0, y0, x1, y1 = BLOC
-    rnd = random.Random(graine); bm = bmesh.new(); k = 0
-    for x in range(x0 + 24, x1 - 20, pas):
-        for y in range(y0 + 24, y1 - 20, pas):
-            r = rnd.uniform(rmin, rmax)
-            cx_, cy_ = x + rnd.uniform(-6, 6), y + rnd.uniform(-6, 6)
-            rp = r / PX + 2
-            pres = min(cx_ - x0, x1 - cx_, cy_ - y0, y1 - cy_) < 10 + rp       # would cross the rim (10 px)
-            touffe(bm, P(cx_, cy_, (0.452 + r * 0.95) if pres else (z0 + r * 0.55)), r, graine * 1000 + k, 2, 0.8)
-            k += 1
-    mesh_obj(nom, bm, 'Ile', M_FEUILLE)
+def lierre():
+    """The ivy over the island: runners on the soil, and strands over the three edges on the void."""
+    x0, y0, x1, y1 = ILE
+    rnd = random.Random(31)
+    tiges, feuilles = bmesh.new(), bmesh.new()
+    haut = Vector((0, 0, 1))
 
+    def feuilles_le_long(pts, regard, pendante):
+        """Alternate leaves every 4 - 5 cm along a stem; `regard(p)` gives the way they face; on a strand, the leaves
+        over the soil and the rim lie open, those below it hang (pendante = None: decided by the height)."""
+        long = 0.0; cote = 1; prochaine = rnd.uniform(0.02, 0.04)
+        for a_, b_ in zip(pts, pts[1:]):
+            seg = (b_ - a_).length
+            t = (b_ - a_).normalized()
+            while long + seg >= prochaine:
+                q = a_ + t * (prochaine - long)
+                pend = pendante(q) if callable(pendante) else pendante
+                n = regard(q) if pend else haut
+                s_ = t.cross(n).normalized() * cote
+                if s_.length < 0.5:
+                    s_ = Vector((-t.y, t.x, 0)).normalized() * cote
+                taille = rnd.uniform(*LIERRE_TAILLE) * (1.12 if pend else 1.0)
+                if pend:                            # hanging: the tips down, the faces out and a little up
+                    y = (s_ * 0.55 + Vector((0, 0, -0.75)) + n * 0.35 + Vector([rnd.uniform(-0.25, 0.25) for _ in range(3)]))
+                    z = n + haut * 0.35
+                else:                                   # on the soil: the leaves lie open to the light
+                    y = (s_ * 0.8 + t * 0.35 + haut * 0.12 + Vector([rnd.uniform(-0.3, 0.3) for _ in range(2)] + [0]))
+                    pente = 0.18 if q.z > 0.275 else 0.4         # over the rim: almost flat
+                    z = haut + Vector([rnd.uniform(-pente, pente) for _ in range(2)] + [0])
+                base = q + s_ * 0.012 + n * (0.004 if pend else 0.008)
+                poser_feuille(feuilles, base, y, z, taille, rnd)
+                cote = -cote
+                prochaine += rnd.uniform(0.032, 0.046) if pend else rnd.uniform(0.036, 0.05)
+            long += seg
 
-def retombees(longueur, pas, graine, nom):
-    """Trailing plants over the three edges on the void, from the rim down `longueur` m, 14 px off the rim: they stay
-    outside the walls of the entry box of the ground floor (y 1898, x 599) and stop 2.15 m over its floor."""
-    x0, y0, x1, y1 = BLOC
-    rnd = random.Random(graine); bm = bmesh.new(); k = 0
-    # (start, direction along the edge, outwards); the east side skips the end of the glass parapet (861, 2045)
-    bords = [([(x, y0 - 14) for x in range(x0 + 8, x1 - 6, pas)], (1, 0), (0, -1)),
-             ([(x0 - 14, y) for y in range(y0 + 8, 2228, pas)], (0, 1), (-1, 0)),
-             ([(x1 + 14, y) for y in range(y0 + 8, y1 - 6, pas) if abs(y - 2042) > 24], (0, 1), (1, 0))]
-    for pts, (ux, uy), (ox, oy) in bords:
-        for x, y in pts:
-            L = longueur * rnd.uniform(0.4, 1.0)
-            n = max(4, int(L / 0.07))
+    # runners on the soil: from a dozen roots, wandering with some persistence, staying within the rim
+    racines = [(x0 + 30 + (x1 - x0 - 60) * rnd.random(), y0 + 30 + (y1 - y0 - 60) * rnd.random()) for _ in range(34)]
+    for rx, ry in racines:
+        for _ in range(rnd.randint(6, 8)):
+            ang = rnd.uniform(0, math.tau); x, y = rx, ry
+            pts = [P(x, y, 0.255)]
+            for i in range(rnd.randint(22, 40)):
+                ang += rnd.uniform(-0.45, 0.45)
+                nx_, ny_ = x + 5.4 * math.cos(ang), y + 5.4 * math.sin(ang)          # 4.5 cm steps
+                if not (x0 + 14 < nx_ < x1 - 14 and y0 + 14 < ny_ < y1 - 24):
+                    ang += math.pi * rnd.uniform(0.6, 1.0); continue
+                x, y = nx_, ny_
+                pts.append(P(x, y, 0.258 + 0.03 * abs(math.sin(i * 0.7 + rx))))
+            if len(pts) > 3:
+                tube(tiges, pts, 0.005, 0.002)
+                feuilles_le_long(pts, lambda q: haut, False)
+
+    # strands over the edges: from inside the rim, over it, then down, kept off the walls below
+    def suite(a_, b_):                                    # irregular spacing: 5 to 15 px, in clumps
+        u, out = a_, []
+        while u < b_:
+            out.append(u); u += rnd.choice((5, 6, 7, 9, 12, 15))
+        return out
+    bords = [([(x, y0) for x in suite(x0 + 16, x1 - 16)], Vector((0, 1, 0)), 'n'),      # clear of the corners' rims
+             ([(x0, y) for y in suite(y0 + 16, 2224)], Vector((-1, 0, 0)), 'o'),
+             ([(x1, y) for y in suite(y0 + 16, y1 - 18)], Vector((1, 0, 0)), 'e')]
+    for pts_bord, sortie, cote_ in bords:
+        for bx, by in pts_bord:
+            dedans = P(bx, by) - sortie * rnd.uniform(0.12, 0.32)
+            bord = P(bx, by)
+            h_ = rnd.uniform(0.285, 0.32)                     # over the rim (0.26 m), each at its own height
+            L = rnd.uniform(0.15, 1.0) ** 1.6 * 1.40           # most short, a few long (up to 1.40 m)
             ph = rnd.uniform(0, math.tau)
-            for i in range(n + 1):
-                z = 0.42 - L * i / n
-                for j in range(3 if i < n * 0.6 else 2):
-                    a = rnd.uniform(-5, 5); b = rnd.uniform(0, 5) + 2 * math.sin(ph + i * 0.6)
-                    r = rnd.uniform(0.035, 0.058) * (1 - 0.3 * i / n)
-                    b = max(0.0, b)
-                    touffe(bm, P(x + ux * a + ox * b, y + uy * a + oy * b, z + rnd.uniform(-0.02, 0.02)), r,
-                           graine * 10000 + k, 1)
-                    k += 1
-    mesh_obj(nom, bm, 'Ile', M_FEUILLE)
-
-
-def arbre(x, y, h, rc, n, graine, nom):
-    """A small tree: a slightly leaning trunk from the soil, a crown of clumps (as floor1's planter trees)."""
-    rnd = random.Random(graine)
-    bm = bmesh.new()
-    pied, tete = P(x, y, 0.40), P(x + rnd.uniform(-8, 8), y + rnd.uniform(-8, 8), h)
-    fil(bm, pied, tete, r=0.035, n=8)
-    mesh_obj(nom + '-tronc', bm, 'Ile', M_ECORCE)
-    bm = bmesh.new()
-    for k in range(2 * n):
-        a = math.tau * k / (2 * n) + rnd.uniform(-0.3, 0.3)
-        d = rc * rnd.uniform(0.15, 0.85)
-        c = tete + Vector((d * math.cos(a), d * math.sin(a), rnd.uniform(-0.25, 0.30)))
-        touffe(bm, c, rc * rnd.uniform(0.28, 0.38), graine * 100 + k, 2, 0.85)
-    touffe(bm, tete + Vector((0, 0, 0.22)), rc * 0.34, graine * 100 + 99, 2, 0.85)
-    mesh_obj(nom + '-couronne', bm, 'Ile', M_FEUILLE)
-
-
-def ile_jardin():
-    """bloc=1, the hanging garden: a dense bed, three small trees, plants spilling over the edges (1 m)."""
-    bac(); massif()
-    arbre(680, 2000, 1.75, 0.42, 8, 3, 'ile-arbre-1'); arbre(785, 2150, 2.05, 0.48, 9, 5, 'ile-arbre-2')
-    arbre(690, 2290, 1.6, 0.38, 7, 7, 'ile-arbre-3')
-    retombees(1.0, 36, 11, 'ile-retombees')
-
-
-def ile_rideau():
-    """bloc=2, the green curtain: a lower bed and long trailing plants falling 1.6 m into the double height, close set,
-    like the curtains of the place."""
-    bac(); massif(pas=36, rmin=0.11, rmax=0.17, graine=2)
-    retombees(1.6, 14, 13, 'ile-rideau')
-
-
-def ile_arbre():
-    """bloc=3, the tree: one large multi-stemmed tree in the island, its crown at the mezzanine's eye level and above,
-    spreading over the void beside the three columns; ground cover at its foot."""
-    bac(); massif(pas=40, rmin=0.10, rmax=0.15, graine=3)
-    rnd = random.Random(17)
-    bm = bmesh.new(); couronne = bmesh.new()
-    base = P(728, 2060, 0.40)
-    for k, (tx, ty, th) in enumerate(((650, 1960, 2.35), (800, 1990, 2.55), (700, 2180, 2.2))):
-        tete = P(tx, ty, th)
-        mid = base.lerp(tete, 0.45) + Vector((0, 0, 0.15))
-        fil(bm, base, mid, r=0.07, n=10); fil(bm, mid, tete, r=0.05, n=10)
-        for j in range(42):                        # a crown of many small clumps, not a few balls
-            a = rnd.uniform(0, math.tau); d = rnd.uniform(0.1, 1.05)
-            c = tete + Vector((d * math.cos(a), d * math.sin(a), rnd.uniform(-0.25, 0.30) - 0.18 * d))
-            c.z = min(c.z, H - 0.35)
-            r = rnd.uniform(0.12, 0.20)
-            px, py = c.x / PX + CX, -c.y / PX + CY      # the crown keeps clear of the three columns
-            if any(math.hypot(px - tx_, py - ty_) < 139 + r / PX + 8 for tx_, ty_ in TAMBOURS_VIDE):
-                continue
-            rp = r / PX + 4                             # and of the wall at the end of the lab (x < 599.5, y 2245-2276)
-            if px - rp < 599.5 and 2245 - rp < py < 2276 + rp:
-                continue
-            touffe(couronne, c, r, 1700 + 100 * k + j, 2, 0.85)
-    mesh_obj('ile-grand-arbre-troncs', bm, 'Ile', M_ECORCE)
-    mesh_obj('ile-grand-arbre-couronne', couronne, 'Ile', M_FEUILLE)
-
-
-def ile_mur():
-    """bloc=4, the green wall: the volume of the block kept (2.6 m), its four faces planted, its top too."""
-    x0, y0, x1, y1 = BLOC
-    e = 16
-    bm = bmesh.new(); bm_box(bm, x0 + e, y0 + e, x1 - e, y1 - e, 0.0, 2.60); mesh_obj('ile-mur-noyau', bm, 'Ile', M_MEUBLE)
-    rnd = random.Random(23); bm = bmesh.new(); k = 0
-    for (ax, a0, a1, fixe, s_) in (('x', x0 + e, x1 - e, y0 + e, -1), ('x', x0 + e, x1 - e, y1 - e, 1),
-                                   ('y', y0 + e, y1 - e, x0 + e, -1), ('y', y0 + e, y1 - e, x1 - e, 1)):
-        L = (a1 - a0) * PX                          # the face, metres
-        for nb, rmin, rmax, sortie in ((150, 0.05, 0.085, 0.6), (30, 0.085, 0.12, 0.75)):   # clumps per m2, two layers
-            for i in range(int(L * 2.6 * nb)):
-                u = rnd.uniform(a0 + 3, a1 - 3)
-                r = rnd.uniform(rmin, rmax)
-                z = rnd.uniform(r + 0.02, 2.58 - r * 0.3)
-                off = r / PX * sortie
-                pres = (ax == 'y' and s_ < 0 and 2230 < u < 2290) or (ax == 'y' and s_ > 0 and 2010 < u < 2075)
-                if pres:                                 # the lab's wall (x 599.5) and the end of the glass parapet
-                    off = min(off, e - r / PX - 1.5)
-                d = fixe + s_ * off
-                c = P(u, d, z) if ax == 'x' else P(d, u, z)
-                touffe(bm, c, r, 23000 + k, 1); k += 1
-    mesh_obj('ile-mur-feuilles', bm, 'Ile', M_FEUILLE)
-    rnd = random.Random(29); bm = bmesh.new(); k = 0
-    for x in range(x0 + 26, x1 - 20, 28):
-        for y in range(y0 + 26, y1 - 20, 28):
-            r = rnd.uniform(0.11, 0.16)
-            touffe(bm, P(x, y, 2.60 + r * 0.5), r, 29000 + k, 2, 0.8); k += 1
-    mesh_obj('ile-mur-dessus', bm, 'Ile', M_FEUILLE)
+            ecart = 0.075 + rnd.uniform(0, 0.03)             # off the edge: clear of the walls below
+            pts = [Vector((dedans.x, dedans.y, 0.255)), Vector((bord.x, bord.y, 0.0)) - sortie * 0.085 + Vector((0, 0, h_ - 0.012)),
+                   Vector((bord.x, bord.y, 0.0)) - sortie * 0.03 + Vector((0, 0, h_ - 0.005)),
+                   Vector((bord.x, bord.y, h_)) + sortie * 0.02,
+                   Vector((bord.x, bord.y, 0.0)) + sortie * ecart * 0.85 + Vector((0, 0, h_ - 0.04))]
+            n = max(3, int(L / 0.045))
+            for i in range(1, n + 1):
+                z = 0.27 - L * i / n
+                lat = Vector((-sortie.y, sortie.x, 0)) * 0.02 * math.sin(ph + i * 0.35)
+                pts.append(Vector((bord.x, bord.y, z)) + sortie * (ecart + 0.01 * math.sin(ph + i * 0.2)) + lat)
+            tube(tiges, pts, 0.0045, 0.0018)
+            dehors = lambda q, b=bord, s=sortie: (q - b).dot(s) > 0.005 or q.z < 0.20      # past the rim: they hang
+            feuilles_le_long(pts, lambda q, s=sortie: s, dehors)
+            if L > 0.5 and rnd.random() < 0.45:              # a branch, leaving the strand sideways and falling
+                k0 = rnd.randint(4, max(5, len(pts) // 2))
+                lat = Vector((-sortie.y, sortie.x, 0)) * rnd.choice((-1, 1))
+                br = [pts[k0]]
+                for i in range(1, rnd.randint(5, 14)):
+                    br.append(pts[k0] + lat * 0.012 * i + sortie * 0.003 * i + Vector((0, 0, -0.04 * i)))
+                tube(tiges, br, 0.0025, 0.0015)
+                feuilles_le_long(br, lambda q, s=sortie: s, True)
+    mesh_obj('ile-lierre-tiges', tiges, 'Ile', M_ECORCE)
+    o = mesh_obj('ile-lierre-feuilles', feuilles, 'Ile', M_FEUILLE)
+    coll('Traits-fins').objects.link(o)                  # thin light lines: a texture of leaves, not a scribble
 
 
 def build_elements():
@@ -957,7 +956,7 @@ def build_elements():
     avant = set(bpy.data.objects)
     bar_omakase(); banquettes(); tablette_vide(); labo(); rideaux(); escalier_detail()
     vide_colonnes()
-    {1: ile_jardin, 2: ile_rideau, 3: ile_arbre, 4: ile_mur}.get(BLOC_P, lambda: None)()
+    bac_lierre(); lierre()
     return [o for o in bpy.data.objects if o not in avant]
 
 
@@ -1334,6 +1333,8 @@ PLANS = {
     # the island over the entry: from the mezzanine across the void, and from the ground floor's room, looking up
     'ile':       ((1230, 1560, 2.45), (720, 2110, 0.70), 22),
     'ile-bas':   ((960, 1480, -1.90), (690, 2000, 0.60), 18),
+    'lierre':    ((690, 1790, 0.75), (735, 1900, 0.05), 32),       # the ivy close up, over the north edge
+    'garde-corps': ((1150, 1860, 1.75), (1090, 2030, 0.35), 22),   # the parapet joined to the stair's
     # step 3
     'grande':    ((1160, 1140, 1.55), (800, 820, 0.70), 22),     # the long table and the omakase bar beyond
     'demi':      ((1080, 1180, 1.40), (1290, 900, 0.75), 24),    # the two half drums
@@ -1411,6 +1412,13 @@ def freestyle_lines(visible, hidden, thickness=1.0):
     fs = vl.freestyle_settings
     fs.crease_angle = math.radians(140)
     exclus = coll('Sans-trait-plein')               # the thin-line objects and the ground floor: not in the main lines
+    lierre_ = [o for o in coll('Ile').objects if o.name.startswith('ile-lierre')] if 'Ile' in bpy.data.collections else []
+    if ARGS.get('variante') != 'detail':            # on the map views, the ivy is shaded without lines: thousands of
+        for o in lierre_:                           # leaves would only make a grey mass, and take an hour to draw
+            if o.name in coll('Traits-fins').objects:
+                coll('Traits-fins').objects.unlink(o)
+            if o.name not in coll('Dessous').objects:
+                coll('Dessous').objects.link(o)
     for o in list(coll('Traits-fins').objects) + list(coll('Dessous').objects):
         if o.name not in exclus.objects:
             exclus.objects.link(o)
@@ -1474,10 +1482,9 @@ else:
     # ---------------------------------------------------------------- the map styles (as floor1's variants)
     nom = ARGS['variante']
     V = VARIANTES[nom]
-    OUT = Path(ARGS.get('out', RACINE / 'rendus' / ('16-etage-prototypes-ile' if 'bloc' in ARGS else
-                                                    '15-etage-mobilier' if MOBILIER else
+    OUT = Path(ARGS.get('out', RACINE / 'rendus' / ('15-etage-mobilier' if MOBILIER else
                                                     '13-etage-elements-fixes' if ELEMENTS else '12-etage-coque')))
-    pre = f"b{BLOC_P}-" if 'bloc' in ARGS else ''
+    pre = ARGS.get('prefixe', '')
     coll('Fantome')
     m_ghost = mat('fantome', (0.98, 0.98, 0.98), 0.6, alpha=0.16)
 
@@ -1541,6 +1548,8 @@ else:
     if ELEMENTS and a < 0.1:
         for o in bpy.data.objects:
             o.visible_shadow = False
+    for o in coll('Escalier').objects:          # the stair's top: no deep shadow on the ground floor seen through it
+        o.visible_shadow = False
     show(collections_hidden=('Plan',))
     sun.rotation_euler = (math.radians(35), 0, math.radians(-121))
 

@@ -44,3 +44,7 @@ modele/*.blend
 rendus/11-plans-d-origine/
 outils/plans/_polices/
 rendus/12-etage-coque/1-calage-vue-de-dessus.png
+
+# third-party 3D models (the ivy of the island over the entry): kept out, with their zip
+outils/assets/
+/ivy-for-walls.zip
