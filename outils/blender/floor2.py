@@ -235,7 +235,8 @@ GARDE_CORPS_JARDIN = [(HX + R_GC * math.cos(math.atan2(_jardin[0][1] - HY, _jard
 # The ground floor's walls (floor1.py's, vectorised from floor1.png, in the same pixels)
 DATA_RDC = json.loads((RACINE / 'modele' / 'floor1-murs.json').read_text())
 # The outer walls round the lab, which the plan leaves black
-MURS_LABO = [(200, 752, 384, 842), (200, 842, 232, 2276), (200, 2245, 599.5, 2276), (232, 1167, 384, 1173),
+# (they meet without overlapping: shared faces of two walls render as dark streaks)
+MURS_LABO = [(200, 752, 382, 842), (200, 842, 232, 2245), (200, 2245, 599.5, 2276), (232, 1167, 384, 1173),
              (569, 2276, 580, 2286)]          # the last one closes the 8 cm slit at the corner, before wall 1065
 # The lift shaft (4 on floor2.png) and the outer band of the right facade: drawn in dark grey on the plan, not in black,
 # so the vectorising missed them; measured on floor2.png. The shaft stands over the ground floor's room of the same
@@ -509,7 +510,7 @@ def build_coque(top, bas=0.0):
     facade('facade-droite-c', 1450.5, [1169, 1263.5, 1360, 1453])
     facade('facade-droite-d', 1450.5, [1579, 1692, 1822.5, 1952, 2082.5, 2210])
     # the double-height facade over the void: its upper part, from the slab level
-    facade('facade-vide', 238.5, [1172 + (2245 - 1172) * k / 9 for k in range(10)])
+    facade('facade-vide', 238.5, [1176 + (2242 - 1176) * k / 9 for k in range(10)])     # between walls 3 and 2
 
     # ---- the parapets: one design everywhere (25/11), a steel shoe (5 cm, up to 8 cm), 2 cm of glass, a steel cap
     #      (4 cm) at 1.06 m; one continuous line from the void's corner round to the stair's arrival, another from
