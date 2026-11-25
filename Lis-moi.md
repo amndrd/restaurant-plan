@@ -8,7 +8,30 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (25/11/2026)
 
-**1er étage, étape 2 : les éléments fixes, d'après les photos.** En attente de ta validation.
+**1er étage, étape 3 : le mobilier.** En attente de ta validation.
+
+- **Fait comme l'étape 4 du rez-de-chaussée,** avec les mêmes pièces : `floor2.py -- variante=fantome|fil-de-fer mobilier=1`, puis `variante=detail plans=grande,demi,facade` pour les gros plans.
+- **Le mobilier :**
+  - les 6 tabourets du bar omakase ;
+  - la grande table et ses 10 chaises ;
+  - les 6 tabourets de la tablette au bord du vide ;
+  - dans les deux demi-tambours, une table ronde et 2 fauteuils chacun ;
+  - 3 tables hautes à tabourets devant une tablette en bois sous les pavés de verre, comme au rez-de-chaussée ;
+  - les machines du laboratoire, une console, les suspensions et les lampes.
+- **Les tables sont numérotées** après celles du bas : 18 à 23, puis 100 pour le bar omakase et 101 pour la tablette, suivis tabouret par tabouret. Il y a 37 places à l'étage. La liste est dans `modele/floor2-tables.json`, et `outils/numeros_tables.py etage1` fait l'image des numéros.
+- **Les rendus** sont dans `rendus/15-etage-mobilier/`. La page, `pages/11-etage-mobilier.png`, reste hors dépôt (photos).
+
+**1er étage : le vide au-dessus des tambours, quatre prototypes.** En attente de ton choix.
+
+- **Le constat :** dans le vrai lieu, les tambours se lisent sur toute la double hauteur, et des câbles tendus portent de petites lampes (photo 33). Dans le modèle, rien n'était fait au-dessus de 3 m.
+- **Les quatre prototypes** (`floor2.py -- ... vide=1..4`) :
+  - V1, le vrai lieu : les câbles et les lampes ;
+  - V2, trois colonnes : les tambours montent jusqu'au plafond, avec des fentes de lumière ;
+  - V3, trois halos : des anneaux de lumière suspendus à hauteur des yeux de la mezzanine ;
+  - V4, les trois colonnes et une lanterne : le bloc de l'entrée devient une lanterne en pavés de verre.
+- **Les rendus** sont dans `rendus/14-etage-prototypes-vide/`. La page, `pages/10-etage-le-vide.png`, reste hors dépôt (photo 33).
+
+**1er étage, étape 2 : les éléments fixes, d'après les photos.** Validée.
 
 - **Faite comme l'étape 3 du rez-de-chaussée,** avec les mêmes fonctions, matériaux, styles et caméras : `floor2.py -- variante=fantome|fil-de-fer elements=1`, puis `variante=detail plans=omakase,banquette,rebord,bloc,escalier` pour les gros plans.
 - **Les éléments :**
@@ -149,7 +172,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 9-carte-finale/ (la carte telle que choisie, et la vidéo),
                 10-plans/ (les plans redessinés du rez-de-chaussée et du 1er étage, SVG et PNG 4K)
                 11-plans-d-origine/ (les copies 4K des plans du client, hors dépôt),
-                12-etage-coque/ (la coque du 1er étage), 13-etage-elements-fixes/ (ses éléments fixes)
+                12-etage-coque/ (la coque du 1er étage), 13-etage-elements-fixes/ (ses éléments fixes),
+                14-etage-prototypes-vide/ (les prototypes pour le vide), 15-etage-mobilier/ (son mobilier)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),

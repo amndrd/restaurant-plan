@@ -1,0 +1,148 @@
+{
+ "note": "floor2 (1er étage, la mezzanine) : les tables de la carte en direct, numérotées après celles du rez-de-chaussée. centre_px : sur floor2.png (les pixels de floor1.png) ; centre_m : dans le modèle (même origine que floor1). zone : D demi-tambours, G grande table, F façade ; 100 le bar omakase, 101 la tablette au bord du vide.",
+ "tables": [
+  {
+   "id": 18,
+   "nom": "Demi-tambour 1",
+   "type": "tambour",
+   "centre_px": [
+    1298.5,
+    770
+   ],
+   "places": 4,
+   "assises": "banquette en demi-cercle et 2 fauteuils",
+   "zone": "D",
+   "centre_m": [
+    3.846,
+    3.833
+   ]
+  },
+  {
+   "id": 19,
+   "nom": "Demi-tambour 2",
+   "type": "tambour",
+   "centre_px": [
+    1298.5,
+    1031
+   ],
+   "places": 4,
+   "assises": "banquette en demi-cercle et 2 fauteuils",
+   "zone": "D",
+   "centre_m": [
+    3.846,
+    1.658
+   ]
+  },
+  {
+   "id": 20,
+   "nom": "Grande table",
+   "type": "table",
+   "centre_px": [
+    847.0,
+    848.5
+   ],
+   "taille_m": [
+    4.32,
+    0.78
+   ],
+   "places": 10,
+   "assises": "chaises",
+   "zone": "G",
+   "centre_m": [
+    0.083,
+    3.179
+   ]
+  },
+  {
+   "id": 21,
+   "nom": "Façade, table haute 1",
+   "type": "table haute",
+   "centre_px": [
+    1334.0,
+    1325.5
+   ],
+   "taille_m": [
+    0.78,
+    1.86
+   ],
+   "places": 3,
+   "assises": "tabourets",
+   "zone": "F",
+   "centre_m": [
+    4.142,
+    -0.796
+   ]
+  },
+  {
+   "id": 22,
+   "nom": "Façade, table haute 2",
+   "type": "table haute",
+   "centre_px": [
+    1334.0,
+    1676.0
+   ],
+   "taille_m": [
+    0.78,
+    1.22
+   ],
+   "places": 2,
+   "assises": "tabourets",
+   "zone": "F",
+   "centre_m": [
+    4.142,
+    -3.717
+   ]
+  },
+  {
+   "id": 23,
+   "nom": "Façade, table haute 3",
+   "type": "table haute",
+   "centre_px": [
+    1334.0,
+    1881.5
+   ],
+   "taille_m": [
+    0.78,
+    1.23
+   ],
+   "places": 2,
+   "assises": "tabourets",
+   "zone": "F",
+   "centre_m": [
+    4.142,
+    -5.429
+   ]
+  },
+  {
+   "id": 100,
+   "nom": "Bar omakase",
+   "type": "bar",
+   "centre_px": [
+    880.5,
+    549
+   ],
+   "places": 6,
+   "assises": "tabourets",
+   "centre_m": [
+    0.363,
+    5.675
+   ]
+  },
+  {
+   "id": 101,
+   "nom": "Tablette du vide",
+   "type": "bar",
+   "centre_px": [
+    756,
+    1143
+   ],
+   "places": 6,
+   "assises": "tabourets",
+   "centre_m": [
+    -0.675,
+    0.725
+   ]
+  }
+ ],
+ "total_places": 37
+}
