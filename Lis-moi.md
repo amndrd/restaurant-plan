@@ -8,7 +8,22 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (26/11/2026)
 
-**La cave à vin, le palier, la légende (26/11, fin de soirée).** En attente de ta validation.
+**La cuisine et le bar du rez-de-chaussée (26/11, nuit).** Trois prototypes, en attente de ton choix.
+
+- **Le fond du rez-de-chaussée est redessiné** (`refonte.py`, `floor1.py`). Les cloisons des deux toilettes (mur 14), le mur de la réserve le long de la façade (13), les bouts du local électrique (15, 35) disparaissent. À leur place :
+  - **la cuisine**, juste derrière le bar (`refonte.KITCHEN`, `cuisine_rdc`) : la ligne de cuisson sous sa hotte (friteuse, grill au charbon, fourneau sur four, plancha, salamandre), deux armoires réfrigérées et un congélateur, une étagère de réserve sèche, le comptoir de préparation avec son évier, la saladette, la passe à la tablette chauffante, la plonge dans l'angle nord-est (table de débarrassage et douchette, lave-vaisselle à capot, table propre), un lave-mains près de la porte, un sol en carreaux de 30 cm et un caniveau ;
+  - **la passe** au bout du bar, côté service, et **la porte de la cuisine** à double battant sur le couloir à droite du bar (`portes_rdc`) ;
+  - **un WC accessible** au bout d'un passage le long des pavés de verre (`refonte.WC`, `wc_rdc`) ;
+  - **le comptoir raccourci de 1,40 m** à l'ouest (`COMPTOIR`) : le passage fait 1,05 m contre la colonne 41, les 7 tabourets ne bougent pas ;
+  - **le bar rhabillé** (`comptoir`, `arriere_bar`) : éviers, bac à glace, rail à bouteilles, lave-verres, colonne à bière, vitrines réfrigérées, machine à café, quatre suspensions ;
+  - **la gaine** sous celle du 1er, fermée par deux portes sur le couloir.
+- **Les trois prototypes** (`cuisine=A|B|C`, B par défaut en attendant) ne changent que la façade de la cuisine sur le bar (`cuisine_cloison`), le haut du meuble arrière et le front du comptoir : A ouverte (muret, retombée, verres et bouteilles suspendus, lattes de chêne), B le mur de bouteilles éclairé (pavés de verre au comptoir), C vitrée (verrière en acier, étagères en verre, ailettes d'acier).
+- **Vérifié :** plus aucune pièce ne traverse une autre de plus de 1 mm, sauf les assemblages voulus (pieds soudés aux étagères, brochettes dans la viande). Au passage, le mur 364 qui entrait de 4 cm dans les pavés de verre de la façade droite est raccourci.
+- **Les rendus** sont dans `rendus/24-cuisine-et-bar/` (`floor1.py -- variante=detail mobilier=1 cuisine=B plans=cuisine-salle,cuisine-comptoir,cuisine-passe,cuisine-ligne,cuisine-froid,cuisine-plonge,cuisine-passage,cuisine-wc prefixe=B-`, puis `variante=fantome ... plans=cuisine-vol,cuisine-dessus`), avec l'état d'avant (`avant-*`). La page est `pages/18-cuisine-et-bar.png`.
+- **La carte** n'est pas encore réexportée : elle le sera avec le prototype choisi. Sa carte « Restaurant » en haut à gauche est retirée ; le panneau des chiffres prend sa place.
+- **Le plan lu dans le modèle** (pour le plan final) : `floor1.py` et `floor2.py` acceptent `trace=modele/trace/<etage>.json`. `outils/blender/plan_modele.py` coupe le modèle à 1,20 m, pièce par pièce, et projette ce qui est dessous.
+
+**La cave à vin, le palier, la légende (26/11, fin de soirée).** Validés.
 
 - **Plus aucun espace dans les murs :** au 1er, les deux colonnes de la façade droite ont la position et le diamètre de celles du bas (`POTEAUX` dans `floor2.py`). Les pavés de verre s'arrêtent sur elles, une joue comble l'arrondi (`face_colonne`, `joue`, dans les deux scripts). Il y a des joints de mortier entre les pavés (`blocs(..., bj=)`), les fentes entre murs sont comblées (`RDC_JOINTS` dans `refonte.py`, `ETAGE_JOINTS` dans `floor2.py`) et l'angle nord-est du bas est fermé. Les demi-tambours ont avancé de 10 cm (`DEMI_CX`). Une coupe à 1,50 m vérifie qu'il ne reste aucun passage entre l'intérieur et l'extérieur.
 - **Le coin de l'escalier au RDC** (`floor1.py`, `refonte.py`) : la cloison fine (murs 408, 421) et la bande vide derrière deviennent une cave à vin vitrée (`CAVE`, `cave_vitrage`, `cave`). Elle a un vitrage en acier côté escalier, une porte vitrée au nord, un casier en chêne avec ses bouteilles, une échelle sur rail et une console de dégustation. Le vestiaire est refait (`vestiaire`, `manteau`, `vestiaire_baie`) : lambris, tablette, tringle, manteaux sur cintres, banc, porte-parapluies, baie encadrée de chêne.
@@ -75,7 +90,7 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 **1er étage : le lierre sur le toit de l'entrée, et un seul garde-corps.** En attente de ta validation.
 
-- **Le lierre** vient de ton modèle `ivy-for-walls.zip`, rangé dans `outils/assets/` et gardé hors dépôt.
+- **Le lierre** vient de ton modèle `ivy-for-walls.zip` (« Ivy for walls », par arca_done sur Sketchfab, licence CC BY 4.0, voir **Crédits**), rangé dans `outils/assets/` et gardé hors dépôt.
   - **L'analyse :** un panneau mural de 430 000 faces, dont les 40 000 feuilles sont des octogones plats, à l'échelle 1/10 (6,6 cm une fois remis à taille réelle).
   - **L'extraction :** `outils/blender/lierre_feuilles.py` en tire les mesures dans `outils/assets/ivy-for-walls/feuilles.json`, hors dépôt.
   - **Le lierre remodélisé :** `floor2.py` dessine une vraie feuille de lierre (cinq lobes, base en cœur, en trois variantes) et fait pousser la plante sur l'îlot, de 2,2 × 4,2 m jusqu'au mur de façade. Les tiges partent d'un bac bas de 26 cm, couvrent le toit, passent le rebord et retombent dans le vide sur les trois côtés, jusqu'à 1,40 m. Rien ne touche les colonnes, les garde-corps ni les murs de l'accueil du bas.
@@ -254,7 +269,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 17-etage-lierre-et-garde-corps/ (le lierre, le garde-corps, l'étage tel qu'il est),
                 18-batiment-entier/ (les deux étages raccordés, vus de la rue),
                 19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé), 21-reprises/ (les endroits repris),
-                22-sans-espace/ (les colonnes et les murs sans fente), 23-cave-palier-carte/ (la cave, le palier, la légende)
+                22-sans-espace/ (les colonnes et les murs sans fente), 23-cave-palier-carte/ (la cave, le palier, la légende),
+                24-cuisine-et-bar/ (la cuisine et le bar du rez-de-chaussée, trois prototypes)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
@@ -283,6 +299,8 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `elements=1` ajoute les éléments fixes de l'étape 3 (pavés de verre, escalier détaillé, bar, banquettes, jardin, accueil, rideaux) ; avec `variante=detail plans=bar,banquette,escalier,facade,rideau`, il rend les vues rapprochées ;
   - `mobilier=1` ajoute le mobilier de l'étape 4 et écrit `modele/floor1-tables.json` ; avec `variante=detail plans=salle,tabourets,tambour`, il rend les vues rapprochées ;
   - avec `variante=detail plans=zone`, il rend la vue rapprochée de la banquette jardinière, près du bar ;
+  - `cuisine=A|B|C` choisit la façade de la cuisine sur le bar ; `plans=cuisine-salle,…,cuisine-vol,cuisine-dessus` rend ses vues (une focale négative donne une vue orthographique de cette largeur), `prefixe=B-` préfixe les fichiers ;
+  - `trace=modele/trace/rdc.json` lit le plan dans le modèle (la coupe à 1,20 m et ce qui est dessous), sans rendu ;
   - `export=carte/modele/floor1-fantome.glb` (avec `variante=fantome mobilier=1`) ou `floor1-entier.glb` (avec `variante=fil-de-fer mobilier=1`) exporte le modèle de la carte. Chaque objet garde son rôle et le numéro de sa table. Il faut ensuite recopier `modele/floor1-tables.json` dans `carte/donnees/`.
 - **Numéroter les tables :** `numeros_tables.py` pose le numéro de chaque table sur la vue du haut en fantôme.
 - **Redessiner les plans :** `outils/plans/plans.py [rdc] [etage1]` écrit les SVG et les PNG 4K de `rendus/10-plans/`. Il s'appuie sur trois fichiers : `dessin.py` (le kit de dessin), `rdc.py` et `etage1.py` (un étage chacun). Les murs du 1er étage sont vectorisés par `outils/vectoriser_etage1.py`.
@@ -293,7 +311,7 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py` à `page_etape17.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py` à `page_etape18.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
@@ -304,3 +322,9 @@ Le dépôt ne contient pas le contenu de tiers :
 - les rendus et pages qui montrent le dessin du plan.
 
 Le détail est dans `.gitignore`.
+
+## Crédits
+
+- **Les plans d'origine :** LAIR Restaurant & Bar, RENESA Architecture Design Interiors Studio (architecte principal Sanchit Arora), 2024, publiés sur ArchDaily ; photos © Avesh Gaur.
+- **Le lierre de l'îlot au-dessus de l'entrée :** d'après « Ivy for walls » par arca_done (https://sketchfab.com/arca_done), publié sur Sketchfab le 25/05/2023 (https://sketchfab.com/3d-models/ivy-for-walls-b5e66f95a4de4cc19e68596f489eeaac), sous licence Creative Commons Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/). Ses feuilles ont été mesurées, puis le lierre a été remodélisé par `floor2.py` ; le fichier d'origine reste hors dépôt.
+- **three.js** (licence MIT), dans `carte/vendor/three/`.

@@ -45,3 +45,4 @@ Il faut Blender 4.5, Python 3 avec numpy, OpenCV et Pillow (plus scikit-image, f
 - **Les photos d'ArchDaily** (© Avesh Gaur), et les pages des étapes qui les montrent.
 - **Les images de recherche** (Pinterest et le web) : les fichiers `sources.json` gardent leurs liens.
 - **Les polices extraites de macOS** et les scènes `.blend` : les scripts les régénèrent.
+- **Le modèle de lierre d'origine**, « Ivy for walls » par [arca_done](https://sketchfab.com/arca_done) ([Sketchfab](https://sketchfab.com/3d-models/ivy-for-walls-b5e66f95a4de4cc19e68596f489eeaac), licence [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)) : le lierre du 1er est remodélisé d'après lui.
