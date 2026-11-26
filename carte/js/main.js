@@ -152,6 +152,8 @@ async function demarrer() {
   const boutons = (id, attr, f) => document.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
     document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle('on', x === b)); f(b.dataset[attr]); });
   boutons('vues', 'vue', v => cam.allerA(v));
+  // a gesture that tilts the top view (or brings the 3D view flat) selects the matching button, as a click would
+  cam.surVue = v => document.querySelectorAll('#vues button').forEach(x => x.classList.toggle('on', x.dataset.vue === v));
   document.querySelectorAll('#etages button').forEach(b => b.onclick = () => {
     const n = Number(b.dataset.etage);
     if (n !== actif) activer(n).catch(err => console.error(err));

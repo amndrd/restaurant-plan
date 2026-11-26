@@ -24,6 +24,8 @@ export class CameraCarte {
     this.anim = null;
     this.change = true;
     this.surChange = () => {};
+    this.surVue = () => {};             // the view changed by a gesture (top view tilted: 3D; 3D brought flat: top)
+    this.bascule = 0;                   // in the top view, the tilt asked for so far (degrees)
     this._entrees();
   }
 
@@ -35,7 +37,7 @@ export class CameraCarte {
 
   allerA(nom, duree = 900) {
     const v = VUES[nom];
-    this.vue = nom;
+    this.vue = nom; this.bascule = 0;
     let az1 = v.az;
     while (az1 - this.az > 180) az1 -= 360;
     while (az1 - this.az < -180) az1 += 360;
@@ -101,8 +103,20 @@ export class CameraCarte {
     this.change = true;
   }
 
+  // (26/11) the top view stays flat until the gesture tilts it by more than 4 degrees (a pinch with fingers that
+  // drift a little keeps it flat); past that, the view is a 3D one and the "3D" button says so. In 3D, a view brought
+  // back flat is the top view again.
   orbiter(dAz, dEl) {
-    this.az -= dAz; this.el = THREE.MathUtils.clamp(this.el + dEl, 12, 90);
+    this.az -= dAz;
+    if (this.vue === 'dessus' && !this.anim) {
+      this.bascule = Math.min(0, this.bascule + dEl);
+      if (this.bascule > -4) { this.el = 90; this.change = true; return; }
+      this.el = THREE.MathUtils.clamp(90 + this.bascule, 12, 90);
+      this.vue = '3d'; this.bascule = 0; this.surVue('3d');
+    } else {
+      this.el = THREE.MathUtils.clamp(this.el + dEl, 12, 90);
+      if (this.vue === '3d' && this.el >= 90) { this.vue = 'dessus'; this.bascule = 0; this.surVue('dessus'); }
+    }
     this.change = true;
   }
 
@@ -133,6 +147,7 @@ export class CameraCarte {
       this.anim = null;
       if (pts.size === 1) {
         mode = (e.button === 2 || e.shiftKey) ? 'orbite' : 'pan';
+        this.bascule = 0;
         dernier = { x: e.clientX, y: e.clientY };
         this.clicPossible = { x: e.clientX, y: e.clientY };
         c.classList.add('prise');
