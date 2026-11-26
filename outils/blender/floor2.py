@@ -277,10 +277,10 @@ FACADE_OUEST = [1211 + (2170 - 1211) * k / 7 for k in range(8)]      # floor1's 
 # front of the right glass blocks (860), the walls of the south-east corner (1064, 1066) and the blind wall over the
 # entry (1068), which becomes glass blocks
 ETAGE_SANS = {16, 860, 1064, 1066, 1068,
-              17, 731, 732, 733, 741, 767, 768}   # (26/11 evening) the small walls round the omakase bar
+              17, 731, 732, 733, 741, 767, 768,   # (26/11 evening) the small walls round the omakase bar
+              734, 770}                           # (26/11 night) the lift shaft's stubs: the shaft became a storeroom
 # (walls 9, 10, 11, 14 fill notches of the north wall 5: kept; the slit between 10 and 11 is filled)
 ETAGE_JOINTS = [(1313, 99, 1316, 113),
-                (1330, 260, 1458, 277),                         # between the toilets' wall (730) and the shaft
                 (1445.5, 626, 1458, 634), (1455.5, 634, 1458, 644)]   # the shaft's corner on the facade
 ETAGE_REMPLACE = {15: [(382, 751), (399, 751), (399, 841), (382, 841)]}
 ANGLE_SE = refonte.ANGLE_SE               # the corner pier, over the ground floor's
@@ -288,11 +288,14 @@ ANGLE_SE = refonte.ANGLE_SE               # the corner pier, over the ground flo
 # chef's aisle, closed on the room by a glazed partition; the storeroom behind the bar's back; the toilets' door
 CUISINE_CLOISON = (396, 434, 584, 444)
 MURS_WC = [(1290, 139, 1300, 152), (1290, 236, 1300, 248)]           # the door between them, y 152 - 236
-# The lift shaft (4 on floor2.png) and the outer band of the right facade: drawn in dark grey on the plan, not in black,
-# so the vectorising missed them; measured on floor2.png. The shaft stands over the ground floor's room of the same
-# outline (floor1's wall 16), the band over floor1's (walls 17, 55, 288): the right facade reads on the two storeys.
-GAINE = [(1330, 277, 1458, 298), (1321, 286, 1330, 298), (1321, 298, 1342, 428), (1321, 589, 1342, 626),
-         (1428, 298, 1458, 626), (1321, 626, 1445.5, 644)]       # openings at y 428 - 480 and 538 - 589 (wall 770 between)
+# The lift shaft (4 on floor2.png, measured there: drawn in dark grey, the vectorising missed it) stood over the ground
+# floor's shaft (floor1's wall 16). Both are gone (26/11 night: the ground floor's became the kitchen's corner): up here
+# its place, from the toilets' wall (730) to the facade, is a storeroom behind the toilets' passage, closed by a thin
+# wall with a door (RESERVE_PORTE) and by the shaft's old south wall. The outer band of the right facade, also missed
+# by the vectorising, stands over floor1's (walls 17, 55, 288): the right facade reads on the two storeys.
+RESERVE = (1333, 260, 1458, 626)
+RESERVE_PORTE = (300, 408)
+RESERVE_MURS = [(1321, 260, 1333, RESERVE_PORTE[0]), (1321, RESERVE_PORTE[1], 1333, 626), (1321, 626, 1445.5, 644)]
 BANDE_EST = [(1458, 140, 1481, 644)]     # along the shaft only (26/11): elsewhere the glass blocks show
 # The columns: the ground floor's go on up (floor1.py's positions); the one in the void (257) is one shaft, from the
 # ground floor through the slab's level to the mezzanine's ceiling
@@ -368,7 +371,7 @@ def build_dalle():
     dalle = to_mesh(extrude_loops('dalle', [SOL], -DALLE, 0.0, 'Sols', M_SOL))
     pieds = [c for _, c in murs_etage()] + [b[0] for _, b in refonte.murs_rdc(DATA_RDC)]
     pieds += [[(x0, y0), (x1, y0), (x1, y1), (x0, y1)] for x0, y0, x1, y1 in
-              MURS_LABO + GAINE + BANDE_EST + [ANGLE_SE, (200, 842, 232, 2276), (580, 2403, 1445.5, 2414)]]
+              MURS_LABO + RESERVE_MURS + BANDE_EST + [ANGLE_SE, (200, 842, 232, 2276), (580, 2403, 1445.5, 2414)]]
     # (the last two: the slab's band under the glass blocks of the left facade and of the street facade)
     outils = [to_mesh(extrude_loops(f't-pied-{k}', [c], -DALLE, 0.0, 'Sols', M_SOL)) for k, c in enumerate(pieds)]
     for k, p in enumerate(DATA['poteaux'] + DATA_RDC['poteaux']):
@@ -565,9 +568,11 @@ def build_coque(top, bas=0.0):
     box('mur-angle-se', *ANGLE_SE, bas, top, 'Coque', M_MUR)
     for k, (x0, y0, x1, y1) in enumerate(MURS_LABO):
         box(f'mur-labo-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
-    # the lift shaft and the outer band of the right facade, over the ground floor's (the whole building, 25/11)
-    for k, (x0, y0, x1, y1) in enumerate(GAINE):
-        box(f'mur-gaine-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
+    # the storeroom where the lift shaft was (26/11 night), its door's lintel
+    for k, (x0, y0, x1, y1) in enumerate(RESERVE_MURS):
+        box(f'mur-reserve-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
+    if top > 2.10:
+        box('mur-reserve-linteau', 1321, RESERVE_PORTE[0], 1333, RESERVE_PORTE[1], max(bas, 2.10), top, 'Coque', M_MUR)
     for k, (x0, y0, x1, y1) in enumerate(ETAGE_JOINTS):
         box(f'mur-joint-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
     for k, (x0, y0, x1, y1) in enumerate(MURS_WC):
@@ -1271,6 +1276,81 @@ def reserve():
     mesh_obj('reserve-caisses', bm, 'Bar', M_MEUBLE)
 
 
+def reserve_est():
+    """(26/11 night) The storeroom where the lift shaft was (RESERVE, 1.0 x 3.0 m inside), behind the toilets' passage:
+    its oak door (closed); steel shelving 2 m high along the facade (cartons, bottles standing in two rows, jars) and a
+    shorter one along the toilets' wall (napkins, paper rolls); wine cases stacked at the far end, a step stool."""
+    x0, y0, x1, y1 = RESERVE
+    pa, pb = RESERVE_PORTE
+    rnd = random.Random(31)
+    bm = bmesh.new()
+    bm_box(bm, 1325, pa + 1, 1329, pb - 1, 0.01, 2.09)                        # the door
+    mesh_obj('reserve-est-porte', bm, 'Bar', M_BOIS)
+    bm = bmesh.new()
+    for xa, xb in ((1322, 1325), (1329, 1332)):                                 # its handles, both faces
+        bm_box(bm, xa, pb - 12, xb, pb - 10, 0.98, 1.00)
+    e = bmesh.new()
+    niveaux = (0.12, 0.55, 0.98, 1.41, 1.84)
+    # the long shelving, along the facade (x 1414 - 1456), uprights at its ends and its middle
+    xa, xb, ya, yb = 1414, 1456, 264, 622
+    for y in (ya, (ya + yb) / 2 - 1.5, yb - 3):
+        for x in (xa, xb - 3):
+            bm_box(e, x, y, x + 3, y + 3, 0.0, 2.00)
+    for z in niveaux:
+        bm_box(e, xa, ya, xb, yb, z, z + 0.02)
+    # the short one, along the toilets' wall (y 262 - 300), from the door's wall to the long shelving
+    xc, xd, yc, yd = 1336, 1410, 262, 300
+    for x in (xc, xd - 3):
+        for y in (yc, yd - 3):
+            bm_box(e, x, y, x + 3, y + 3, 0.0, 1.60)
+    for z in niveaux[:4]:
+        bm_box(e, xc, yc, xd, yd, z, z + 0.02)
+    mesh_obj('reserve-est-etageres', e, 'Bar', M_CADRE)
+    cartons = bmesh.new()
+    bouteilles = bmesh.new()
+    # on the long shelving: cartons on the bottom and fourth shelves, two rows of bottles on the others (all inset
+    # from the uprights, which stand at the shelves' edges)
+    for k, z in enumerate(niveaux[:-1]):
+        y = ya + 4.0
+        while y < yb - 8:
+            if k in (0, 3):
+                l_ = rnd.uniform(28, 46)
+                if y + l_ > yb - 4:
+                    break
+                bm_box(cartons, xa + 4, y, xb - 4, y + l_, z + 0.02, z + 0.02 + rnd.uniform(0.22, 0.36))
+                y += l_ + rnd.uniform(1.5, 4)
+            else:
+                r = rnd.uniform(0.035, 0.042) / PX
+                if y + 2 * r > yb - 4:
+                    break
+                h = rnd.uniform(0.27, 0.32)
+                for x in (xa + 12, xb - 12):
+                    if rnd.random() < 0.9:
+                        c = Vector((x, y + r))
+                        pts = [c + Vector((math.cos(a), math.sin(a))) * r for a in (math.tau * i / 8 for i in range(8))]
+                        prisme(bouteilles, [(p_.x, p_.y) for p_ in pts], z + 0.021, z + 0.021 + h * 0.62)
+                        pts = [c + Vector((math.cos(a), math.sin(a))) * r * 0.35 for a in (math.tau * i / 8 for i in range(8))]
+                        prisme(bouteilles, [(p_.x, p_.y) for p_ in pts], z + 0.021 + h * 0.62, z + 0.021 + h)
+                y += 2 * r + rnd.uniform(1.0, 2.5)
+    # on the short one: packs of napkins and paper rolls
+    for z in niveaux[:4]:
+        x = xc + 5.0
+        while x < xd - 20:
+            l_ = rnd.uniform(14, 22)
+            bm_box(cartons, x, yc + 4, x + l_, yd - 4, z + 0.02, z + 0.02 + rnd.uniform(0.12, 0.25))
+            x += l_ + rnd.uniform(2, 5)
+    # wine cases stacked at the far end, a step stool
+    for k, (cx_, cy_, h0) in enumerate(((1356, 598, 0.0), (1390, 598, 0.0), (1360, 598, 0.18))):
+        bm_box(cartons, cx_ - 16, cy_ - 22, cx_ + 16, cy_ + 22, h0, h0 + 0.18)
+    mesh_obj('reserve-est-cartons', cartons, 'Bar', M_MEUBLE)
+    mesh_obj('reserve-est-bouteilles', bouteilles, 'Bar', M_COMPTOIR)
+    mesh_obj('reserve-est-poignees', bm, 'Bar', M_ACIER)
+    bm = bmesh.new()                                                              # the step stool
+    bm_box(bm, 1345, 520, 1385, 548, 0.0, 0.22)
+    bm_box(bm, 1345, 534, 1385, 548, 0.22, 0.44)
+    mesh_obj('reserve-est-escabeau', bm, 'Bar', M_MEUBLE)
+
+
 def cuisine():
     """The kitchen corner (26/11 evening), at the omakase bar's west end, behind its glazed partition: the cooking
     line along the back wall under its hood (two induction plates, a plancha, a stockpot), the prep counter and its
@@ -1341,6 +1421,7 @@ def build_elements():
         coll(c)
     avant = set(bpy.data.objects)
     bar_omakase(); banquettes(); tablette_vide(); labo(); rideaux(); escalier_detail(); reserve(); cuisine(); wc()
+    reserve_est()
     vide_colonnes()
     bac_lierre(); lierre()
     return [o for o in bpy.data.objects if o not in avant]
