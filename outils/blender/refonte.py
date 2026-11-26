@@ -12,7 +12,9 @@
 #   street and on the right side, as the room next to it.
 
 RDC_SANS = {55, 437,
-            408, 421}     # (26/11 evening) the thin partition by the stair, with a closed strip behind: the wine room
+            408, 421,     # (26/11 evening) the thin partition by the stair, with a closed strip behind: the wine room
+            13, 14, 15, 35}   # (26/11 night) the back of house behind the bar: the store's wall along the facade, the
+                              # two toilets' maze of thin walls, the stubs of the electrical room (see KITCHEN below)
 RDC_REMPLACE = {
     288: [[(1272, 2245), (1447, 2245), (1447, 2233), (1457, 2233), (1457, 2276), (1272, 2276)]],
     440: [[(1299.5, 2276), (1308.5, 2276), (1308.5, 2298), (1299.5, 2298)],
@@ -20,16 +22,39 @@ RDC_REMPLACE = {
     # (26/11, no gap left in the walls) the entry's left wall down to the street front, room 4's two south walls as one
     439: [[(567, 2276), (576, 2276), (576, 2411.5), (567, 2411.5)]],
     432: [[(1285, 2228), (1447, 2228), (1447, 2245), (1285, 2245)]],
+    # (26/11 night) the shaft under the 1st floor's: its west side closed down to the kitchen's wall, then a pair of
+    # doors (y 478 - 592) on the corridor right of the bar, and its last stub
+    16: [[(1321.0, 281.0), (1321.0, 478.0), (1335.0, 478.0), (1335.0, 306), (1338, 303.0), (1421, 303.0),
+          (1423.5, 306), (1423.5, 635.0), (1451.0, 635.0), (1451.0, 281.0)]],
+    36: [[(1321.0, 592.0), (1335.5, 592.0), (1335.5, 635.0), (1321.0, 635.0)]],
+    # (26/11 night) a stub on the right facade went 4 cm into the glass blocks: stopped on their inner face
+    364: [[(1411.0, 1757.0), (1447.0, 1757.0), (1447.0, 1767.0), (1411.0, 1767.0)]],
 }
 # the slits the plan left between walls that meet (1 - 3 cm): filled
 RDC_JOINTS = [(480, 41.5, 482, 146.5), (1419, 42, 1421, 146), (1451, 281, 1453, 635), (596.5, 2243, 608, 2276),
-              (426, 146, 435, 148), (640, 148, 642, 227), (1273, 2228, 1285, 2245),
+              (1273, 2228, 1285, 2245),
               # the pocket between the room of wall 16, wall 17 and column 40 (with a cheek on the column, floor1.py)
               (1447, 635, 1453, 737.5), (1453, 636.5, 1461, 737.5)]
 ANGLE_SE = (1445.5, 2397, 1481, 2414)     # the south-east corner pier, the same on both storeys
 RDC_AJOUT = [[(ANGLE_SE[0], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[3]), (ANGLE_SE[0], ANGLE_SE[3])],
              # (26/11) the north-east corner: the plan left the right side open between walls 7 and 17 (y 146 - 281)
-             [(1453, 146), (1481, 146), (1481, 281), (1453, 281)]]
+             [(1453, 146), (1481, 146), (1481, 281), (1453, 281)],
+             # (26/11 night) the kitchen's west wall, which is the toilets' east wall; the toilets' south wall on either
+             # side of their door (397 - 505); the lobby's south wall, behind the back bar's west end
+             [(640, 146.5), (650, 146.5), (650, 470), (640, 470)],
+             [(387, 352), (397, 352), (397, 362), (387, 362)],
+             [(505, 352), (640, 352), (640, 362), (505, 362)],
+             [(580, 460), (640, 460), (640, 470), (580, 470)]]
+
+# (26/11 night) the back of house behind the bar, reworked (floor1.py, `cuisine=`): the kitchen right behind the bar,
+# its south wall (y 460 - 470) built per prototype, the pass at the bar's service end, the swing door on the corridor
+KITCHEN = (650, 105, 1321, 460)
+KITCHEN_SUD = (460, 470)
+PASSE = (1072, 1182)
+KITCHEN_PORTE = (1203, 1311)
+GAINE_PORTES = (478, 592)
+WC = (387, 146.5, 640, 352)
+WC_PORTE = (397, 505)
 
 # (26/11 evening) the wine room: the strip between the stair's garden and the right facade, which the plan closed
 # with a thin partition (408, 421) and left empty. Glazed on the stair's side (x 1273 - 1283, as the partition was)
