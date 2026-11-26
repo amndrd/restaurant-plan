@@ -89,7 +89,7 @@ async function demarrer() {
     const e = ETAGES[n];
     if (n) { chargement.textContent = `Chargement du ${e.nom.toLowerCase()}…`; chargement.classList.remove('fini'); }
     const modeles = await s3.chargerEtage(n, e.fichiers);
-    const tables = (await (await fetch(e.tables)).json()).tables;
+    const tables = (await (await fetch(e.tables, { cache: 'no-cache' })).json()).tables;
     const G = groupes(modeles, tables);
     const service = new Service(tables, { heure: etats[0] ? etats[0].service.t : h * 60 + m, graine: e.graine });
     const sys = new Systemes(s3.scene, G, calque, e.sol);

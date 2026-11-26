@@ -120,6 +120,7 @@ void main() {
   //      ground floor under its slab (dessous), shown in every style
   async chargerEtage(n, fichiers) {
     const charge = new GLTFLoader();
+    charge.setRequestHeader({ 'Cache-Control': 'no-cache' });   // always the model as it is now (304 when unchanged)
     const g = new THREE.Group(); g.name = `etage-${n}`;
     const modeles = {};
     for (const [cle, url] of Object.entries(fichiers)) {
