@@ -6,7 +6,18 @@ Les plans sont ceux du **LAIR Restaurant & Bar** (Gurugram, Inde, 2024), conçu 
 
 On travaille étage par étage, en commençant par **floor1**, le rez-de-chaussée avec l'entrée, l'accueil, la salle et le bar. On avance étape par étape : chaque étape est montrée en captures et validée avant la suivante.
 
-## Où en est-on (25/11/2026)
+## Où en est-on (26/11/2026)
+
+**Le modèle repensé : prototypes.** En attente de ta validation. Le plan du client n'est plus suivi là où il n'avait pas de sens pour un restaurant de deux étages ; les plans des deux étages seront refaits d'après le modèle une fois celui-ci validé.
+
+- **Les changements** sont décrits dans `outils/blender/refonte.py` (les murs du rez-de-chaussée, partagés par les deux scripts), puis dans `floor1.py` et `floor2.py` :
+  - **l'angle sud-est :** au 1er, le plancher va jusqu'aux deux façades, le mur isolé, la console et la poche au-dessus du bas disparaissent, le garde-corps du jardin de pierres va jusqu'à la façade ; dans le coin, une station de service (`angle=station`, par défaut) ou une table pour deux (`angle=table`). Au rez-de-chaussée, la boîte vide collée à la façade droite (mur 437) est retirée : c'est le vestiaire de l'entrée, avec une ouverture dans le mur 440. Un pilier d'angle ferme le bâtiment sur les deux étages ;
+  - **l'entrée :** une devanture en acier (deux vitres fixes, une double porte vitrée, une imposte), les pavés de verre devant le jardin de pierres et le vestiaire ; au 1er, le mur aveugle au-dessus devient des pavés de verre ;
+  - **les façades :** la bande pleine devant les pavés de verre de droite est retirée sur les deux étages (murs 55 et 288 du bas, 860 et la bande est du haut) ; à gauche, au-dessus du vide, le mur plein du 1er doublé d'une vitre devient une façade de pavés de verre alignée sur celle du bas ; au coin nord-ouest, une seule couche ; un trou de 60 cm dans la façade droite du 1er est refermé ;
+  - **l'escalier vers nulle part,** derrière le bar omakase, devient la réserve du bar (étagères, bouteilles, caisses).
+- **Les vérifications :** il ne reste que des contacts voulus (cadres bout à bout, objets posés).
+- **Les rendus** sont dans `rendus/20-refonte/` (`floor2.py -- variante=detail mobilier=1 plans=rue-sud,angle-se,angle-1er,rdc-entree,vestiaire,reserve,facade-est,facade-ouest out=rendus/20-refonte`, `angle=table prefixe=table-` pour la variante B), la page est `pages/15-refonte.png`.
+- **La carte** est réexportée avec le modèle repensé (les deux étages, la station de service dans le coin) ; ses captures seront refaites après ta validation.
 
 **Le bâtiment entier : les deux étages raccordés, et la carte à deux étages.** En attente de ta validation.
 
@@ -224,7 +235,7 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 16-etage-prototypes-ile/ (les décors pour l'îlot, à la place du bloc),
                 17-etage-lierre-et-garde-corps/ (le lierre, le garde-corps, l'étage tel qu'il est),
                 18-batiment-entier/ (les deux étages raccordés, vus de la rue),
-                19-carte-deux-etages/ (la carte avec le 1er étage)
+                19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
