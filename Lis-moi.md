@@ -8,6 +8,29 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (25/11/2026)
 
+**Le bâtiment entier : les deux étages raccordés, et la carte à deux étages.** En attente de ta validation.
+
+- **Pourquoi ils ne se touchaient pas :**
+  - chaque étage avait son propre script ; dans les vues du 1er, le rez-de-chaussée n'était qu'un fond pâle, sans traits, coupé sous la dalle ;
+  - la dalle du 1er s'arrêtait à la face intérieure de ses murs extérieurs : sous ces murs, une fente de 30 cm restait vide tout autour ;
+  - la gaine d'ascenseur et la bande extérieure de la façade droite sont en gris foncé sur `floor2.png`, pas en noir : la vectorisation les avait manquées, la façade est restait ouverte ;
+  - le petit local du bas, au-delà de la façade droite, n'avait pas de toit.
+- **Ce qui les raccorde** (`floor2.py`) :
+  - la dalle passe sous les murs extérieurs des deux niveaux (`floor1-murs.json` et `etage1-murs.json`), jusqu'aux faces du bâtiment : une bande de 30 cm fait le tour, comme sur la coupe du lieu ;
+  - le rez-de-chaussée est le modèle entier de la carte (`carte/modele/floor1-entier.glb`), posé sous la dalle, dans les mêmes matières et avec les mêmes traits ; son escalier s'arrête à 1 m sous le plancher du haut, où celui du 1er prend la suite ;
+  - les poteaux du bas montent aux mêmes places, celui du vide d'un seul fût ;
+  - la gaine d'ascenseur (`GAINE`) et la bande est (`BANDE_EST`) sont mesurées sur le plan ; le local du bas est couvert ;
+  - l'ouverture de l'escalier est élargie de 2 cm pour sa main courante. Il ne reste que des contacts voulus.
+- **Les vues de la rue** sont dans `rendus/18-batiment-entier/` (`variante=detail mobilier=1 plans=facade-ouest,angle-entree,est`).
+- **La carte :**
+  - le bouton « 1er » montre l'étage posé sur le rez-de-chaussée ; « RDC » montre le rez-de-chaussée seul, comme avant ;
+  - chaque étage a son service simulé, sur la même horloge ; le panneau, la légende et les fiches suivent l'étage affiché ; au 1er, le bar omakase (100) et la tablette (101) sont suivis tabouret par tabouret ;
+  - le 1er se charge à la première demande ; dans la carte, le lierre est allégé et ombré sans contour ;
+  - les modèles : `floor2.py -- variante=fantome mobilier=1 export=carte/modele/floor2-fantome.glb dessous=carte/modele/floor1-sous-dalle.glb`, puis `variante=fil-de-fer mobilier=1 export=carte/modele/floor2-entier.glb` ; recopier `modele/floor2-tables.json` dans `carte/donnees/` ;
+  - l'adresse accepte `?etage=1` ; les captures sont dans `rendus/19-carte-deux-etages/` (`node outils/carte_captures.mjs etage`).
+- **Les rendus des étapes du 1er** sont refaits avec le modèle d'aujourd'hui : `rendus/12-etage-coque/`, `13-etage-elements-fixes/` et `15-etage-mobilier/`.
+- **La page** est `pages/14-batiment-entier.png`.
+
 **1er étage, étape 3 : le mobilier.** En attente de ta validation.
 
 - **Fait comme l'étape 4 du rez-de-chaussée,** avec les mêmes pièces : `floor2.py -- variante=fantome|fil-de-fer mobilier=1`, puis `variante=detail plans=grande,demi,facade` pour les gros plans.
@@ -199,13 +222,16 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 12-etage-coque/ (la coque du 1er étage), 13-etage-elements-fixes/ (ses éléments fixes),
                 14-etage-prototypes-vide/ (les prototypes pour le vide), 15-etage-mobilier/ (son mobilier),
                 16-etage-prototypes-ile/ (les décors pour l'îlot, à la place du bloc),
-                17-etage-lierre-et-garde-corps/ (le lierre, le garde-corps, l'étage tel qu'il est)
+                17-etage-lierre-et-garde-corps/ (le lierre, le garde-corps, l'étage tel qu'il est),
+                18-batiment-entier/ (les deux étages raccordés, vus de la rue),
+                19-carte-deux-etages/ (la carte avec le 1er étage)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
                 12-carte-interactive/sources.md (les références de la carte)
 outils/         les scripts (voir plus bas)
-carte/          la carte interactive : index.html, js/, css/, modele/ (le modèle en glTF), donnees/, vendor/three (three.js,
+carte/          la carte interactive : index.html, js/, css/, modele/ (les modèles en glTF : le rez-de-chaussée, le 1er
+                étage et le rez-de-chaussée sous sa dalle), donnees/ (les tables des deux étages), vendor/three (three.js,
                 licence MIT), ouvrir-la-carte.command
 ```
 
@@ -230,14 +256,14 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `export=carte/modele/floor1-fantome.glb` (avec `variante=fantome mobilier=1`) ou `floor1-entier.glb` (avec `variante=fil-de-fer mobilier=1`) exporte le modèle de la carte. Chaque objet garde son rôle et le numéro de sa table. Il faut ensuite recopier `modele/floor1-tables.json` dans `carte/donnees/`.
 - **Numéroter les tables :** `numeros_tables.py` pose le numéro de chaque table sur la vue du haut en fantôme.
 - **Redessiner les plans :** `outils/plans/plans.py [rdc] [etage1]` écrit les SVG et les PNG 4K de `rendus/10-plans/`. Il s'appuie sur trois fichiers : `dessin.py` (le kit de dessin), `rdc.py` et `etage1.py` (un étage chacun). Les murs du 1er étage sont vectorisés par `outils/vectoriser_etage1.py`.
-- **La carte :** `carte_captures.mjs` sert la carte, fait toutes les captures de `rendus/6-carte/`, puis la vidéo (`node outils/carte_captures.mjs video` pour la vidéo seule). Les réglages passent aussi par l'adresse de la carte : `?vue=3d&style=fil-de-fer&systeme=B&numeros=5&legende=1&ouvert=style&heure=20:40&vitesse=0&fiche=6`.
+- **La carte :** `carte_captures.mjs` sert la carte, fait toutes les captures de `rendus/9-carte-finale/` et `rendus/19-carte-deux-etages/`, puis la vidéo (`node outils/carte_captures.mjs video` pour la vidéo seule, `etage` pour les captures du 1er seules). Les réglages passent aussi par l'adresse de la carte : `?etage=1&vue=3d&style=fil-de-fer&systeme=B&numeros=5&legende=1&ouvert=style&heure=20:40&vitesse=0&fiche=6`.
 
   Le `.blend` n'est jamais enregistré à la main : c'est le script qui le refait.
 - **La recherche :**
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py` à `page_etape7.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py` à `page_etape14.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
