@@ -65,7 +65,7 @@ export class Scene3D {
 
     this.etages = [];            // one group per floor
     this.actif = 0;              // the floor on show (the 1st floor brings the ground floor under its slab)
-    this.style = 'fantome';
+    this.style = 'transparent';                        // the default (reglages.js: the first option)
     this._passe();
     this.taille();
   }

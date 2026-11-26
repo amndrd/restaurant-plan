@@ -2,9 +2,9 @@
 // the command bar chosen at step 7 (R3): at the bottom right, with the clock; each menu opens upwards and says what
 // each option does. Dark, like the whole interface.
 export const REGLAGES = {
-  style: { titre: 'Style', options: [
-    ['fantome', 'Fantôme', 'Les murs pleins jusqu’à 1,20 m, le haut en transparence'],
+  style: { titre: 'Style', options: [                 // (26/11) transparent first: the default, as in the site's film
     ['transparent', 'Transparent', 'Tout le modèle en verre dépoli'],
+    ['fantome', 'Fantôme', 'Les murs pleins jusqu’à 1,20 m, le haut en transparence'],
     ['fil-de-fer', 'Fil de fer', 'Seulement les arêtes, comme un dessin'],
   ] },
   systeme: { titre: 'Tables', options: [
