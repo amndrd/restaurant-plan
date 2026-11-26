@@ -6,14 +6,14 @@
    "nom": "Demi-tambour 1",
    "type": "tambour",
    "centre_px": [
-    1298.5,
+    1286.5,
     770
    ],
    "places": 4,
    "assises": "banquette en demi-cercle et 2 fauteuils",
    "zone": "D",
    "centre_m": [
-    3.846,
+    3.746,
     3.833
    ]
   },
@@ -22,14 +22,14 @@
    "nom": "Demi-tambour 2",
    "type": "tambour",
    "centre_px": [
-    1298.5,
+    1286.5,
     1031
    ],
    "places": 4,
    "assises": "banquette en demi-cercle et 2 fauteuils",
    "zone": "D",
    "centre_m": [
-    3.846,
+    3.746,
     1.658
    ]
   },

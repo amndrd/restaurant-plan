@@ -212,6 +212,30 @@ def mur_suivant(name, pts, z0, z1, ep, collection, material):
     return obj(name, me, collection, material)
 
 
+def face_colonne(x0, x1, col, s):
+    """Where a straight end (from x0 to x1, across a facade or a wall) first meets a column's round side: the y of the
+    column's nearest point over that width. s = +1: the column lies towards +y."""
+    cx, cy, r = col
+    ys = [cy - s * math.sqrt(max(r * r - (cx - (x0 + (x1 - x0) * k / 20)) ** 2, 0.0)) for k in range(21)]
+    return min(ys) if s > 0 else max(ys)
+
+
+def joue(name, x0, x1, y_f, col, s, z0, z1, collection, material):
+    """(26/11) Fills the sliver between a straight end at y_f (from x0 to x1) and a column's round side: no gap where
+    a facade or a wall meets a column."""
+    cx, cy, r = col
+    pts = [(x0, y_f), (x1, y_f)]
+    for k in range(13):
+        x = x1 + (x0 - x1) * k / 12
+        p_ = (x, cy - s * math.sqrt(max(r * r - (cx - x) ** 2, 0.0)))
+        if abs(p_[1] - pts[-1][1]) > 1e-4 or abs(p_[0] - pts[-1][0]) > 1e-4:
+            pts.append(p_)
+    if abs(pts[-1][1] - pts[0][1]) < 1e-4 and abs(pts[-1][0] - pts[0][0]) < 1e-4:
+        pts.pop()
+    if len(pts) >= 3 and z1 - z0 > 0.002:
+        bm = bmesh.new(); prisme(bm, pts, z0, z1); mesh_obj(name, bm, collection, material)
+
+
 # ---------------------------------------------------------------- the plan of the floor
 SOL = [(384, 140), (1457, 140), (1457, 2403), (576, 2403),
        (576, 2276), (601, 2276), (601, 2245), (232, 2245), (232, 842), (384, 842)]          # with the island over the entry, where the block was,
@@ -250,14 +274,17 @@ FACADE_OUEST = [1211 + (2170 - 1211) * k / 7 for k in range(8)]      # floor1's 
 # front of the right glass blocks (860), the walls of the south-east corner (1064, 1066) and the blind wall over the
 # entry (1068), which becomes glass blocks
 ETAGE_SANS = {16, 860, 1064, 1066, 1068,
-              9, 14, 10, 11,                  # inner layers inside the north wall (5)
               17, 731, 732, 733, 741, 767, 768}   # (26/11 evening) the small walls round the omakase bar
+# (walls 9, 10, 11, 14 fill notches of the north wall 5: kept; the slit between 10 and 11 is filled)
+ETAGE_JOINTS = [(1313, 99, 1316, 113),
+                (1330, 260, 1458, 277),                         # between the toilets' wall (730) and the shaft
+                (1445.5, 626, 1458, 634), (1455.5, 634, 1458, 644)]   # the shaft's corner on the facade
 ETAGE_REMPLACE = {15: [(382, 751), (399, 751), (399, 841), (382, 841)]}
 ANGLE_SE = refonte.ANGLE_SE               # the corner pier, over the ground floor's
 # (26/11 evening) the omakase bar redrawn: the kitchen corner at its west end (x 396 - 600, y 140 - 434), open on the
 # chef's aisle, closed on the room by a glazed partition; the storeroom behind the bar's back; the toilets' door
 CUISINE_CLOISON = (396, 434, 584, 444)
-MURS_WC = [(1290, 140, 1300, 152), (1290, 236, 1300, 248)]           # the door between them, y 152 - 236
+MURS_WC = [(1290, 139, 1300, 152), (1290, 236, 1300, 248)]           # the door between them, y 152 - 236
 # The lift shaft (4 on floor2.png) and the outer band of the right facade: drawn in dark grey on the plan, not in black,
 # so the vectorising missed them; measured on floor2.png. The shaft stands over the ground floor's room of the same
 # outline (floor1's wall 16), the band over floor1's (walls 17, 55, 288): the right facade reads on the two storeys.
@@ -266,7 +293,10 @@ GAINE = [(1330, 277, 1458, 298), (1321, 286, 1330, 298), (1321, 298, 1342, 428),
 BANDE_EST = [(1458, 140, 1481, 644)]     # along the shaft only (26/11): elsewhere the glass blocks show
 # The columns: the ground floor's go on up (floor1.py's positions); the one in the void (257) is one shaft, from the
 # ground floor through the slab's level to the mezzanine's ceiling
-POTEAUX = {841: (405.1, 805.7, 49.2), 995: (405.1, 1516.5, 49.2)}
+POTEAUX = {841: (405.1, 805.7, 49.2), 995: (405.1, 1516.5, 49.2),
+           # (26/11) the right facade's two columns as the ground floor's (the plan drew them thinner up here)
+           843: (1477.5, 805.0, 66.8), 989: (1477.5, 1516.7, 67.1)}
+DEMI_CX = 1286.5                          # the half drums, 10 cm off the column's side (26/11; the plan: 1298.5)
 
 
 def dans(pt, poly):
@@ -409,31 +439,54 @@ def prisme(bm, pts, z0, z1):
         bm.faces.new((lo[k], lo[j], hi[j], hi[k]))
 
 
-def blocs(bm, axe, d0, d1, u0, u1, z0, z1, pas_u=0.2, pas_z=0.2, bas=0.0, top=99.0, joint=0.012):
+def blocs(bm, axe, d0, d1, u0, u1, z0, z1, pas_u=0.2, pas_z=0.2, bas=0.0, top=99.0, joint=0.012, bj=None):
     """A grid of glass blocks: axe 'y' = wall plane x in [d0, d1] running along y in [u0, u1] (px),
-    axe 'x' = wall plane y in [d0, d1] running along x. Heights z0 - z1, blocks clipped to [bas, top]."""
+    axe 'x' = wall plane y in [d0, d1] running along x. Heights z0 - z1, blocks clipped to [bas, top].
+    bj: (26/11) the mortar of the joints, 2 mm back from the faces, filling every joint and the half joints along the
+    frame: the panel has no gap through it."""
     cols = max(1, round((u1 - u0) * PX / pas_u)); pu = (u1 - u0) / cols
     rows = max(1, round((z1 - z0) / pas_z)); pz = (z1 - z0) / rows
     j = joint / 2
+    def boite(b_, ua, ub, za, zb, da, db):
+        if axe == 'y':
+            bm_box(b_, da, ua, db, ub, za, zb)
+        else:
+            bm_box(b_, ua, da, ub, db, za, zb)
     for i in range(cols):
         a, b = u0 + i * pu + j / PX, u0 + (i + 1) * pu - j / PX
         for r in range(rows):
             za, zb = max(z0 + r * pz + j, bas), min(z0 + (r + 1) * pz - j, top)
             if zb - za < 0.004:
                 continue
-            if axe == 'y':
-                bm_box(bm, d0, a, d1, b, za, zb)
-            else:
-                bm_box(bm, a, d0, b, d1, za, zb)
+            boite(bm, a, b, za, zb, d0, d1)
+    if bj is None:
+        return
+    da, db = d0 + 0.002 / PX, d1 - 0.002 / PX
+    zba, zbb = max(z0, bas), min(z1, top)
+    if zbb - zba < 0.004:
+        return
+    for i in range(cols + 1):                    # the upright joints, the whole height
+        ua, ub = max(u0, u0 + i * pu - j / PX), min(u1, u0 + i * pu + j / PX)
+        boite(bj, ua, ub, zba, zbb, da, db)
+    for i in range(cols):                        # the level joints, between the uprights
+        a, b = u0 + i * pu + j / PX, u0 + (i + 1) * pu - j / PX
+        for r in range(rows + 1):
+            za, zb = max(z0, z0 + r * pz - j, bas), min(z1, z0 + r * pz + j, top)
+            if zb - za > 0.0005:
+                boite(bj, a, b, za, zb, da, db)
 
 
-def paves(name, axe, c, travees, bas, top, ep=4.0):
+def paves(name, axe, c, travees, bas, top, ep=5.0):
     """Glass block facade panels between the mullions (as floor1): blocks of about 0.2 m, from the sill (0.06 m) to
     the head of the frame (H - 0.08), clipped to [bas, top]."""
-    bm = bmesh.new()
+    bm = bmesh.new(); bj = bmesh.new()
     for u0, u1 in travees:
         if u1 - u0 > 6:
-            blocs(bm, axe, c - ep, c + ep, u0, u1, 0.06, H - 0.08, bas=bas, top=top)
+            blocs(bm, axe, c - ep, c + ep, u0, u1, 0.06, H - 0.08, bas=bas, top=top, bj=bj)
+    if len(bj.verts):                            # (26/11) the mortar, as thin lines
+        mesh_obj(name + '-joints', bj, 'Traits-fins', M_MUR)
+    else:
+        bj.free()
     if len(bm.verts):
         return mesh_obj(name + '-paves', bm, 'Traits-fins', M_PAVE)
     bm.free()
@@ -512,6 +565,8 @@ def build_coque(top, bas=0.0):
     # the lift shaft and the outer band of the right facade, over the ground floor's (the whole building, 25/11)
     for k, (x0, y0, x1, y1) in enumerate(GAINE):
         box(f'mur-gaine-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
+    for k, (x0, y0, x1, y1) in enumerate(ETAGE_JOINTS):
+        box(f'mur-joint-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
     for k, (x0, y0, x1, y1) in enumerate(MURS_WC):
         box(f'mur-wc-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
     if top > 2.10:
@@ -542,7 +597,7 @@ def build_coque(top, bas=0.0):
     def facade(name, x, montants, ep=4.5):
         if ELEMENTS and bas == 0.0:
             ep = 5.0
-            paves(name, 'y', x, [(y0 + 3, y1 - 3) for y0, y1 in zip(montants, montants[1:])], bas, top)
+            paves(name, 'y', x, [(y0 + 3, y1 - 3) for y0, y1 in zip(montants, montants[1:])], bas, top, ep=ep)
         else:
             for k, (y0, y1) in enumerate(zip(montants, montants[1:])):
                 box(f'{name}-verre-{k}', x - 1.2, y0, x + 1.2, y1, bas, top, 'Vitrages', M_VERRE)
@@ -557,16 +612,22 @@ def build_coque(top, bas=0.0):
             box(f'{name}-tete', x - ep, montants[0] - 3, x + ep, montants[-1] + 3, max(bas, H - 0.08), top, 'Vitrages', M_CADRE)
     facade('facade-gauche', 391, [143, 281.5, 421, 560, 656, 748])        # 26/11: the one layer, over floor1's
     facade('facade-ouest', 224, FACADE_OUEST)                              # 26/11: over the void, as floor1's
-    facade('facade-droite-a', 1450.5, [637, 741])
+    # (26/11) at the columns, the end mullions stop on the column's nearest point, a cheek fills the rest (joue)
+    C843, C989 = POTEAUX[843], POTEAUX[989]
+    fa, fb0 = face_colonne(1445.5, 1455.5, C843, 1), face_colonne(1445.5, 1455.5, C843, -1)
+    fb1, fd0 = face_colonne(1445.5, 1455.5, C989, 1), face_colonne(1445.5, 1455.5, C989, -1)
+    facade('facade-droite-a', 1450.5, [637, fa - 3])
     # (26/11) one run from column to column: the plan's gap at y 1094 - 1169, hidden behind the outer band, closed
-    facade('facade-droite-b', 1450.5, [851, 972, 1094, 1169, 1263.5, 1360, 1453])
-    facade('facade-droite-d', 1450.5, [1579, 1692, 1822.5, 1952, 2082.5, 2210, 2302, 2394])   # on to the corner pier
+    facade('facade-droite-b', 1450.5, [fb0 + 3, 972, 1094, 1169, 1263.5, 1360, fb1 - 3])
+    facade('facade-droite-d', 1450.5, [fd0 + 3, 1692, 1822.5, 1952, 2082.5, 2210, 2302, 2394])   # on to the corner pier
+    for k, (yf, col, s_) in enumerate(((fa, C843, 1), (fb0, C843, -1), (fb1, C989, 1), (fd0, C989, -1))):
+        joue(f'facade-droite-joue-{k}', 1445.5, 1455.5, yf, col, s_, bas, top, 'Vitrages', M_CADRE)
 
     # the street facade over the entry (26/11, where the plan had a blind wall): glass blocks from the island's side
     # wall to the corner pier, the light of the entry's double height and of the ivy
     def facade_x(name, y, montants, ep=5.0):
         if ELEMENTS and bas == 0.0:
-            paves(name, 'x', y, [(x0 + 3, x1 - 3) for x0, x1 in zip(montants, montants[1:])], bas, top)
+            paves(name, 'x', y, [(x0 + 3, x1 - 3) for x0, x1 in zip(montants, montants[1:])], bas, top, ep=ep)
         else:
             for k, (x0, x1) in enumerate(zip(montants, montants[1:])):
                 box(f'{name}-verre-{k}', x0, y - 1.2, x1, y + 1.2, bas, top, 'Vitrages', M_VERRE)
@@ -601,12 +662,14 @@ def build_coque(top, bas=0.0):
 
     # ---- the two half drums of the booths on the right (open to the room, the round side against the facade)
     for k, cy in enumerate((770, 1031)):
-        cx = 1298.5
+        cx = DEMI_CX
         zt = min(2.2, top)
         if bas < zt:
             ring(f'demi-tambour-{k}', cx, cy, 125, 110, -90, 90, bas, zt, 'Tambours', M_TAMBOUR)
-            box(f'demi-tambour-{k}-retour-a', 1281, cy - 125, cx, cy - 110, bas, zt, 'Tambours', M_TAMBOUR)
-            box(f'demi-tambour-{k}-retour-b', 1281, cy + 110, cx, cy + 125, bas, zt, 'Tambours', M_TAMBOUR)
+            box(f'demi-tambour-{k}-retour-a', cx - 17.5, cy - 125, cx, cy - 110, bas, zt, 'Tambours', M_TAMBOUR)
+            box(f'demi-tambour-{k}-retour-b', cx - 17.5, cy + 110, cx, cy + 125, bas, zt, 'Tambours', M_TAMBOUR)
+        if bas < zt and k == 0:                        # (26/11) between the two drums' returns: no slit
+            box('demi-tambours-joint', cx - 17.5, 895, cx, 906, bas, zt, 'Tambours', M_TAMBOUR)
 
     # ---- (26/11) the plan's stair up led to a floor this restaurant does not have: it is gone; behind the omakase
     #      bar's back panel its place is the bar's storeroom (reserve, step 2)
@@ -738,8 +801,8 @@ def banquettes():
     coussin = [(0.09, 0.401, False), (0.42, 0.401, True)] + arrondi(0.42, 0.441, 0.04, 0.04, -90, 90, 8)[1:-1] + \
               [(0.42, 0.481, False), (0.09, 0.481, False)]
     for k, cy in enumerate((770, 1031)):
-        cx = 1298.5
-        ch = chemin_demi(cx, cy, 110, 1282)
+        cx = DEMI_CX
+        ch = chemin_demi(cx, cy, 110, cx - 16.5)
         c = P(cx, cy)
         sweep(f'banquette-demi-{k}-assise', ch, base, 'Banquettes', M_BANQUETTE, ref=c)
         sweep(f'banquette-demi-{k}-coussin', ch, coussin, 'Banquettes', M_BANQUETTE, ref=c)
@@ -1517,7 +1580,7 @@ TABOURETS_VIDE = [536.8, 608.5, 719.9, 792, 902.9, 975.6]                   # y 
 
 def tablette_facade():
     """The wooden ledge under the right glass blocks, behind the high tables (as floor1's), round the facade column."""
-    cx_, cy_, r = 1476.2, 1515.3, 69.5
+    cx_, cy_, r = 1477.5, 1516.7, 69.5                 # round the column (as the ground floor's)
     y0, y1, xb = 1172, 2004, 1440
     front = [(1387 - (10 * math.sin(math.pi * (y - 1460) / 112) if 1460 < y < 1572 else 0), y) for y in range(y0, y1 + 1, 4)]
     back = []
@@ -1596,12 +1659,12 @@ def build_mobilier():
     avant = set(bpy.data.objects)
     liste = []
     for tid, nom, cy in DEMI:
-        tc = (1298.5, cy)
+        tc = (DEMI_CX, cy)
         poser(f'table-{tid:02d}', table_ronde(0.40), *tc, collection='Tables')
         poser(f'lampe-{tid:02d}', lampe(), tc[0] + 15, tc[1], collection='Tables', z=0.75)
         poser(f'suspension-{tid:02d}', suspension(1.85, 0.26), *tc, collection='Suspensions')
         for k, dy in enumerate((-44, 44)):
-            poser(f'chaise-{tid:02d}-{k + 1}', fauteuil(), 1232.5, cy + dy, vers=tc, collection='Assises')
+            poser(f'chaise-{tid:02d}-{k + 1}', fauteuil(), DEMI_CX - 66, cy + dy, vers=tc, collection='Assises')
         liste.append(dict(id=tid, nom=nom, type='tambour', centre_px=[tc[0], tc[1]], places=4,
                           assises='banquette en demi-cercle et 2 fauteuils', zone='D'))
     tid, nom, x0, y0, x1, y1, pieds, chaises = GRANDE
@@ -1753,6 +1816,8 @@ PLANS = {
     'bar':          ((850, 790, 1.60), (850, 400, 1.05), 22),       # the omakase bar
     'cuisine':      ((590, 420, 1.65), (430, 160, 0.90), 18),       # the kitchen corner, from its corner by the aisle
     'labo':         ((585, 1000, 1.60), (370, 960, 0.80), 22),      # the lab's counter
+    'colonne-est':  ((1760, 1010, 0.80), (1440, 800, -0.20), 22),   # the right facade's column, glass blocks on it
+    'colonne-1er':  ((1235, 1290, 1.60), (1462, 1560, 1.05), 20),   # the other column, from inside the 1st floor
 }
 
 

@@ -225,12 +225,36 @@ def build_sols():
     obj('plan', me, 'Plan', m)
 
     # ---- floors (raised 1 cm over the plan; hidden in the calibration view)
-    sol = [(385, 146), (1418, 146), (1418, 283), (1473, 283), (1473, 2410), (575, 2410), (575, 2275),
+    sol = [(385, 146), (1453, 146), (1453, 283), (1473, 283), (1473, 2410), (575, 2410), (575, 2275),
            (201, 2275), (201, 728), (385, 728)]
     extrude_loops('sol', [sol], -0.05, 0.0, 'Sols', M_SOL_SOMBRE)
     extrude_loops('sol-clair', [[(231, 728), (857, 728), (857, 1894), (604, 1894), (604, 2275), (231, 2275)]],
                   0.0, 0.004, 'Sols', M_SOL_CLAIR)
     extrude_loops('gravier', [GRAVIER], 0.0, 0.03, 'Sols', M_GRAVIER)
+
+
+def face_colonne(x0, x1, col, s):
+    """Where a straight end (from x0 to x1, across a facade or a wall) first meets a column's round side: the y of the
+    column's nearest point over that width. s = +1: the column lies towards +y."""
+    cx, cy, r = col
+    ys = [cy - s * math.sqrt(max(r * r - (cx - (x0 + (x1 - x0) * k / 20)) ** 2, 0.0)) for k in range(21)]
+    return min(ys) if s > 0 else max(ys)
+
+
+def joue(name, x0, x1, y_f, col, s, z0, z1, collection, material):
+    """(26/11) Fills the sliver between a straight end at y_f (from x0 to x1) and a column's round side: no gap where
+    a facade or a wall meets a column."""
+    cx, cy, r = col
+    pts = [(x0, y_f), (x1, y_f)]
+    for k in range(13):
+        x = x1 + (x0 - x1) * k / 12
+        p_ = (x, cy - s * math.sqrt(max(r * r - (cx - x) ** 2, 0.0)))
+        if abs(p_[1] - pts[-1][1]) > 1e-4 or abs(p_[0] - pts[-1][0]) > 1e-4:
+            pts.append(p_)
+    if abs(pts[-1][1] - pts[0][1]) < 1e-4 and abs(pts[-1][0] - pts[0][0]) < 1e-4:
+        pts.pop()
+    if len(pts) >= 3 and z1 - z0 > 0.002:
+        bm = bmesh.new(); prisme(bm, pts, z0, z1); mesh_obj(name, bm, collection, material)
 
 
 def build_coque(cut, top, bas):
@@ -252,7 +276,7 @@ def build_coque(cut, top, bas):
         if ELEMENTS and bas == 0.0:             # glass blocks (photos 2, 8, 9, 37) in deeper steel frames;
             x_ep = 5.0                          # above the map cut (bas > 0) a plain see-through pane is lighter
             paves(name, 'y', x, [(y0 + (y1 - y0) * k / n + 3, y0 + (y1 - y0) * (k + 1) / n - 3) for k in range(n)],
-                  bas, top)
+                  bas, top, ep=x_ep)
         else:
             box(name + '-verre', x - 1.2, y0, x + 1.2, y1, bas, top, 'Vitrages', M_VERRE)
         m_bas = max(bas, 0.06) if ELEMENTS else bas
@@ -265,18 +289,24 @@ def build_coque(cut, top, bas):
         if cut is None:
             box(name + '-imposte', x - x_ep, y0, x + x_ep, y1, top - 0.08, top, 'Vitrages', M_CADRE)
 
-    facade('facade-gauche-haut', 382, 150, 723)
+    facade('facade-gauche-haut', 382, 149, 723)         # (26/11) against wall 4, no slit
     facade('facade-gauche-a', 224, 848, 1117)
     facade('facade-gauche-b', 224, 1211, 2170)
-    facade('facade-droite', 1452, 870, 1450)
-    facade('facade-droite-b', 1452, 1583, 2230)
-    facade('facade-droite-haut', 1452, 737, 740)
+    # (26/11) at the columns, the end mullions stop on the column's nearest point and a cheek fills the rest (joue)
+    C40, C251 = (1477.5, 805.0, 66.8), (1477.5, 1516.7, 67.1)
+    f0, f1 = face_colonne(1447, 1457, C40, -1), face_colonne(1447, 1457, C251, 1)
+    f2 = face_colonne(1447, 1457, C251, -1)
+    facade('facade-droite', 1452, f0 + 3, f1 - 3)
+    facade('facade-droite-b', 1452, f2 + 3, 2230)
+    for k, (yf, col, s_) in enumerate(((f0, C40, -1), (f1, C251, 1), (f2, C251, -1))):
+        joue(f'facade-droite-joue-{k}', 1447, 1457, yf, col, s_, bas, top, 'Vitrages', M_CADRE)
+    joue('mur-17-joue', 1447, 1474, 737.5, C40, 1, bas, top, 'Coque', M_MUR)   # the walls' end on column 40
     # ---- the street front (26/11): glass blocks from the shopfront to the corner pier, in front of the rock garden,
     #      the stair and the cloakroom; the shopfront and its double door (devanture)
     m = refonte.MONTANTS_SUD
-    travees = [(a + 3, b - 3) for a, b in zip(m, m[1:]) if b - a > 20]      # not between the two by wall 440
+    travees = [(a + (0 if a == 861 else 3), b - 3) for a, b in zip(m, m[1:]) if b - a > 20]   # from the shopfront's post
     if ELEMENTS and bas == 0.0:
-        paves('entree', 'x', 2406.5, travees, bas, top)
+        paves('entree', 'x', 2406.5, travees, bas, top, ep=5.0)
     else:
         for k, (u0, u1) in enumerate(travees):
             box(f'entree-verre-{k}', u0, 2404, u1, 2409, bas, top, 'Vitrages', M_VERRE)
@@ -392,22 +422,41 @@ def prisme(bm, pts, z0, z1):
         bm.faces.new((lo[k], lo[j], hi[j], hi[k]))
 
 
-def blocs(bm, axe, d0, d1, u0, u1, z0, z1, pas_u=0.2, pas_z=0.2, bas=0.0, top=99.0, joint=0.012):
+def blocs(bm, axe, d0, d1, u0, u1, z0, z1, pas_u=0.2, pas_z=0.2, bas=0.0, top=99.0, joint=0.012, bj=None):
     """A grid of glass blocks: axe 'y' = wall plane x in [d0, d1] running along y in [u0, u1] (px),
-    axe 'x' = wall plane y in [d0, d1] running along x. Heights z0 - z1, blocks clipped to [bas, top]."""
+    axe 'x' = wall plane y in [d0, d1] running along x. Heights z0 - z1, blocks clipped to [bas, top].
+    bj: (26/11) the mortar of the joints, 2 mm back from the faces, filling every joint and the half joints along the
+    frame: the panel has no gap through it."""
     cols = max(1, round((u1 - u0) * PX / pas_u)); pu = (u1 - u0) / cols
     rows = max(1, round((z1 - z0) / pas_z)); pz = (z1 - z0) / rows
     j = joint / 2
+    def boite(b_, ua, ub, za, zb, da, db):
+        if axe == 'y':
+            bm_box(b_, da, ua, db, ub, za, zb)
+        else:
+            bm_box(b_, ua, da, ub, db, za, zb)
     for i in range(cols):
         a, b = u0 + i * pu + j / PX, u0 + (i + 1) * pu - j / PX
         for r in range(rows):
             za, zb = max(z0 + r * pz + j, bas), min(z0 + (r + 1) * pz - j, top)
             if zb - za < 0.004:
                 continue
-            if axe == 'y':
-                bm_box(bm, d0, a, d1, b, za, zb)
-            else:
-                bm_box(bm, a, d0, b, d1, za, zb)
+            boite(bm, a, b, za, zb, d0, d1)
+    if bj is None:
+        return
+    da, db = d0 + 0.002 / PX, d1 - 0.002 / PX
+    zba, zbb = max(z0, bas), min(z1, top)
+    if zbb - zba < 0.004:
+        return
+    for i in range(cols + 1):                    # the upright joints, the whole height
+        ua, ub = max(u0, u0 + i * pu - j / PX), min(u1, u0 + i * pu + j / PX)
+        boite(bj, ua, ub, zba, zbb, da, db)
+    for i in range(cols):                        # the level joints, between the uprights
+        a, b = u0 + i * pu + j / PX, u0 + (i + 1) * pu - j / PX
+        for r in range(rows + 1):
+            za, zb = max(z0, z0 + r * pz - j, bas), min(z1, z0 + r * pz + j, top)
+            if zb - za > 0.0005:
+                boite(bj, a, b, za, zb, da, db)
 
 
 def devanture(cut, top, bas):
@@ -443,13 +492,17 @@ def devanture(cut, top, bas):
                 b(f'porte-{k}-poignee-{cote}-pied-{z:.2f}', xp - 0.8, sa, xp + 0.8, sb, z - 0.012, z + 0.012, M_CADRE)
 
 
-def paves(name, axe, c, travees, bas, top, ep=4.0):
+def paves(name, axe, c, travees, bas, top, ep=5.0):
     """Glass block facade panels between the mullions (photos 2, 8, 9, 37): blocks of about 0.2 m,
     from the sill (0.06 m) to the head of the frame (H - 0.08), clipped to [bas, top]."""
-    bm = bmesh.new()
+    bm = bmesh.new(); bj = bmesh.new()
     for u0, u1 in travees:
         if u1 - u0 > 6:
-            blocs(bm, axe, c - ep, c + ep, u0, u1, 0.06, H - 0.08, bas=bas, top=top)
+            blocs(bm, axe, c - ep, c + ep, u0, u1, 0.06, H - 0.08, bas=bas, top=top, bj=bj)
+    if len(bj.verts):                            # (26/11) the mortar, as thin lines
+        mesh_obj(name + '-joints', bj, 'Traits-fins', M_MUR)
+    else:
+        bj.free()
     if len(bm.verts):
         return mesh_obj(name + '-paves', bm, 'Traits-fins', M_PAVE)
     bm.free()
@@ -496,22 +549,23 @@ def bar():
     bm_box(bm, 413, 623, 1190, 683, 0.86, 0.90)         # bartender's working shelf (the light band of the plan)
     bm_box(bm, 409, 680, 1194, 752, 1.03, 1.08)         # customer top (the dark band of the plan)
     mesh_obj('bar-plateaux', bm, 'Bar', M_COMPTOIR)
-    bm = bmesh.new()
-    blocs(bm, 'x', 737.5, 745, 413, 1190, 0.10, 1.02, pas_u=0.2, pas_z=0.23)
+    bm = bmesh.new(); bj = bmesh.new()
+    blocs(bm, 'x', 737.5, 745, 413, 1190, 0.10, 1.02, pas_u=0.2, pas_z=0.23, bj=bj)
     mesh_obj('bar-facade-verre', bm, 'Traits-fins', M_PAVE)
+    mesh_obj('bar-facade-joints', bj, 'Traits-fins', M_MUR)            # (26/11) its mortar
     # back bar
     bm = bmesh.new()
-    bm_box(bm, 565, 422, 625, 488, 0.0, 2.196)          # tall units at both ends
-    bm_box(bm, 1110, 422, 1170, 488, 0.0, 2.196)
+    bm_box(bm, 565, 419, 625, 488, 0.0, 2.196)          # tall units at both ends
+    bm_box(bm, 1110, 419, 1170, 488, 0.0, 2.196)
     bm_box(bm, 627, 426, 1108, 482, 0.0, 0.10)          # plinth
-    bm_box(bm, 625.5, 422, 1109.5, 488, 0.10, 0.86)     # base cabinet
-    bm_box(bm, 625.5, 422, 1109.5, 425, 0.90, 2.196)    # back panel
+    bm_box(bm, 625.5, 419, 1109.5, 488, 0.10, 0.86)     # base cabinet
+    bm_box(bm, 625.5, 419, 1109.5, 425, 0.90, 2.196)    # back panel
     bm_box(bm, 640, 425, 1095, 470, 0.90, 1.02)         # display steps (lit, photo 25)
     bm_box(bm, 640, 425, 1095, 448, 1.02, 1.18)
-    bm_box(bm, 565, 422, 1170, 500, 2.20, 2.42)         # canopy with the lights
+    bm_box(bm, 565, 419, 1170, 500, 2.20, 2.42)         # canopy with the lights
     mesh_obj('arriere-bar', bm, 'Bar', M_MEUBLE)
     bm = bmesh.new()
-    bm_box(bm, 625.5, 422, 1109.5, 490, 0.86, 0.90)     # worktop
+    bm_box(bm, 625.5, 419, 1109.5, 490, 0.86, 0.90)     # worktop
     mesh_obj('arriere-bar-plan', bm, 'Bar', M_COMPTOIR)
     bm = bmesh.new()
     blocs(bm, 'x', 425, 431, 640, 1095, 1.30, 1.74, pas_u=0.2, pas_z=0.22)   # band of glass cells

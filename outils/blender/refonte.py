@@ -14,11 +14,21 @@
 RDC_SANS = {55, 437}
 RDC_REMPLACE = {
     288: [[(1272, 2245), (1447, 2245), (1447, 2233), (1457, 2233), (1457, 2276), (1272, 2276)]],
-    440: [[(1299.5, 2284.5), (1308.5, 2284.5), (1308.5, 2298), (1299.5, 2298)],
-          [(1299.5, 2378), (1308.5, 2378), (1308.5, 2399.5), (1299.5, 2399.5)]],
+    440: [[(1299.5, 2276), (1308.5, 2276), (1308.5, 2298), (1299.5, 2298)],
+          [(1299.5, 2378), (1308.5, 2378), (1308.5, 2411.5), (1299.5, 2411.5)]],
+    # (26/11, no gap left in the walls) the entry's left wall down to the street front, room 4's two south walls as one
+    439: [[(567, 2276), (576, 2276), (576, 2411.5), (567, 2411.5)]],
+    432: [[(1285, 2228), (1447, 2228), (1447, 2245), (1285, 2245)]],
 }
+# the slits the plan left between walls that meet (1 - 3 cm): filled
+RDC_JOINTS = [(480, 41.5, 482, 146.5), (1419, 42, 1421, 146), (1451, 281, 1453, 635), (596.5, 2243, 608, 2276),
+              (426, 146, 435, 148), (640, 148, 642, 227), (1283, 2228, 1285, 2245), (1273, 2243, 1283, 2245),
+              # the pocket between the room of wall 16, wall 17 and column 40 (with a cheek on the column, floor1.py)
+              (1447, 635, 1453, 737.5), (1453, 636.5, 1461, 737.5)]
 ANGLE_SE = (1445.5, 2397, 1481, 2414)     # the south-east corner pier, the same on both storeys
-RDC_AJOUT = [[(ANGLE_SE[0], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[3]), (ANGLE_SE[0], ANGLE_SE[3])]]
+RDC_AJOUT = [[(ANGLE_SE[0], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[3]), (ANGLE_SE[0], ANGLE_SE[3])],
+             # (26/11) the north-east corner: the plan left the right side open between walls 7 and 17 (y 146 - 281)
+             [(1453, 146), (1481, 146), (1481, 281), (1453, 281)]]
 
 # the cloakroom (between the entry and the corner pier, inside the glass blocks) and the street front (y 2406.5):
 # the mullions of the glass blocks, from the shopfront to the corner pier
@@ -41,4 +51,6 @@ def murs_rdc(data):
         murs.append((str(mu['id']), [mu['contour']] + mu['trous']))
     for k, c in enumerate(RDC_AJOUT):
         murs.append((f'angle-{k}', [c]))
+    for k, (x0, y0, x1, y1) in enumerate(RDC_JOINTS):
+        murs.append((f'joint-{k}', [[(x0, y0), (x1, y0), (x1, y1), (x0, y1)]]))
     return murs
