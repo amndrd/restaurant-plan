@@ -8,7 +8,19 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (26/11/2026)
 
-**La cuisine et le bar du rez-de-chaussée (26/11, nuit).** Trois prototypes, en attente de ton choix.
+**La cuisine ouverte, telle que choisie (26/11, nuit).** En attente de ta validation.
+
+- **Le prototype A est retenu** : la cuisine ouverte sur le bar par-dessus un muret, la retombée avec les verres et les bouteilles suspendus, le comptoir en lattes de chêne. B et C sortent du script (l'option `cuisine=` n'existe plus) ; leurs rendus restent dans `rendus/24-cuisine-et-bar/`.
+- **Le « couloir ouvert »** était la gaine sous celle du 1er (murs 16 et 36) : une boîte de 90 cm, ouverte au sud. Elle est retirée (`refonte.RDC_SANS`), et le nu intérieur de la façade droite est redressé d'un seul tenant (x 1447).
+- **La cuisine va jusqu'à la façade** (`refonte.KITCHEN`) : après la plonge, une table propre, une étagère de vaisselle (assiettes, casiers à verres), le lave-mains près des portes, une étagère à assiettes au-dessus.
+- **Les portes** sont replacées et élargies à 1,57 m (`refonte.KITCHEN_PORTE`) : deux battants de chêne à double action, avec chacun un hublot et une plaque de poussée sur les deux faces, et des plinthes inox.
+- **Le poste de service** devant les portes (`refonte.SERVICE`, `service_rdc`) : un meuble en chêne avec tiroirs à couverts, portes et plateau de pierre, la caisse, des carafes et des verres ; un lambris de tasseaux de chêne et une étagère.
+- **Vérifié :** il ne reste que des assemblages voulus.
+- **Les rendus** sont dans `rendus/25-cuisine-ouverte/`, avec tes captures (`avant-couloir`, `avant-portes`) et la carte (`node outils/carte_captures.mjs cuisine`). La page est `pages/19-cuisine-ouverte.png`.
+- **La carte est réexportée** (les deux étages et le rez-de-chaussée sous sa dalle), et `floor1-tables.json` est recopié dans `carte/donnees/`.
+- **Au 1er,** la boîte de l'ancienne « gaine d'ascenseur » n'a plus rien en dessous : à décider (réserve fermée ou ouverte sur la salle).
+
+**La cuisine et le bar du rez-de-chaussée (26/11, nuit).** Trois prototypes ; le A est choisi (voir ci-dessus).
 
 - **Le fond du rez-de-chaussée est redessiné** (`refonte.py`, `floor1.py`). Les cloisons des deux toilettes (mur 14), le mur de la réserve le long de la façade (13), les bouts du local électrique (15, 35) disparaissent. À leur place :
   - **la cuisine**, juste derrière le bar (`refonte.KITCHEN`, `cuisine_rdc`) : la ligne de cuisson sous sa hotte (friteuse, grill au charbon, fourneau sur four, plancha, salamandre), deux armoires réfrigérées et un congélateur, une étagère de réserve sèche, le comptoir de préparation avec son évier, la saladette, la passe à la tablette chauffante, la plonge dans l'angle nord-est (table de débarrassage et douchette, lave-vaisselle à capot, table propre), un lave-mains près de la porte, un sol en carreaux de 30 cm et un caniveau ;
@@ -270,7 +282,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 18-batiment-entier/ (les deux étages raccordés, vus de la rue),
                 19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé), 21-reprises/ (les endroits repris),
                 22-sans-espace/ (les colonnes et les murs sans fente), 23-cave-palier-carte/ (la cave, le palier, la légende),
-                24-cuisine-et-bar/ (la cuisine et le bar du rez-de-chaussée, trois prototypes)
+                24-cuisine-et-bar/ (la cuisine et le bar du rez-de-chaussée, trois prototypes),
+                25-cuisine-ouverte/ (la cuisine ouverte retenue, le poste de service, la carte)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
@@ -299,7 +312,7 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `elements=1` ajoute les éléments fixes de l'étape 3 (pavés de verre, escalier détaillé, bar, banquettes, jardin, accueil, rideaux) ; avec `variante=detail plans=bar,banquette,escalier,facade,rideau`, il rend les vues rapprochées ;
   - `mobilier=1` ajoute le mobilier de l'étape 4 et écrit `modele/floor1-tables.json` ; avec `variante=detail plans=salle,tabourets,tambour`, il rend les vues rapprochées ;
   - avec `variante=detail plans=zone`, il rend la vue rapprochée de la banquette jardinière, près du bar ;
-  - `cuisine=A|B|C` choisit la façade de la cuisine sur le bar ; `plans=cuisine-salle,…,cuisine-vol,cuisine-dessus` rend ses vues (une focale négative donne une vue orthographique de cette largeur), `prefixe=B-` préfixe les fichiers ;
+  - `plans=cuisine-salle,cuisine-comptoir,cuisine-passe,cuisine-service,cuisine-ligne,cuisine-froid,cuisine-plonge,cuisine-coin,cuisine-passage,cuisine-wc` (avec `variante=detail`) puis `cuisine-vol,cuisine-dessus` (avec `variante=fantome`) rendent les vues de la cuisine et du bar (une focale négative donne une vue orthographique de cette largeur) ; `prefixe=` préfixe les fichiers ;
   - `trace=modele/trace/rdc.json` lit le plan dans le modèle (la coupe à 1,20 m et ce qui est dessous), sans rendu ;
   - `export=carte/modele/floor1-fantome.glb` (avec `variante=fantome mobilier=1`) ou `floor1-entier.glb` (avec `variante=fil-de-fer mobilier=1`) exporte le modèle de la carte. Chaque objet garde son rôle et le numéro de sa table. Il faut ensuite recopier `modele/floor1-tables.json` dans `carte/donnees/`.
 - **Numéroter les tables :** `numeros_tables.py` pose le numéro de chaque table sur la vue du haut en fantôme.
@@ -311,7 +324,7 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py` à `page_etape18.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py` à `page_etape19.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 
