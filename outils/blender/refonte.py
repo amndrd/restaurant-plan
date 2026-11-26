@@ -11,7 +11,8 @@
 # - a corner pier closes the building at the south-east, on both storeys; the cloakroom has glass blocks on the
 #   street and on the right side, as the room next to it.
 
-RDC_SANS = {55, 437}
+RDC_SANS = {55, 437,
+            408, 421}     # (26/11 evening) the thin partition by the stair, with a closed strip behind: the wine room
 RDC_REMPLACE = {
     288: [[(1272, 2245), (1447, 2245), (1447, 2233), (1457, 2233), (1457, 2276), (1272, 2276)]],
     440: [[(1299.5, 2276), (1308.5, 2276), (1308.5, 2298), (1299.5, 2298)],
@@ -22,13 +23,19 @@ RDC_REMPLACE = {
 }
 # the slits the plan left between walls that meet (1 - 3 cm): filled
 RDC_JOINTS = [(480, 41.5, 482, 146.5), (1419, 42, 1421, 146), (1451, 281, 1453, 635), (596.5, 2243, 608, 2276),
-              (426, 146, 435, 148), (640, 148, 642, 227), (1283, 2228, 1285, 2245), (1273, 2243, 1283, 2245),
+              (426, 146, 435, 148), (640, 148, 642, 227), (1273, 2228, 1285, 2245),
               # the pocket between the room of wall 16, wall 17 and column 40 (with a cheek on the column, floor1.py)
               (1447, 635, 1453, 737.5), (1453, 636.5, 1461, 737.5)]
 ANGLE_SE = (1445.5, 2397, 1481, 2414)     # the south-east corner pier, the same on both storeys
 RDC_AJOUT = [[(ANGLE_SE[0], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[1]), (ANGLE_SE[2], ANGLE_SE[3]), (ANGLE_SE[0], ANGLE_SE[3])],
              # (26/11) the north-east corner: the plan left the right side open between walls 7 and 17 (y 146 - 281)
              [(1453, 146), (1481, 146), (1481, 281), (1453, 281)]]
+
+# (26/11 evening) the wine room: the strip between the stair's garden and the right facade, which the plan closed
+# with a thin partition (408, 421) and left empty. Glazed on the stair's side (x 1273 - 1283, as the partition was)
+# and at its north end (y 1884 - 1894), with a glass door there; inside, from its glass to the glass blocks
+CAVE = (1283, 1894, 1447, 2228)
+CAVE_PORTE = (1284, 1380)           # the door leaf, hinged by the corner post
 
 # the cloakroom (between the entry and the corner pier, inside the glass blocks) and the street front (y 2406.5):
 # the mullions of the glass blocks, from the shopfront to the corner pier

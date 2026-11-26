@@ -316,6 +316,8 @@ def build_coque(cut, top, bas):
         box('entree-cadre', 861, 2402, m[-1] + 3, 2411, 0.0, 0.06, 'Vitrages', M_CADRE)
     facade('facade-droite-vestiaire', 1452, 2279, 2394)                   # the cloakroom's side, to the corner pier
     devanture(cut, top, bas)
+    cave_vitrage(cut, top, bas)
+    vestiaire_baie(cut, top, bas)
 
     # ---- booth drums: a tall dark cylinder. Low part (0 - 2.2 m) = half shell open to the room,
     #      with short straight returns; high part (2.2 - 3.0 m) = a full ring hung over the booth (photo 24).
@@ -490,6 +492,63 @@ def devanture(cut, top, bas):
             b(f'porte-{k}-poignee-{cote}', xp - 1, ya, xp + 1, yb, 0.85, 1.75, M_CADRE)
             for z in (0.90, 1.70):                                          # the two standoffs of each pull
                 b(f'porte-{k}-poignee-{cote}-pied-{z:.2f}', xp - 0.8, sa, xp + 0.8, sb, z - 0.012, z + 0.012, M_CADRE)
+
+
+def cave_vitrage(cut, top, bas):
+    """(26/11 evening) The wine room's glazing, in the shopfront's language: steel posts, a sill, a head, a transom at
+    2.40 m and glass over it. On the stair's side, three bays where the thin partition stood; at the north end, a
+    pivoting glass door by the corner post and a fixed pane to the glass blocks."""
+    x0, y0, x1, y1 = refonte.CAVE
+    pa, pb = refonte.CAVE_PORTE
+    def b(name, xa, ya, xb, yb, z0, z1, m):
+        z0, z1 = max(z0, bas), min(z1, top)
+        if z1 - z0 > 0.002:
+            box(name, xa, ya, xb, yb, z0, z1, 'Vitrages', m)
+    # the long side, x 1273 - 1283
+    ys = [1884, 2000, 2114, y1]
+    b('cave-poteau-angle', 1273, 1884, 1283, 1894, 0.0, H, M_CADRE)
+    for k, y in enumerate(ys[1:-1]):
+        b(f'cave-poteau-{k}', 1273, y - 3, 1283, y + 3, 0.03, H - 0.08, M_CADRE)
+    b('cave-poteau-fond', 1273, y1 - 6, 1283, y1, 0.03, H - 0.08, M_CADRE)
+    b('cave-seuil', 1273, 1894, 1283, y1, 0.0, 0.03, M_CADRE)
+    b('cave-tete', 1273, 1894, 1283, y1, H - 0.08, H, M_CADRE)
+    baies = [(1894, ys[1] - 3), (ys[1] + 3, ys[2] - 3), (ys[2] + 3, y1 - 6)]
+    for k, (ya, yb) in enumerate(baies):
+        b(f'cave-imposte-{k}', 1273, ya, 1283, yb, 2.40, 2.46, M_CADRE)
+        b(f'cave-vitre-{k}', 1276.8, ya, 1279.2, yb, 0.03, 2.40, M_VERRE)
+        b(f'cave-vitre-haute-{k}', 1276.8, ya, 1279.2, yb, 2.46, H - 0.08, M_VERRE)
+    # the north end, y 1884 - 1894: the door (pa - pb), a post, the fixed pane, a post against the glass blocks
+    b('cave-nord-seuil', 1283, 1884, x1, 1894, 0.0, 0.03, M_CADRE)
+    b('cave-nord-tete', 1283, 1884, x1, 1894, H - 0.08, H, M_CADRE)
+    b('cave-nord-poteau', pb, 1884, pb + 6, 1894, 0.03, H - 0.08, M_CADRE)
+    b('cave-nord-poteau-fin', x1 - 6, 1884, x1, 1894, 0.03, H - 0.08, M_CADRE)
+    for k, (xa, xb) in enumerate(((1283, pb), (pb + 6, x1 - 6))):
+        b(f'cave-nord-imposte-{k}', xa, 1884, xb, 1894, 2.40, 2.46, M_CADRE)
+        b(f'cave-nord-vitre-haute-{k}', xa, 1887.8, xb, 1890.2, 2.46, H - 0.08, M_VERRE)
+    b('cave-nord-vitre', pb + 6, 1887.8, x1 - 6, 1890.2, 0.03, 2.40, M_VERRE)
+    xa, xb = pa + 0.5, pb - 0.5                                                  # the leaf, in a thin steel frame
+    b('cave-porte-cadre-bas', xa, 1886.5, xb, 1891.5, 0.03, 0.15, M_CADRE)
+    b('cave-porte-cadre-haut', xa, 1886.5, xb, 1891.5, 2.34, 2.395, M_CADRE)
+    b('cave-porte-montant-a', xa, 1886.5, xa + 4, 1891.5, 0.15, 2.34, M_CADRE)
+    b('cave-porte-montant-b', xb - 4, 1886.5, xb, 1891.5, 0.15, 2.34, M_CADRE)
+    b('cave-porte-vitre', xa + 4, 1887.8, xb - 4, 1890.2, 0.15, 2.34, M_VERRE)
+    xp = xb - 9                                                                  # the pulls, by the latch side
+    for cote, (ya, yb), (sa, sb) in (('dedans', (1895, 1896.5), (1891.5, 1895)), ('dehors', (1881.5, 1883), (1883, 1886.5))):
+        b(f'cave-porte-poignee-{cote}', xp - 1, ya, xp + 1, yb, 0.85, 1.75, M_CADRE)
+        for z in (0.90, 1.70):
+            b(f'cave-porte-poignee-{cote}-pied-{z:.2f}', xp - 0.8, sa, xp + 0.8, sb, z - 0.012, z + 0.012, M_CADRE)
+
+
+def vestiaire_baie(cut, top, bas):
+    """(26/11 evening) The cloakroom's opening in wall 440 becomes a doorway: a lintel at 2.20 m, the jambs and the
+    soffit lined with oak."""
+    if min(top, H) - max(bas, 2.20) > 0.002:
+        box('vestiaire-linteau', 1299.5, 2298, 1308.5, 2378, max(bas, 2.20), min(top, H), 'Coque', M_MUR)
+    for nom, (ya, yb) in (('a', (2298, 2299.2)), ('b', (2376.8, 2378))):
+        if min(top, 2.20) - bas > 0.002:
+            box(f'vestiaire-baie-jambage-{nom}', 1299.5, ya, 1308.5, yb, bas, min(top, 2.20), 'Vitrages', M_BOIS)
+    if bas <= 2.188 < top:
+        box('vestiaire-baie-tableau', 1299.5, 2299.2, 1308.5, 2376.8, 2.188, 2.20, 'Vitrages', M_BOIS)
 
 
 def paves(name, axe, c, travees, bas, top, ep=5.0):
@@ -954,35 +1013,292 @@ def rideaux():
 
 def build_elements():
     """Step 3: the fixed elements, at full height. Returns the new objects."""
-    for c in ('Bar', 'Banquettes', 'Accueil', 'Rideaux', 'Jardin'):
+    for c in ('Bar', 'Banquettes', 'Accueil', 'Rideaux', 'Jardin', 'Cave'):
         if c not in bpy.data.collections:
             sc.collection.children.link(bpy.data.collections.new(c))
     avant = set(bpy.data.objects)
-    bar(); banquettes(); escalier_detail(); jardin(); accueil(); rideaux(); vestiaire()
+    bar(); banquettes(); escalier_detail(); jardin(); accueil(); rideaux(); vestiaire(); cave()
     return [o for o in bpy.data.objects if o not in avant]
 
 
+# ---- (26/11 evening) small solids for the wine room and the cloakroom: plan pixels for x / y, metres for z and radii
+def bm_cyl_x(bm, x0, x1, y, z, r, seg=14):
+    """A cylinder lying along plan x, from x0 to x1, its axis at (y, z)."""
+    ring = [(r * math.cos(math.tau * k / seg) / PX, r * math.sin(math.tau * k / seg)) for k in range(seg)]
+    a = [bm.verts.new(P(x0, y + dy, z + dz)) for dy, dz in ring]
+    b = [bm.verts.new(P(x1, y + dy, z + dz)) for dy, dz in ring]
+    bm.faces.new(a); bm.faces.new(list(reversed(b)))
+    for k in range(seg):
+        j = (k + 1) % seg
+        bm.faces.new((a[k], b[k], b[j], a[j])).smooth = True
+
+
+def bm_cyl_y(bm, y0, y1, x, z, r, seg=12):
+    """A cylinder lying along plan y."""
+    ring = [(r * math.cos(math.tau * k / seg) / PX, r * math.sin(math.tau * k / seg)) for k in range(seg)]
+    a = [bm.verts.new(P(x + dx, y0, z + dz)) for dx, dz in ring]
+    b = [bm.verts.new(P(x + dx, y1, z + dz)) for dx, dz in ring]
+    bm.faces.new(a); bm.faces.new(list(reversed(b)))
+    for k in range(seg):
+        j = (k + 1) % seg
+        bm.faces.new((a[k], b[k], b[j], a[j])).smooth = True
+
+
+def bm_tour(bm, cx, cy, profil, z0=0.0, seg=16):
+    """A solid of revolution about the vertical through plan (cx, cy): profil = [(r, z)] from the axis at the bottom
+    to the axis at the top (r = 0 at both ends), metres; z from z0."""
+    anneaux = []
+    for r, z in profil:
+        if r <= 0:
+            anneaux.append([bm.verts.new(P(cx, cy, z0 + z))])
+        else:
+            anneaux.append([bm.verts.new(P(cx + r * math.cos(math.tau * k / seg) / PX,
+                                           cy + r * math.sin(math.tau * k / seg) / PX, z0 + z)) for k in range(seg)])
+    for A, B in zip(anneaux, anneaux[1:]):
+        for k in range(seg):
+            j = (k + 1) % seg
+            if len(A) == 1:
+                bm.faces.new((A[0], B[j], B[k])).smooth = True
+            elif len(B) == 1:
+                bm.faces.new((A[k], A[j], B[0])).smooth = True
+            else:
+                bm.faces.new((A[k], A[j], B[j], B[k])).smooth = True
+
+
+def bm_barre(bm, a, b, w):
+    """A square bar of side w (m) between two world points."""
+    a, b = Vector(a), Vector(b)
+    d = (b - a).normalized()
+    u = d.cross(Vector((0, 0, 1)) if abs(d.z) < 0.9 else Vector((1, 0, 0))).normalized() * (w / 2)
+    v = d.cross(u).normalized() * (w / 2)
+    c = [[bm.verts.new(p + su * u + sv * v) for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))] for p in (a, b)]
+    bm.faces.new(list(reversed(c[0]))); bm.faces.new(c[1])
+    for k in range(4):
+        j = (k + 1) % 4
+        bm.faces.new((c[0][k], c[0][j], c[1][j], c[1][k]))
+
+
+BOUTEILLE = [(0.0, 0.0), (0.037, 0.0), (0.037, 0.205), (0.031, 0.226), (0.019, 0.243), (0.0145, 0.255),
+             (0.0145, 0.300), (0.0155, 0.302), (0.0155, 0.312), (0.0, 0.312)]          # a Bordeaux bottle, 75 cl
+
+
+# ---- the wine room (26/11 evening): an oak wine wall from floor to 2.77 m against the glass blocks, the bottles
+#      lying in its cases with their bases to the aisle, an eye-level row of bottles standing; a library ladder on a
+#      steel rail; at the far end, a small tasting console with a decanter and two glasses
+CAVE_CASIER = (1404, 1897, 1445, 2225)                     # front, north end, back, south end
+CAVE_NIVEAUX = [0.10, 0.38, 0.66, 0.94, 1.22, 1.62, 1.90, 2.18, 2.46, 2.74]   # shelf bottoms; 1.22 - 1.62: standing
+EP_TABLETTE = 0.025
+
+
+def cave():
+    xf, ya, xb, yb = CAVE_CASIER
+    nb = 6
+    montants = [ya + (yb - ya - 3) * k / nb for k in range(nb + 1)]           # the uprights' north faces
+    bm = bmesh.new()
+    for y in montants:
+        bm_box(bm, xf, y, xb, y + 3, 0.0, CAVE_NIVEAUX[-1] + EP_TABLETTE)
+    for k in range(nb):
+        y0, y1 = montants[k] + 3, montants[k + 1]
+        bm_box(bm, xf + 2, y0, xb, y1, 0.0, CAVE_NIVEAUX[0])                  # the plinth, set back 2 cm
+        for z in CAVE_NIVEAUX:
+            bm_box(bm, xf, y0, xb, y1, z, z + EP_TABLETTE)
+    mesh_obj('cave-casier', bm, 'Cave', M_BOIS)
+
+    rnd = random.Random(7)
+    couche = bmesh.new(); debout = bmesh.new()
+    r, L = 0.037, 0.30
+    for k in range(nb):
+        y0, y1 = montants[k] + 3, montants[k + 1]
+        w = (y1 - y0) * PX
+        for i, z in enumerate(CAVE_NIVEAUX[:-1]):
+            zb = z + EP_TABLETTE
+            if CAVE_NIVEAUX[i + 1] - z > 0.3:                                  # the eye-level row: four standing
+                for j in range(4):
+                    yc = y0 + (j + 0.5) * (y1 - y0) / 4
+                    bm_tour(debout, xf + 20, yc, BOUTEILLE, zb, seg=16)
+                continue
+            n0 = int((w - 0.01) // (2 * r))                                    # the bottom row, then nested rows
+            rangs = rnd.choice((3, 3, 2, 2, 1)) if (k, i) != (2, 0) else 0
+            for rg in range(rangs):
+                n = n0 - rg
+                zc = zb + r + rg * 2 * r * math.sqrt(3) / 2
+                larg = n * 2 * r
+                for j in range(n):
+                    yc = (y0 + y1) / 2 + (-larg / 2 + r + j * 2 * r) / PX
+                    bm_cyl_x(couche, xf + 2, xf + 2 + L / PX, yc, zc, r * 0.985, seg=14)
+    mesh_obj('cave-bouteilles', couche, 'Cave', M_COMPTOIR)
+    mesh_obj('cave-bouteilles-debout', debout, 'Cave', M_COMPTOIR)
+
+    # the ladder's rail, on brackets at the uprights, and the ladder parked at the north end
+    zr, xr = 2.70, xf - 6
+    bm = bmesh.new()
+    bm_cyl_y(bm, ya + 2, yb - 2, xr, zr, 0.0125, seg=16)
+    for y in montants:
+        bm_box(bm, xr + 0.0125 / PX, y + 0.5, xf, y + 2.5, zr - 0.01, zr + 0.01)
+    mesh_obj('cave-echelle-rail', bm, 'Cave', M_CADRE)
+    yl, pied = 1975, xf - 6 - 0.66 / PX                  # the hooks clear of the brackets (y 1951.7, 2005.8)
+    haut = P(xr - 0.045 / PX, yl, zr)                     # the stiles stop 1 cm in front of the rail
+    bas_ = P(pied, yl, 0.04)
+    d = (haut - bas_)
+    bm = bmesh.new(); ferr = bmesh.new()
+    for s in (-1, 1):
+        dy = Vector((0, -s * 0.21, 0))
+        bm_barre(bm, bas_ + dy, haut + dy, 0.045)
+        bm_box(ferr, pied - 2.5, yl + s * 0.21 / PX - 2.5, pied + 2.5, yl + s * 0.21 / PX + 2.5, 0.0, 0.035)  # the feet
+        c_ = P(xr, yl, zr) + dy                                                   # the hook, from the stile over the rail
+        pts = [P(xr - 0.0225 / PX, yl, zr) + dy] + \
+              [c_ + Vector((0.0185 * math.cos(math.radians(t)), 0, 0.0185 * math.sin(math.radians(t))))
+               for t in (150, 120, 90, 60, 30, 0, -30)]
+        for p0, p1 in zip(pts, pts[1:]):
+            bm_barre(ferr, p0, p1, 0.006)
+    for i in range(1, 10):                                                     # the treads, every 0.27 m
+        t = (0.27 * i - 0.04) / d.z
+        if t >= 0.97:
+            break
+        c = bas_ + d * t
+        x_ = (c.x / PX) + CX
+        bm_box(bm, x_ - 3.5, yl - 0.21 / PX + 2.7, x_ + 3.5, yl + 0.21 / PX - 2.7, c.z - 0.012, c.z + 0.012)
+    mesh_obj('cave-echelle', bm, 'Cave', M_BOIS)
+    mesh_obj('cave-echelle-ferrures', ferr, 'Cave', M_CADRE)
+
+    # the tasting console against the south wall: an oak cabinet on a recessed plinth, a stone top
+    cx0, cx1, cy0, cy1 = 1292, 1394, 2198, 2228
+    bm = bmesh.new()
+    bm_box(bm, cx0 + 2, cy0 + 2, cx1 - 2, cy1, 0.0, 0.10)
+    bm_box(bm, cx0, cy0, cx1, cy1, 0.10, 1.02)
+    mesh_obj('cave-console', bm, 'Cave', M_BOIS)
+    bm = bmesh.new(); bm_box(bm, cx0 - 1, cy0 - 1.5, cx1 + 1, cy1, 1.02, 1.05)
+    mesh_obj('cave-console-plateau', bm, 'Cave', M_PLATEAU)
+    bm = bmesh.new()
+    bm_tour(bm, 1318, 2212, [(0.0, 0.0), (0.085, 0.0), (0.095, 0.03), (0.085, 0.08), (0.035, 0.135), (0.022, 0.24),
+                             (0.026, 0.255), (0.0, 0.255)], 1.05, seg=24)          # the decanter
+    verre = [(0.0, 0.0), (0.035, 0.0), (0.035, 0.004), (0.005, 0.009), (0.004, 0.10), (0.028, 0.118), (0.042, 0.15),
+             (0.037, 0.205), (0.035, 0.205), (0.040, 0.15), (0.027, 0.121), (0.0, 0.112)]
+    for x_, y_ in ((1350, 2208), (1364, 2214)):
+        bm_tour(bm, x_, y_, verre, 1.05, seg=20)
+    mesh_obj('cave-console-verres', bm, 'Cave', M_VERRE)
+    bm = bmesh.new(); bm_tour(bm, 1381, 2211, BOUTEILLE, 1.05, seg=16)
+    mesh_obj('cave-console-bouteille', bm, 'Cave', M_COMPTOIR)
+
+
+# ---- the cloakroom of the entry (26/11 evening, redone): the north wall lined with oak slats, an oak hat shelf over a
+#      steel rail, coats on wooden hangers; an oak bench by the street glass blocks and an umbrella stand in the
+#      corner. Its doorway is lined with oak (vestiaire_baie)
+def manteau(bm, x, y, z_haut, long, ka, kb):
+    """A coat on its hanger, hanging from (x, y) at z_haut (its shoulders' top): sections of a rounded rectangle,
+    the width across the rail (along y), lofted from the hem to the collar."""
+    sections = [(z_haut - long - 0.004, 0.200, 0.058), (z_haut - long, 0.214, 0.066), (z_haut - long + 0.28, 0.200, 0.071),
+                (z_haut - 0.26, 0.208, 0.075), (z_haut - 0.085, 0.216, 0.076), (z_haut - 0.035, 0.205, 0.071),
+                (z_haut - 0.012, 0.16, 0.064), (z_haut, 0.085, 0.05), (z_haut + 0.012, 0.035, 0.03)]
+    seg, e = 20, 2.6
+    anneaux = []
+    for z, a, b in sections:
+        a, b = a * ka, b * kb
+        pts = []
+        for k in range(seg):
+            t = math.tau * k / seg
+            c, s = math.cos(t), math.sin(t)
+            pts.append((x + b * math.copysign(abs(c) ** (2 / e), c) / PX, y + a * math.copysign(abs(s) ** (2 / e), s) / PX))
+        anneaux.append([bm.verts.new(P(px, py, z)) for px, py in pts])
+    bm.faces.new(list(reversed(anneaux[0]))); bm.faces.new(anneaux[-1])
+    for A, B in zip(anneaux, anneaux[1:]):
+        for k in range(seg):
+            j = (k + 1) % seg
+            bm.faces.new((A[k], A[j], B[j], B[k])).smooth = True
+    for cote in (-1, 1):                                  # the sleeves, hanging along the sides, a little forward
+        a_ = P(x + 0.008 / PX, y + cote * 0.19 * ka / PX, z_haut - 0.05)
+        b_ = P(x + 0.022 / PX, y + cote * 0.205 * ka / PX, z_haut - 0.62)
+        d = (b_ - a_).normalized()
+        u = d.cross(Vector((1, 0, 0))).normalized(); v = d.cross(u).normalized()
+        anneaux = []
+        for t, r in ((0.0, 0.050), (0.5, 0.047), (1.0, 0.042)):
+            c = a_ + (b_ - a_) * t
+            anneaux.append([bm.verts.new(c + u * r * math.cos(math.tau * q / 12) + v * r * math.sin(math.tau * q / 12))
+                            for q in range(12)])
+        bm.faces.new(list(reversed(anneaux[0]))); bm.faces.new(anneaux[-1])
+        for A, B in zip(anneaux, anneaux[1:]):
+            for q in range(12):
+                j = (q + 1) % 12
+                bm.faces.new((A[q], A[j], B[j], B[q])).smooth = True
+
+
 def vestiaire():
-    """The cloakroom of the entry (26/11, in the corner past the stair): a hat shelf and a hanging rail along the
-    corner pier, coats on it."""
-    x0, y0, x1, y1 = refonte.VESTIAIRE
+    x0, y0, x1, y1 = refonte.VESTIAIRE                                       # 1308.5, 2276, 1447, 2402
+    bm = bmesh.new()                                                           # the slats, 5 cm on 6 cm
+    n = int((x1 - 1 - (x0 + 1)) // 7.2)
+    for k in range(n):
+        xa = x0 + 1 + k * (x1 - 1 - (x0 + 1)) / n
+        bm_box(bm, xa + 0.6, y0, xa + 0.6 + 6.0, y0 + 3.5, 0.0, 2.30)
+    mesh_obj('vestiaire-lambris', bm, 'Accueil', M_BOIS)
+    yr, zr = 2312, 1.75                                                         # the rail, 0.30 m off the slats
+    bm = bmesh.new(); bm_box(bm, x0 + 1.5, y0 + 3.5, x1 - 1.5, 2318, 1.86, 1.89)
+    mesh_obj('vestiaire-tablette', bm, 'Accueil', M_BOIS)
     bm = bmesh.new()
-    bm_box(bm, x1 - 44, y0 + 4, x1 - 2, y1 - 6, 1.86, 1.90)                     # the shelf
-    for y in (y0 + 6, y1 - 8):                                                 # its brackets
-        bm_box(bm, x1 - 42, y - 1, x1 - 2, y + 1, 1.78, 1.86)
-    mesh_obj('vestiaire-tablette', bm, 'Accueil', M_MEUBLE)
-    tringle_ = bmesh.new()
-    bm_box(tringle_, x1 - 35, y0 + 8, x1 - 33, y1 - 10, 1.72, 1.74)
-    mesh_obj('vestiaire-tringle', tringle_, 'Accueil', M_CADRE)
-    rnd = random.Random(17)
+    for xb in (x0 + 8, x1 - 9):                                                 # the shelf's brackets on the slats
+        bm_box(bm, xb - 0.5, y0 + 3.5, xb + 0.5, y0 + 4.7, 1.70, 1.86)
+        bm_box(bm, xb - 0.5, y0 + 4.7, xb + 0.5, 2302, 1.849, 1.86)
+    bm_cyl_x(bm, x0 + 5, x1 - 5, yr, zr, 0.0125, seg=16)
+    for xb in (x0 + 12, x1 - 13):                                               # the rail's two hangers
+        bm_box(bm, xb - 0.5, yr - 0.5, xb + 0.5, yr + 0.5, zr + 0.0125, 1.86)
+    mesh_obj('vestiaire-tringle', bm, 'Accueil', M_CADRE)
+    rnd = random.Random(23)
+    tissu = bmesh.new(); crochets = bmesh.new()
+    xs = [x0 + 26, x0 + 45, x0 + 64, x0 + 98, x0 + 117]
+    for k, xc in enumerate(xs):
+        long = rnd.choice((0.95, 1.02, 0.78, 0.62, 0.88))
+        ka, kb = rnd.uniform(0.94, 1.03), rnd.uniform(0.86, 1.02)          # 19 px apart: they never touch
+        zh = zr - 0.045
+        manteau(tissu, xc, yr, zh, long, ka, kb)
+        c_ = P(xc, yr, zr)                                                      # the hook, from the collar over the rail
+        pts = [P(xc, yr + 0.019 / PX, zh + 0.012)] + \
+              [c_ + Vector((0, -0.019 * math.cos(math.radians(t)), 0.019 * math.sin(math.radians(t)))) for t in range(0, 181, 20)]
+        for p0, p1 in zip(pts, pts[1:]):
+            bm_barre(crochets, p0, p1, 0.004)
+    mesh_obj('vestiaire-manteaux', tissu, 'Accueil', M_RIDEAU)
+    mesh_obj('vestiaire-cintres', crochets, 'Accueil', M_CADRE)
+    bm = bmesh.new()                                                            # the bench, by the street glass blocks
+    bm_box(bm, x0 + 22, y1 - 32, x0 + 26, y1 - 2, 0.0, 0.42)
+    bm_box(bm, x0 + 92, y1 - 32, x0 + 96, y1 - 2, 0.0, 0.42)
+    bm_box(bm, x0 + 18, y1 - 34, x0 + 100, y1 - 1, 0.42, 0.455)
+    mesh_obj('vestiaire-banc', bm, 'Accueil', M_BOIS)
+    bm = bmesh.new()                                                            # the umbrella stand, a hollow drum
+    cxu, cyu = x1 - 15, y1 - 15
+    bm_tour(bm, cxu, cyu, [(0.0, 0.0), (0.105, 0.0), (0.11, 0.01), (0.11, 0.50), (0.10, 0.50), (0.10, 0.02),
+                           (0.0, 0.02)], 0.0, seg=32)
+    mesh_obj('vestiaire-porte-parapluies', bm, 'Accueil', M_PIERRE)
     bm = bmesh.new()
-    y = y0 + 16
-    while y < y1 - 18:                                                         # coats, 8 to 11 cm apart
-        h = rnd.uniform(0.85, 1.05); w = rnd.uniform(0.36, 0.42) / PX / 2; e = rnd.uniform(0.07, 0.10) / PX / 2
-        cx_ = x1 - 34 + rnd.uniform(-1.5, 1.5)
-        bm_box(bm, cx_ - w, y - e, cx_ + w, y + e, 1.70 - h, 1.70)
-        y += rnd.uniform(0.08, 0.11) / PX + 2 * e
-    mesh_obj('vestiaire-manteaux', bm, 'Accueil', M_RIDEAU)
+    for k, (bx, tx) in enumerate(((-0.045, -0.04), (0.045, 0.04))):            # two closed umbrellas, leaning apart
+        base = P(cxu, cyu, 0.02) + Vector((bx, 0, 0))
+        ax = Vector((tx, 0.0, 1.0)).normalized()
+        nseg = 12
+        prof = [(0.0, 0.0), (0.004, 0.0), (0.004, 0.06), (0.030, 0.12), (0.020, 0.55), (0.007, 0.68), (0.006, 0.86),
+                (0.0, 0.86)]
+        anneaux = []
+        for r_, z_ in prof:
+            c = base + ax * z_
+            if r_ <= 0:
+                anneaux.append([bm.verts.new(c)])
+            else:
+                u = ax.cross(Vector((1, 0, 0))).normalized(); v = ax.cross(u).normalized()
+                anneaux.append([bm.verts.new(c + u * r_ * math.cos(math.tau * q / nseg) + v * r_ * math.sin(math.tau * q / nseg))
+                                for q in range(nseg)])
+        for A, B in zip(anneaux, anneaux[1:]):
+            for q in range(nseg):
+                j = (q + 1) % nseg
+                if len(A) == 1:
+                    bm.faces.new((A[0], B[j], B[q]))
+                elif len(B) == 1:
+                    bm.faces.new((A[q], A[j], B[0]))
+                else:
+                    bm.faces.new((A[q], A[j], B[j], B[q])).smooth = True
+        h = base + ax * 0.86                                                    # the crook handle
+        side = Vector((0, 1, 0)) if k == 0 else Vector((0, -1, 0))
+        arc = [h + ax * (0.035 * math.sin(math.radians(t))) + side * (0.035 - 0.035 * math.cos(math.radians(t)))
+               for t in range(0, 181, 30)]
+        arc.append(arc[-1] - ax * 0.025)
+        for p0, p1 in zip(arc, arc[1:]):
+            bm_barre(bm, p0, p1, 0.011)
+    mesh_obj('vestiaire-parapluies', bm, 'Accueil', M_RIDEAU)
 
 
 def couper(o, z, garder):
@@ -1385,6 +1701,7 @@ def build_mobilier():
 # blocks, curtains) and, for the furniture, the number of its table (0 = the bar).
 ROLES = {'Coque': 'mur', 'Vitrages': 'vitrage', 'Tambours': 'tambour', 'Escalier': 'escalier', 'Sols': 'sol',
          'Bar': 'element', 'Banquettes': 'element', 'Accueil': 'element', 'Rideaux': 'element', 'Jardin': 'element',
+         'Cave': 'element',
          'Mobilier': 'element', 'Tables': 'table', 'Assises': 'assise', 'Jardinieres': 'jardiniere',
          'Suspensions': 'suspension', 'Traits-fins': 'fin'}
 
@@ -1628,6 +1945,10 @@ PLANS = {
     # 26/11 evening: the dry garden under the stair, from the entry; the reception, from the door
     'jardin-sec': ((848, 2120, 1.70), (1030, 2300, 0.0), 20),     # from the reception, between the curtains
     'accueil':    ((800, 2370, 1.55), (650, 2120, 0.90), 20),
+    # 26/11 late: the wine room by the stair (from the room, then inside), the cloakroom from the entry
+    'cave-salle': ((1150, 1760, 1.60), (1380, 2060, 1.10), 20),
+    'cave':       ((1300, 1905, 1.60), (1400, 2150, 1.00), 18),
+    'vestiaire':  ((1228, 2374, 1.60), (1440, 2322, 1.00), 16),
 }
 
 
