@@ -48,3 +48,6 @@ rendus/12-etage-coque/1-calage-vue-de-dessus.png
 # third-party 3D models (the ivy of the island over the entry): kept out, with their zip
 outils/assets/
 /ivy-for-walls.zip
+
+# the plan traced from the model (outils/blender/plan_modele.py): regenerated, several MB
+modele/trace/

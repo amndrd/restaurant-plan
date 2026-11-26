@@ -2101,7 +2101,10 @@ else:
     d = Vector((-1, -1.05, 1.15)).normalized()
     c3 = o_c + Vector((0, 0, 0.9))
     cam_3d = camera('cam-3d', c3 + d * 60, c3, ortho=25.5)
-    if ARGS.get('export'):
+    if ARGS.get('trace'):                       # the plan drawn from the model (outils/plans/depuis_modele.py)
+        import plan_modele
+        plan_modele.tracer(RACINE / ARGS['trace'], CX, CY, PX)
+    elif ARGS.get('export'):
         maillages = [o for o in bpy.data.objects if o.type == 'MESH' and o.name != 'terrain'
                      and not any(c.name == 'Plan' for c in o.users_collection)]
         sous = [o for o in maillages if 'Dessous' in [c.name for c in o.users_collection]]
