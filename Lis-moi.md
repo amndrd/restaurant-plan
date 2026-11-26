@@ -8,6 +8,14 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (26/11/2026)
 
+**La cave à vin, le palier, la légende (26/11, fin de soirée).** En attente de ta validation.
+
+- **Plus aucun espace dans les murs :** au 1er, les deux colonnes de la façade droite ont la position et le diamètre de celles du bas (`POTEAUX` dans `floor2.py`). Les pavés de verre s'arrêtent sur elles, une joue comble l'arrondi (`face_colonne`, `joue`, dans les deux scripts). Il y a des joints de mortier entre les pavés (`blocs(..., bj=)`), les fentes entre murs sont comblées (`RDC_JOINTS` dans `refonte.py`, `ETAGE_JOINTS` dans `floor2.py`) et l'angle nord-est du bas est fermé. Les demi-tambours ont avancé de 10 cm (`DEMI_CX`). Une coupe à 1,50 m vérifie qu'il ne reste aucun passage entre l'intérieur et l'extérieur.
+- **Le coin de l'escalier au RDC** (`floor1.py`, `refonte.py`) : la cloison fine (murs 408, 421) et la bande vide derrière deviennent une cave à vin vitrée (`CAVE`, `cave_vitrage`, `cave`). Elle a un vitrage en acier côté escalier, une porte vitrée au nord, un casier en chêne avec ses bouteilles, une échelle sur rail et une console de dégustation. Le vestiaire est refait (`vestiaire`, `manteau`, `vestiaire_baie`) : lambris, tablette, tringle, manteaux sur cintres, banc, porte-parapluies, baie encadrée de chêne.
+- **L'escalier du 1er** (`floor2.py`, `escalier_detail`) : un palier au niveau du plancher, la 19e marche (`escalier-palier`, `A_PALIER`). Le garde-corps du jardin part du noyau et ferme son côté sur le vide.
+- **La carte :** la légende est une carte sombre, toujours visible en bas à gauche, avec les six états en deux colonnes (`legende.js`). Le bouton « 3D » se sélectionne dès qu'un geste incline la vue du haut, et « Haut » revient quand on la ramène à plat (`camera.js`, `orbiter`). Le 1er se charge en arrière-plan et s'affiche sans écran de chargement (`main.js`, `scene.js`, `prechauffer`).
+- **Les rendus** sont dans `rendus/22-sans-espace/` et `rendus/23-cave-palier-carte/` (avec tes captures `avant-coin-escalier`, `avant-escalier-1er` et ton modèle de légende). La page est `pages/17-cave-palier-carte.png`.
+
 **Les endroits repris, un par un (26/11, soir).** En attente de ta validation. Pour le coin du 1er, tu as choisi la station de service (A, `angle=station`, par défaut).
 
 - **La tablette du balcon :** le garde-corps en verre court tout le long du vide ; la tablette en chêne en est le chapeau (1,02 - 1,08 m), sur des pieds fins en acier avec un repose-pieds ; la main courante part de son bout (`tablette_vide`, `TABLETTE_FIN` dans `floor2.py`).
@@ -245,7 +253,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 16-etage-prototypes-ile/ (les décors pour l'îlot, à la place du bloc),
                 17-etage-lierre-et-garde-corps/ (le lierre, le garde-corps, l'étage tel qu'il est),
                 18-batiment-entier/ (les deux étages raccordés, vus de la rue),
-                19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé), 21-reprises/ (les endroits repris)
+                19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé), 21-reprises/ (les endroits repris),
+                22-sans-espace/ (les colonnes et les murs sans fente), 23-cave-palier-carte/ (la cave, le palier, la légende)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
@@ -284,7 +293,7 @@ Il faut Blender 4.5, Node avec Playwright (celui de `~/Desktop/Portfolio/tools`)
   - `pinterest.py` liste les épingles d'une page publique ;
   - `planches_contact.py` fait les planches de tri ;
   - `recherche_choix.py` télécharge les images retenues et écrit `sources.json`.
-- **Les pages :** `page_etape1.py` à `page_etape14.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
+- **Les pages :** `page_etape1.py` à `page_etape17.py` et `page_recherche.py` écrivent le HTML dans `outils/pages/` (Inter, style minimal) et l'exportent en PNG avec `outils/pages/export.mjs`.
 
 ## Ce qui n'est pas dans le dépôt
 

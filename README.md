@@ -12,9 +12,9 @@ Les plans sont ceux du **LAIR Restaurant & Bar** (Gurugram, Inde, 2024), conçu 
 - **La carte interactive** est une application web en three.js. Elle propose :
   - la vue du haut et la vue 3D, avec trois styles : fantôme, transparent et fil de fer ;
   - les états des tables en trois systèmes : places occupées, plateau et minuteur ;
-  - les numéros des tables, une légende, une fiche par table et les bars suivis tabouret par tabouret ;
+  - les numéros des tables, une légende des six états, une fiche par table et les bars suivis tabouret par tabouret ;
   - un service simulé en accéléré, sur les deux étages ;
-  - le changement d'étage : le rez-de-chaussée seul, ou le 1er posé dessus.
+  - le changement d'étage : le rez-de-chaussée seul, ou le 1er posé dessus, préchargé pour s'afficher aussitôt.
 - **Les plans redessinés** du rez-de-chaussée et du 1er étage, en 4K, sont dans `rendus/10-plans/`.
 - **Le 1er étage** est modélisé : la coque, les éléments fixes, le mobilier, trois colonnes dans le vide et un lierre sur le toit de l'entrée. Il pose sur le rez-de-chaussée : les deux forment un seul bâtiment, dans les rendus comme dans la carte, où le bouton « 1er » montre l'étage sur le bas.
 
