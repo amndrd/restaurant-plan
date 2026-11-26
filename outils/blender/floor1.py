@@ -2714,7 +2714,7 @@ if ARGS.get('variante'):
 
     if ARGS.get('trace'):                       # the plan drawn from the model (outils/plans/depuis_modele.py)
         import plan_modele
-        plan_modele.tracer(RACINE / ARGS['trace'], CX, CY, PX)
+        plan_modele.tracer(RACINE / ARGS['trace'], CX, CY, PX, haut=plan_modele.HAUT)
     elif ARGS.get('export'):
         export_web(ARGS['export'])
     elif ARGS.get('transition'):

@@ -2184,7 +2184,7 @@ else:
     cam_3d = camera('cam-3d', c3 + d * 60, c3, ortho=25.5)
     if ARGS.get('trace'):                       # the plan drawn from the model (outils/plans/depuis_modele.py)
         import plan_modele
-        plan_modele.tracer(RACINE / ARGS['trace'], CX, CY, PX)
+        plan_modele.tracer(RACINE / ARGS['trace'], CX, CY, PX, haut=plan_modele.HAUT)
     elif ARGS.get('export'):
         maillages = [o for o in bpy.data.objects if o.type == 'MESH' and o.name != 'terrain'
                      and not any(c.name == 'Plan' for c in o.users_collection)]

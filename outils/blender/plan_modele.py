@@ -12,7 +12,12 @@ import bmesh
 import bpy
 
 
-def tracer(chemin, CX, CY, PX, coupe=1.2, haut=('Escalier',), exclure=('Plan',)):
+# what lies above the cut and is drawn dashed on an architect's plan: the stair's upper flight, the hood, the soffits
+# and lintels, the glazing's heads (the drawing keeps only the parts entirely above the cut)
+HAUT = ('Escalier', 'Cuisine', 'Coque', 'Vitrages', 'Bar')
+
+
+def tracer(chemin, CX, CY, PX, coupe=1.2, haut=('Escalier',), exclure=('Plan', 'Sans-trait')):
     dg = bpy.context.evaluated_depsgraph_get()
     k = 1 / PX
 
