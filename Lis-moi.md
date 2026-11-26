@@ -8,7 +8,7 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (26/11/2026)
 
-**Les plans finaux des deux étages, tirés du modèle (26/11, nuit).** En attente de ta validation. Ce sont de vrais plans d'architecte, pas des captures du modèle. Ils serviront de feuilles dans le film du site : les plans se posent au sol, puis la maquette en sort.
+**Les plans finaux des deux étages, tirés du modèle (26/11, nuit).** Validés tels quels. Ce sont de vrais plans d'architecte, pas des captures du modèle. Ils serviront de feuilles dans le film du site : les plans se posent au sol, puis la maquette en sort.
 - **Comment ils sont faits :** `outils/plans/plan_final.py` lit le modèle coupé à 1,20 m (`modele/trace/rdc.json`, `etage1.json`, écrits par `floor1.py` / `floor2.py -- variante=detail mobilier=1 trace=…`). Il ne garde que ce qu'un architecte dessine :
   - les murs et les poteaux coupés en noir, les tambours et les colonnes en gris foncé, les murets en contour ;
   - les pavés de verre, les vitrages et leurs cadres en acier ;
