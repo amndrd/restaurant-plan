@@ -982,7 +982,7 @@ def build_elements():
         if c not in bpy.data.collections:
             sc.collection.children.link(bpy.data.collections.new(c))
     avant = set(bpy.data.objects)
-    comptoir(); arriere_bar(); cuisine_rdc(); portes_rdc(); wc_rdc()
+    comptoir(); arriere_bar(); cuisine_rdc(); portes_rdc(); wc_rdc(); service_rdc()
     banquettes(); escalier_detail(); jardin(); accueil(); rideaux(); vestiaire(); cave()
     return [o for o in bpy.data.objects if o not in avant]
 
@@ -1277,13 +1277,13 @@ def vestiaire():
 #     hand basin by the swing door, which opens on the corridor right of the bar;
 #   - one accessible toilet at the north-west, behind the left facade's glass blocks, reached by a passage along the
 #     facade: the counter is 1.40 m shorter at its west end, where there was no stool (1.05 m clear by column 41);
-#   - the shaft under the 1st floor's, closed by a pair of flush doors on the corridor;
 #   - the bar dressed again: a working station on the bartender's side, a back bar of coolers and the coffee machine,
-#     pendants. Three prototypes for the kitchen's front on the bar (cuisine=A|B|C):
-#       A  open: a low wall and a soffit, the cooks seen from the bar, glasses and bottles hung from the soffit;
-#       B  closed: a wall of lit bottle cubbies, the pass as a window at the bar's service end;
-#       C  glazed: a steel and glass screen in the language of the shopfront and the wine room.
-CUISINE = ARGS.get('cuisine', 'B')
+#     pendants. Of the three prototypes for the kitchen's front on the bar (rendus/24-cuisine-et-bar: A open, B a wall
+#     of lit bottles, C glazed), the user chose A: a low wall and a soffit, the cooks seen from the bar, glasses and
+#     bottles hung from the soffit, the counter's front in oak slats;
+#   - then (26/11, night, after the pick) the shaft under the 1st floor's is gone (a 0.9 m box open at its south end,
+#     which read as a dead-end corridor): the kitchen runs to the right facade, its double swing door is 1.57 m wide,
+#     and the bay in front of it, right of the bar, is the waiters' service station (service_rdc).
 ARRIERE = (580, 1060, 470, 506)          # the back bar: x, y (against the kitchen's south wall)
 COMPTOIR = (580, 1194)                    # the counter's body, from its new west end: 1.05 m past column 41
 M_INOX = mat('inox', (0.62, 0.63, 0.64), 0.28)
@@ -1375,7 +1375,8 @@ VERRE_VIN = [(0.0, 0.0), (0.038, 0.0), (0.038, 0.004), (0.005, 0.008), (0.004, 0
 
 
 def cuisine_cloison(cut, top, bas):
-    """The kitchen's south wall, on the bar's side (refonte.KITCHEN_SUD), per prototype; the lintels of the doors."""
+    """The kitchen's south wall, on the bar's side (refonte.KITCHEN_SUD): open over a low wall at 1.00 m to the pass,
+    a soffit from 2.45 m over the back bar; the pier, the doors' lintel, the wall to the facade."""
     def b(name, xa, ya, xb, yb, z0, z1, col, m):
         z0, z1 = max(z0, bas), min(z1, top)
         if z1 - z0 > 0.002:
@@ -1383,48 +1384,20 @@ def cuisine_cloison(cut, top, bas):
     y0, y1 = refonte.KITCHEN_SUD
     pa, pb = refonte.PASSE
     da, db = refonte.KITCHEN_PORTE
-    b('cuisine-mur-trumeau', pb, y0, da, y1, 0.0, H, 'Coque', M_MUR)          # every prototype: the pier, the door
+    b('cuisine-mur-trumeau', pb, y0, da, y1, 0.0, H, 'Coque', M_MUR)          # the pier, the door, to the facade
     b('cuisine-mur-linteau', da, y0, db, y1, 2.10, H, 'Coque', M_MUR)
     b('cuisine-mur-fin', db, y0, refonte.KITCHEN[2], y1, 0.0, H, 'Coque', M_MUR)
     wa, wb = refonte.WC_PORTE
     b('wc-linteau', wa, 352, wb, 362, 2.10, H, 'Coque', M_MUR)
-    ga, gb = refonte.GAINE_PORTES
-    b('gaine-linteau', 1321, ga, 1335, gb, 2.10, H, 'Coque', M_MUR)
-    if CUISINE == 'B':
-        b('cuisine-mur', refonte.KITCHEN[0], y0, pa, y1, 0.0, H, 'Coque', M_MUR)
-        b('cuisine-mur-passe-allege', pa, y0, pb, y1, 0.0, 1.00, 'Coque', M_MUR)
-        b('cuisine-mur-passe-linteau', pa, y0, pb, y1, 1.62, H, 'Coque', M_MUR)
-        return
     b('cuisine-allege', refonte.KITCHEN[0], y0, pb, y1, 0.0, 1.00, 'Coque', M_MUR)
-    if CUISINE == 'A':                          # open: the low wall, and over the back bar a soffit from 2.45 m
-        b('cuisine-retombee', ARRIERE[0], y1, pb, 510, 2.45, H, 'Coque', M_MUR)
-        b('cuisine-retombee-mur', refonte.KITCHEN[0], y0, pb, y1, 2.45, H, 'Coque', M_MUR)
-        return
-    # C, glazed: on the low wall a steel sill, posts about every 0.7 m, a transom at 2.40, a head under the ceiling;
-    # the pass is an opening in the screen, 1.00 - 1.62, under a steel lintel
-    x0 = refonte.KITCHEN[0]
-    b('cuisine-verriere-seuil', x0, y0, pa, y1, 1.00, 1.04, 'Vitrages', M_CADRE)
-    b('cuisine-verriere-tete', x0, y0, pb, y1, H - 0.08, H, 'Vitrages', M_CADRE)
-    b('cuisine-verriere-passe-linteau', pa, y0, pb, y1, 1.62, 1.68, 'Vitrages', M_CADRE)
-    xs = [x0 + (pa - x0) * k / 6 for k in range(7)]
-    poteaux = [(x0, x0 + 6)] + [(x - 3, x + 3) for x in xs[1:-1]] + [(pa - 6, pa)]
-    for k, (xa, xb) in enumerate(poteaux):
-        b(f'cuisine-verriere-poteau-{k}', xa, y0, xb, y1, 1.04, H - 0.08, 'Vitrages', M_CADRE)
-    yv0, yv1 = (y0 + y1) / 2 - 1.2, (y0 + y1) / 2 + 1.2
-    for k, ((_, xa), (xb, _)) in enumerate(zip(poteaux, poteaux[1:])):
-        b(f'cuisine-verriere-imposte-{k}', xa, y0, xb, y1, 2.40, 2.46, 'Vitrages', M_CADRE)
-        b(f'cuisine-verriere-vitre-{k}', xa, yv0, xb, yv1, 1.04, 2.40, 'Vitrages', M_VERRE)
-        b(f'cuisine-verriere-vitre-haute-{k}', xa, yv0, xb, yv1, 2.46, H - 0.08, 'Vitrages', M_VERRE)
-    b('cuisine-verriere-imposte-passe', pa, y0, pb, y1, 2.40, 2.46, 'Vitrages', M_CADRE)
-    b('cuisine-verriere-passe-vitre', pa, yv0, pb, yv1, 1.68, 2.40, 'Vitrages', M_VERRE)
-    b('cuisine-verriere-passe-vitre-haute', pa, yv0, pb, yv1, 2.46, H - 0.08, 'Vitrages', M_VERRE)
+    b('cuisine-retombee', ARRIERE[0], y1, pb, 510, 2.45, H, 'Coque', M_MUR)
+    b('cuisine-retombee-mur', refonte.KITCHEN[0], y0, pb, y1, 2.45, H, 'Coque', M_MUR)
 
 
 def comptoir():
     """The bar's counter (photos 6, 11, 25), at its place, 1.40 m shorter at the west end: the customers' top at 1.08 m
     over the front, the bartender's working shelf at 0.90 m with its station (two sinks, the ice well, a speed rail of
-    bottles, the glass washer, a cocktail mat), a beer font. The front per prototype: oak slats (A), the lit glass
-    cells of the place (B), black steel fins (C)."""
+    bottles, the glass washer, a cocktail mat), a beer font. Its front in vertical oak slats, as the omakase bar."""
     x0, x1 = COMPTOIR
     L = Lot('bar', 'Bar')
     bm_box(L[M_MEUBLE], x0 + 7, 630, x1 - 7, 730, 0.0, 0.10)         # recessed plinth
@@ -1432,25 +1405,15 @@ def comptoir():
     bm_box(L[M_MEUBLE], x0, 683, x1, 737, 0.86, 1.03)                # upstand under the customers' top
     bm_box(L[M_INOX], x0, 623, x1, 683, 0.86, 0.90)                  # the working shelf
     bm_box(L[M_COMPTOIR], x0 - 4, 680, x1 + 4, 752, 1.03, 1.08)      # the customers' top
-    if CUISINE == 'B':                                                # the front: lit ribbed glass cells, as before
-        bm = bmesh.new(); bj = bmesh.new()
-        blocs(bm, 'x', 737.5, 745, x0, x1, 0.10, 1.02, pas_u=0.2, pas_z=0.23, bj=bj)
-        mesh_obj('bar-facade-verre', bm, 'Traits-fins', M_PAVE)
-        mesh_obj('bar-facade-joints', bj, 'Traits-fins', M_MUR)
-        bm_box(L[M_ACIER], x0 - 3, 623, x0, 745, 0.10, 1.02)         # a steel cheek on the west end
-    elif CUISINE == 'A':                                              # oak slats, as the omakase bar upstairs
-        x = x0 + 1.0
-        while x < x1 - 2:
-            bm_box(L[M_BOIS], x, 737, x + 2.2, 740, 0.12, 1.02); x += 5.0
-        y = 626.0
-        while y < 735:
-            bm_box(L[M_BOIS], x0 - 3, y, x0, y + 2.2, 0.12, 1.02); y += 5.0
-    else:                                                             # black steel fins, 6 cm apart
-        bm_box(L[M_ACIER], x0, 737, x1, 738, 0.10, 1.02)
-        x = x0 + 4.0
-        while x < x1 - 3:
-            bm_box(L[M_ACIER], x - 0.6, 738, x + 0.6, 742, 0.12, 1.02); x += 7.2
-        bm_box(L[M_ACIER], x0 - 3, 623, x0, 742, 0.10, 1.02)
+    x = x0 + 1.0                                                      # the front's oak slats, and on the west end
+    while x < x1 - 2:
+        bm_box(L[M_BOIS], x, 737, x + 2.2, 740, 0.12, 1.02); x += 5.0
+    y = 626.0
+    while y < 735:
+        bm_box(L[M_BOIS], x0 - 3, y, x0, y + 2.2, 0.12, 1.02); y += 5.0
+    y = 626.0                                                         # and on the east end, by the service bay
+    while y < 735:
+        bm_box(L[M_BOIS], x1, y, x1 + 3, y + 2.2, 0.12, 1.02); y += 5.0
     # the station, from west to east: a sink, the speed rail under the edge, the ice well, the cocktail mat and its
     # shakers, the glass washer under the shelf, a second sink by the service end
     for xa, xb in ((596, 648), (1128, 1180)):
@@ -1483,9 +1446,8 @@ def comptoir():
 
 
 def arriere_bar():
-    """The back bar against the kitchen's wall: coolers with glass doors, drawers, the coffee machine and its grinder on
-    the worktop. Above it, per prototype: hung glasses and bottles under the soffit (A), the lit bottle cubbies to
-    2.80 m (B), two glass shelves on steel uprights, the kitchen seen through the screen (C)."""
+    """The back bar against the kitchen's low wall: coolers with glass doors, the coffee machine and its grinder on the
+    worktop; above it, glasses and bottles hung under the soffit, the kitchen seen between them and the worktop."""
     x0, x1, y0, y1 = ARRIERE
     L = Lot('arriere-bar', 'Bar')
     bm_box(L[M_MEUBLE], x0 + 4, y0, x1 - 4, y1 - 5, 0.0, 0.10)
@@ -1534,59 +1496,26 @@ def arriere_bar():
     L.fin()
 
     F = Lot('arriere-bar-haut', 'Bar')
-    if CUISINE == 'B':
-        bm_box(F[M_MEUBLE], x0, y0, x1, y0 + 4, 0.90, 2.80)                       # the back panel
-        zs = [1.46, 1.785, 2.11, 2.435, 2.76]
-        n = 12
-        e = 0.012 / PX
-        for z in zs:
-            bm_box(F[M_MEUBLE], x0, y0 + 4, x1, 500, z - 0.012, z + 0.012)
-            bm_box(F[M_LUMIERE], x0 + e, 496, x1 - e, 499, z - 0.030, z - 0.012)  # a light strip under each shelf
-        for k in range(n + 1):
-            x = x0 + e + (x1 - x0 - 2 * e) * k / n
-            for za, zb in zip(zs, zs[1:]):
-                bm_box(F[M_MEUBLE], x - e, y0 + 4, x + e, 500, za + 0.012, zb - 0.030)
-        bm_box(F[M_MEUBLE], x0 - 3, y0, x1 + 3, 508, 2.80, 2.92)
-        for k in range(n):
-            xa, xb = x0 + e + (x1 - x0 - 2 * e) * k / n, x0 + e + (x1 - x0 - 2 * e) * (k + 1) / n
-            for za in zs[:-1]:
-                m_ = rnd.randint(1, 3)
-                sorte = rnd.choice(('alcool', 'alcool', 'large'))
-                for j in range(m_):
-                    bouteille(F[M_COMPTOIR], xa + (xb - xa) * (j + 1) / (m_ + 1), 487, za + 0.012, sorte,
-                              k=rnd.uniform(0.92, 1.0))
-    elif CUISINE == 'C':
-        us = (586, 703, 820, 936)
-        for x in us:                                                                 # flat steel uprights
-            bm_box(F[M_ACIER], x - 1, 476, x + 1, 500, 0.90, 1.95)
-        for z in (1.28, 1.62):
-            for ua, ub in zip(us, us[1:]):
-                bm_box(F[M_VERRE], ua + 1, 476, ub - 1, 500, z, z + 0.012)
-            x = 596.0
-            while x < 928:
-                if all(abs(x - u) > 7 for u in us):
-                    bouteille(F[M_COMPTOIR], x, 488, z + 0.012, rnd.choice(('vin', 'alcool', 'large')), rnd)
-                x += rnd.uniform(11, 16)
-    else:                                                                           # A: from the soffit (2.45)
-        for x in (590, 720, 850, 1000, 1050):
-            for y in (478, 498):
-                bm_box(F[M_ACIER], x - 0.6, y - 0.6, x + 0.6, y + 0.6, 2.02, 2.45)
+    # from the soffit (2.45)
+    for x in (590, 720, 850, 1000, 1050):
         for y in (478, 498):
-            bm_box(F[M_ACIER], 584, y - 2, 1055, y + 2, 2.00, 2.02)               # two flat rails
-        bm_box(F[M_BOIS], 770, 474, 1055, 502, 1.985, 2.00)                        # a tray for the bottles
-        for k in range(15):
-            bouteille(F[M_COMPTOIR], 780 + 18.5 * k, 488, 2.00, rnd.choice(('vin', 'alcool', 'large')), rnd)
-        verre = [(r, 0.215 - z) for r, z in reversed(VERRE_VIN)]
-        for y in (482, 488, 494):                                                   # glasses hung upside down
-            x = 596.0
-            while x < 755:
-                bm_tour(F[M_VERRE], x, y, verre, z0=2.00 - 0.215, seg=12)
-                x += 11.5
+            bm_box(F[M_ACIER], x - 0.6, y - 0.6, x + 0.6, y + 0.6, 2.02, 2.45)
+    for y in (478, 498):
+        bm_box(F[M_ACIER], 584, y - 2, 1055, y + 2, 2.00, 2.02)               # two flat rails
+    bm_box(F[M_BOIS], 770, 474, 1055, 502, 1.985, 2.00)                        # a tray for the bottles
+    for k in range(15):
+        bouteille(F[M_COMPTOIR], 780 + 18.5 * k, 488, 2.00, rnd.choice(('vin', 'alcool', 'large')), rnd)
+    verre = [(r, 0.215 - z) for r, z in reversed(VERRE_VIN)]
+    for y in (482, 488, 494):                                                   # glasses hung upside down
+        x = 596.0
+        while x < 755:
+            bm_tour(F[M_VERRE], x, y, verre, z0=2.00 - 0.215, seg=12)
+            x += 11.5
     F.fin()
 
 
 def cuisine_rdc():
-    """The kitchen's equipment (refonte.KITCHEN), the same in the three prototypes."""
+    """The kitchen's equipment (refonte.KITCHEN)."""
     L = Lot('cuisine-ligne', 'Cuisine')
     # ---- the cooking line along the north wall (y 105), 0.90 m deep, on a stainless plinth: fryer, charcoal grill,
     #      range with its oven, plancha; a handrail along its front; the backsplash; the salamander over the range
@@ -1701,7 +1630,7 @@ def cuisine_rdc():
     T = Lot('cuisine-sol', 'Cuisine')
     k0, n0, k1, n1 = refonte.KITCHEN
     pas, j = 0.30 / PX, 0.0015 / PX
-    zones = [(k0, 146.5, 899.5, n1), (899.5, n0, k1, n1), (k1, 146.5, 1453, 281)]
+    zones = [(k0, 146.5, 899.5, n1), (899.5, n0, 1419, n1), (1419, 146, k1, n1)]
     for za in zones:
         y = za[1]
         while y < za[3] - 0.5:
@@ -1788,71 +1717,79 @@ def cuisine_rdc():
     for x in (1098, 1155):
         prisme(C[M_CERAMIQUE], rond(x, 488, 0.13, 24), 1.05, 1.065)
         bm_tour(C[M_PLATEAU], x, 488, [(0.0, 0.0), (0.07, 0.0), (0.05, 0.04), (0.0, 0.05)], z0=1.065, seg=16)
-    z_haut = 1.62 if CUISINE != 'A' else 2.45
     for x in (1098, 1155):                                                          # heads 0.37 m over the shelf
         bm_tour(C[M_INOX], x, 470, [(0.0, 0.0), (0.09, 0.0), (0.05, 0.10), (0.0, 0.10)], z0=1.42, seg=20)
-        prisme(C[M_ACIER], rond(x, 470, 0.004, 6), 1.52, z_haut)
-    if CUISINE != 'A':
-        bm_box(C[M_INOX], pa + 2, 455, pb - 2, 460, 1.70, 1.73)
-        for k in range(4):
-            bm_box(C[M_CERAMIQUE], pa + 8 + 26 * k, 458.5, pa + 22 + 26 * k, 459.5, 1.55, 1.70)
-    # the hand basin by the door, on the shaft's wall: its knee valve, soap and towels
-    bm_box(C[M_INOX], 1294, 322, 1321, 372, 0.80, 0.95)
-    bac(C[M_COMPTOIR], 1298, 328, 1314, 366, 0.95)
-    bm_box(C[M_INOX], 1292, 335, 1294, 359, 0.55, 0.72)
-    robinet(C[M_INOX], 1317.5, 347, 0.95, (-1, 0), haut=0.20, bec=0.12)
-    bm_box(C[M_CERAMIQUE], 1316, 334, 1321, 344, 1.15, 1.32)
-    bm_box(C[M_CERAMIQUE], 1314, 350, 1321, 372, 1.15, 1.45)
+        prisme(C[M_ACIER], rond(x, 470, 0.004, 6), 1.52, 2.45)
+    bm_box(C[M_INOX], pa + 2, 453, pb - 2, 458, 1.70, 1.73)                        # the tickets' rail, on two rods
+    for x in (pa + 6, pb - 6):
+        bm_box(C[M_ACIER], x - 0.5, 455, x + 0.5, 456, 1.73, 2.45)
+    for k in range(4):
+        bm_box(C[M_CERAMIQUE], pa + 8 + 26 * k, 455.5, pa + 22 + 26 * k, 456.5, 1.55, 1.70)
+    # the hand basin by the doors, on the right facade's wall: its knee valve, soap and towels
+    bm_box(C[M_INOX], 1420, 404, 1447, 454, 0.80, 0.95)
+    bac(C[M_COMPTOIR], 1424, 410, 1440, 448, 0.95)
+    bm_box(C[M_INOX], 1418, 417, 1420, 441, 0.55, 0.72)
+    robinet(C[M_INOX], 1443.5, 429, 0.95, (-1, 0), haut=0.20, bec=0.12)
+    bm_box(C[M_CERAMIQUE], 1442, 412, 1447, 422, 1.15, 1.32)
+    bm_box(C[M_CERAMIQUE], 1440, 430, 1447, 452, 1.15, 1.45)
     C.fin()
 
     # ---- the dish wash in the north-east corner: the dirty table and its pre-rinse sink along the north wall, the hood
-    #      dishwasher in the corner, the clean table along the shaft, a shelf of racks and plates on the east wall
+    #      dishwasher in the corner, then along the right facade the clean table, a rack of crockery and glass racks,
+    #      a shelf of plates over them
     D = Lot('cuisine-plonge', 'Cuisine')
-    table_inox(D, 1255, 107, 1373, 185, dosseret='n')
+    table_inox(D, 1255, 107, 1371, 185, dosseret='n')
     bac(D[M_COMPTOIR], 1266, 117, 1330, 172, 0.90)
     prisme(D[M_INOX], rond(1298, 112, 0.014, 10), 0.90, 1.95)
     bm_barre(D[M_INOX], P(1298, 112, 1.93), P(1298, 135, 1.93), 0.02)
     prisme(D[M_ACIER], rond(1298, 135, 0.022, 12), 1.30, 1.92)
     bm_tour(D[M_INOX], 1298, 135, [(0.0, 0.0), (0.03, 0.0), (0.02, 0.08), (0.0, 0.08)], z0=1.22, seg=12)
-    bm_box(D[M_INOX], 1375, 148, 1451, 226, 0.10, 0.86)
-    pieds(D[M_ACIER], 1375, 148, 1451, 226, 0.10, r=0.02, retrait=4)
-    bm_box(D[M_INOX], 1375, 148, 1451, 226, 0.86, 0.90)
-    bm_box(D[M_INOX], 1377, 150, 1449, 224, 0.90, 1.58)
-    bm_box(D[M_INOX], 1377, 150, 1449, 162, 1.58, 1.80)
-    bm_box(D[M_ACIER], 1385, 224, 1441, 228, 1.44, 1.47)
-    table_inox(D, 1375, 228, 1451, 279, dosseret='e')
+    bm_box(D[M_INOX], 1373, 148, 1445, 226, 0.10, 0.86)
+    pieds(D[M_ACIER], 1373, 148, 1445, 226, 0.10, r=0.02, retrait=4)
+    bm_box(D[M_INOX], 1373, 148, 1445, 226, 0.86, 0.90)
+    bm_box(D[M_INOX], 1375, 150, 1443, 224, 0.90, 1.58)
+    bm_box(D[M_INOX], 1375, 150, 1443, 162, 1.58, 1.80)
+    bm_box(D[M_ACIER], 1383, 224, 1435, 228, 1.44, 1.47)
+    table_inox(D, 1385, 228, 1447, 322, dosseret='e')
     for k in range(2):
-        bm_box(D[M_ACIER], 1380, 232 + 1, 1446, 276, 0.90 + 0.11 * k, 0.90 + 0.11 * k + 0.10)
-    bm_box(D[M_INOX], 1420, 150, 1451, 279, 1.86, 1.88)
-    for k in range(3):
-        prisme(D[M_CERAMIQUE], rond(1436, 175 + 36 * k, 0.12, 20), 1.88, 1.88 + 0.10 + 0.03 * k)
+        bm_box(D[M_ACIER], 1390, 236, 1442, 286, 0.90 + 0.11 * k, 0.90 + 0.11 * k + 0.10)
+    xa, xb, ya, yb = 1397, 1447, 328, 396                                           # the crockery rack
+    for x in (xa + 1, xb - 1):
+        for y in (ya + 1, yb - 1):
+            bm_box(D[M_ACIER], x - 1, y - 1, x + 1, y + 1, 0.0, 1.80)
+    zs = (0.16, 0.56, 0.96, 1.36, 1.78)
+    for z in zs:
+        bm_box(D[M_INOX], xa, ya, xb, yb, z - 0.015, z)
+    for k, z in enumerate(zs[:-1]):                                                 # plates, or a glass rack
+        if k % 2:
+            bm_box(D[M_ACIER], xa + 3, ya + 5, xb - 3, yb - 5, z, z + 0.10)
+        else:
+            prisme(D[M_CERAMIQUE], rond((xa + xb) / 2, (ya + yb) / 2, 0.12, 20), z, z + 0.10 + 0.04 * k)
+    bm_box(D[M_INOX], 1421, 150, 1447, 322, 1.86, 1.88)
+    for k in range(4):
+        prisme(D[M_CERAMIQUE], rond(1434, 175 + 40 * k, 0.10, 20), 1.88, 1.88 + 0.08 + 0.03 * (k % 3))
     D.fin()
 
 
 def portes_rdc():
-    """The doors of the back of house: the kitchen's double-action door (a porthole, kick plates; glazed in C), the
-    toilets' door (oak, a pull bar inside), the shaft's two flush leaves."""
+    """The doors of the back of house: the kitchen's double-action door (two oak leaves of 0.78 m, a porthole and a
+    push plate on each face, stainless kick plates), the toilets' door (oak, a pull bar inside)."""
     da, db = refonte.KITCHEN_PORTE
     y0, y1 = refonte.KITCHEN_SUD
     L = Lot('cuisine-porte', 'Cuisine')
     xm = (da + db) / 2
     for xa, xb in ((da + 1, xm - 0.5), (xm + 0.5, db - 1)):
-        if CUISINE == 'C':
-            bm_box(L[M_CADRE], xa, y0 + 3, xb, y1 - 3, 0.02, 0.32)
-            bm_box(L[M_CADRE], xa, y0 + 3, xb, y1 - 3, 1.98, 2.08)
-            bm_box(L[M_CADRE], xa, y0 + 3, xa + 4, y1 - 3, 0.32, 1.98)
-            bm_box(L[M_CADRE], xb - 4, y0 + 3, xb, y1 - 3, 0.32, 1.98)
-            bm_box(L[M_VERRE], xa + 4, y0 + 4.5, xb - 4, y1 - 4.5, 0.32, 1.98)
-        else:
-            bm_box(L[M_MEUBLE], xa, y0 + 3, xb, y1 - 3, 0.02, 2.08)
-            for y_, s in ((y0 + 3, -1), (y1 - 3, 1)):
-                bm_box(L[M_INOX], xa + 1, y_, xb - 1, y_ + s * 0.6, 0.04, 0.32)        # kick plates
-                c = ((xa + xb) / 2, 1.50)
-                for k in range(24):                                                   # the porthole's ring
-                    a0, a1 = math.tau * k / 24, math.tau * (k + 1) / 24
-                    bm_barre(L[M_INOX], P(c[0] + 0.15 / PX * math.cos(a0), y_ + s * 1.4, c[1] + 0.15 * math.sin(a0)),
-                             P(c[0] + 0.15 / PX * math.cos(a1), y_ + s * 1.4, c[1] + 0.15 * math.sin(a1)), 0.02)
-                bm_cyl_y(L[M_VERRE], min(y_, y_ + s * 0.4), max(y_, y_ + s * 0.4), c[0], c[1], 0.13, 24)
+        bm_box(L[M_BOIS], xa, y0 + 3, xb, y1 - 3, 0.02, 2.08)
+        pousse = xb - 14 if xa < xm else xa + 6                                  # by the meeting stiles
+        for y_, s in ((y0 + 3, -1), (y1 - 3, 1)):
+            bm_box(L[M_INOX], xa + 1, y_, xb - 1, y_ + s * 0.6, 0.04, 0.32)        # kick plates
+            bm_box(L[M_INOX], pousse, y_, pousse + 8, y_ + s * 0.4, 0.95, 1.25)    # push plates
+            c = ((xa + xb) / 2, 1.50)
+            for k in range(24):                                                   # the porthole's ring
+                a0, a1 = math.tau * k / 24, math.tau * (k + 1) / 24
+                bm_barre(L[M_INOX], P(c[0] + 0.15 / PX * math.cos(a0), y_ + s * 1.4, c[1] + 0.15 * math.sin(a0)),
+                         P(c[0] + 0.15 / PX * math.cos(a1), y_ + s * 1.4, c[1] + 0.15 * math.sin(a1)), 0.02)
+            bm_cyl_y(L[M_VERRE], min(y_, y_ + s * 0.4), max(y_, y_ + s * 0.4), c[0], c[1], 0.13, 24)
     L.fin()
     W = Lot('wc-porte', 'Mobilier')
     wa, wb = refonte.WC_PORTE
@@ -1862,15 +1799,51 @@ def portes_rdc():
         bm_box(W[M_ACIER], wb - 12, y_ + s * 2.5, wb - 2, y_ + s * 3.5, 0.985, 1.00)
     bm_box(W[M_ACIER], wa + 20, 352, wb - 20, 353, 0.90, 0.92)                         # the pull bar, inside
     W.fin()
-    G = Lot('gaine-portes', 'Mobilier')
-    ga, gb = refonte.GAINE_PORTES
-    gm = (ga + gb) / 2
-    for ya, yb in ((ga + 1, gm - 0.5), (gm + 0.5, gb - 1)):
-        bm_box(G[M_MEUBLE], 1321, ya, 1325, yb, 0.01, 2.09)
-    bm_box(G[M_ACIER], 1319.5, gm - 6, 1321, gm - 2, 1.00, 1.18)
-    bm_box(G[M_ACIER], 1319.5, gm + 2, 1321, gm + 6, 1.00, 1.18)
-    bm_box(G[M_ACIER], 1320, ga + 8, 1321, gb - 8, 1.95, 2.03)                          # a ventilation grille
-    G.fin()
+
+
+def service_rdc():
+    """(26/11, night) The service bay in front of the kitchen's doors, where the shaft was (refonte.SERVICE): the waiters'
+    station along the right facade, out of the doors' swing (0.78 m): an oak cabinet with drawers and doors, a stone
+    top, the till's tablet on its stand, carafes, a tray of glasses; on the wall, oak battens from the plinth to 2.60 m
+    and a shelf of glasses and napkins."""
+    x0, y0, x1, y1 = refonte.SERVICE
+    L = Lot('service', 'Bar')
+    ya, yb = 575, 732                                                              # the station, along the wall
+    xa = 1395
+    bm_box(L[M_BOIS], xa + 4, ya + 3, 1444, yb - 3, 0.0, 0.10)                   # recessed plinth
+    bm_box(L[M_BOIS], xa, ya, 1444, yb, 0.10, 0.90)
+    for k in range(3):                                                             # three drawers, two doors under
+        y_a, y_b = ya + 1 + (yb - ya - 2) * k / 3, ya + 1 + (yb - ya - 2) * (k + 1) / 3
+        bm_box(L[M_BOIS], xa - 1.5, y_a + 0.5, xa, y_b - 0.5, 0.70, 0.88)
+        bm_box(L[M_ACIER], xa - 3, (y_a + y_b) / 2 - 8, xa - 1.5, (y_a + y_b) / 2 + 8, 0.80, 0.815)
+    ym = (ya + yb) / 2
+    for y_a, y_b in ((ya + 1, ym - 0.5), (ym + 0.5, yb - 1)):
+        bm_box(L[M_BOIS], xa - 1.5, y_a, xa, y_b, 0.12, 0.68)
+    bm_box(L[M_ACIER], xa - 3, ym - 9, xa - 1.5, ym - 7, 0.42, 0.62)
+    bm_box(L[M_ACIER], xa - 3, ym + 7, xa - 1.5, ym + 9, 0.42, 0.62)
+    bm_box(L[M_PLATEAU], xa - 3, ya - 2, 1444, yb + 2, 0.90, 0.93)               # the stone top
+    # on the top: the till (a tablet on its stand), three carafes, a tray of tumblers, a box of cutlery
+    prisme(L[M_ACIER], rond(1431.5, 600, 0.05, 16), 0.93, 0.94)                  # the till: a base, a post, the screen
+    prisme(L[M_ACIER], rond(1431.5, 600, 0.012, 10), 0.94, 1.10)
+    bm_box(L[M_COMPTOIR], 1428, 588, 1430, 612, 1.05, 1.23)
+    for k, y in enumerate((640, 656, 672)):
+        bm_tour(L[M_VERRE], 1425, y, [(0.0, 0.0), (0.045, 0.0), (0.05, 0.12), (0.035, 0.22), (0.035, 0.25),
+                                       (0.0, 0.25)], z0=0.93, seg=16)
+    bm_box(L[M_BOIS], 1400, 688, 1440, 726, 0.93, 0.945)
+    for i in range(3):
+        for j in range(2):
+            prisme(L[M_VERRE], rond(1408 + 12 * i, 698 + 18 * j, 0.035, 14), 0.945, 1.04)
+    bm_box(L[M_BOIS], 1400, 618, 1416, 634, 0.93, 1.00)
+    # on the wall: oak battens (the reception's language) and a shelf
+    y = y0 + 8.0
+    while y < y1 - 6:
+        bm_box(L[M_BOIS], 1444, y, 1447, y + 2.4, 0.10, 2.60); y += 5.0
+    bm_box(L[M_BOIS], 1426, ya + 3, 1444, yb - 3, 1.55, 1.58)
+    for k in range(4):
+        prisme(L[M_VERRE], rond(1435, ya + 18 + 24 * k, 0.035, 14), 1.58, 1.68)
+    for k in range(2):
+        bm_box(L[M_CERAMIQUE], 1428, yb - 40 + 16 * k, 1442, yb - 28 + 16 * k, 1.58, 1.64)
+    L.fin()
 
 
 def wc_rdc():
@@ -2551,6 +2524,8 @@ PLANS = {
     'cuisine-comptoir': ((620, 880, 1.30), (1010, 430, 1.30), 20),     # a guest at the bar's west end
     'cuisine-ligne':    ((1285, 330, 1.68), (880, 185, 1.00), 17),     # in the kitchen, along the cooking line
     'cuisine-plonge':   ((1245, 300, 1.70), (1425, 165, 0.95), 15),    # the dish wash in its corner
+    'cuisine-coin':     ((1215, 215, 1.68), (1445, 430, 0.95), 15),    # the kitchen's corner to the facade, the doors
+    'cuisine-service':  ((1150, 930, 1.62), (1385, 530, 1.25), 18),    # the service bay and the kitchen's doors
     'cuisine-froid':    ((1000, 330, 1.65), (690, 250, 1.00), 17),     # the cold column, the store, the prep
     'cuisine-passe':    ((1262, 900, 1.62), (1110, 440, 1.25), 18),    # from the corridor: the pass and the door
     'cuisine-passage':  ((565, 860, 1.60), (445, 300, 1.05), 16),      # the passage to the toilets
