@@ -1,6 +1,6 @@
 // Captures of the interactive map (carte/), for the step pages (step 7: the map as chosen; the interface is dark), at
 // Retina scale, plus a short video of the map being handled. Serves carte/ itself on a free port.
-// usage: node outils/carte_captures.mjs [video | etage | cuisine]   (etage: the 1st floor's captures only, 25/11;
+// usage: node outils/carte_captures.mjs [video | etage | cuisine | readme]   (etage: the 1st floor's captures only, 25/11;
 //        cuisine: the open kitchen's, 26/11)
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
 
 const R = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DOS = { carte: path.join(R, 'rendus', '9-carte-finale'), etage: path.join(R, 'rendus', '19-carte-deux-etages'),
-  cuisine: path.join(R, 'rendus', '25-cuisine-ouverte') };
+  cuisine: path.join(R, 'rendus', '25-cuisine-ouverte'), readme: path.join(R, 'rendus', '27-carte-readme') };
 Object.values(DOS).forEach(d => fs.mkdirSync(d, { recursive: true }));
 const OUT = DOS.carte;
 const port = 8800 + Math.floor(Math.random() * 100);
@@ -38,6 +38,9 @@ const PLANS = [
   ['cuisine', 'carte-rdc-3d', 'vitesse=0&heure=20:25&vue=3d'],
   ['cuisine', 'carte-rdc-dessus', 'vitesse=0&heure=20:25'],
   ['cuisine', 'carte-rdc-cuisine', 'vitesse=0&heure=20:25&vue=3d', null, ['cuisine-comptoir-inox', 13]],
+  // (27/11) the README's image: the map as it opens now (3D, the Transparent style by default), both floors
+  ['readme', 'carte-rdc-3d', 'vitesse=0&heure=20:25&vue=3d'],
+  ['readme', 'carte-1er-3d', 'vitesse=0&heure=20:25&vue=3d&etage=1'],
 ];
 
 const b = await chromium.launch({ channel: 'chrome', headless: true });

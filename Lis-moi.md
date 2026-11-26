@@ -304,7 +304,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 22-sans-espace/ (les colonnes et les murs sans fente), 23-cave-palier-carte/ (la cave, le palier, la légende),
                 24-cuisine-et-bar/ (la cuisine et le bar du rez-de-chaussée, trois prototypes),
                 25-cuisine-ouverte/ (la cuisine ouverte retenue, le poste de service, la carte),
-                26-plans-finaux/ (les plans d'architecte des deux étages, tirés du modèle : SVG, PNG, PDF)
+                26-plans-finaux/ (les plans d'architecte des deux étages, tirés du modèle : SVG, PNG, PDF),
+                27-carte-readme/ (la carte telle qu'elle s'ouvre, les deux étages : l'image du README)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),

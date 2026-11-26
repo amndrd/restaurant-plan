@@ -2,7 +2,7 @@
 
 Un projet du studio. Les plans d'un restaurant deviennent une carte 3D interactive pour l'équipe de salle : les tables libres et prises, les places occupées, le temps d'attente et les commandes, en direct. Le modèle est construit dans Blender, entièrement par des scripts Python. Aucune scène n'est enregistrée à la main : les scripts sont la source.
 
-![La carte en 3D](rendus/9-carte-finale/sombre-3d.png)
+![La carte en 3D du rez-de-chaussée, en style Transparent](rendus/27-carte-readme/carte-rdc-3d.png)
 
 Les plans sont ceux du **LAIR Restaurant & Bar** (Gurugram, Inde, 2024), conçu par **RENESA Architecture Design Interiors Studio** et publié sur ArchDaily. Le restaurant de la démo est fictif : son service, ses clients et ses réservations sont simulés.
 
