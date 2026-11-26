@@ -129,7 +129,6 @@ async function demarrer() {
     s3.montrerEtage(n);
     choix.visible = false; ui.cacher();
     ui.s = et.service; legende.lier(et.service, et.sys); ui.maj();
-    document.getElementById('etage-nom').textContent = `${ETAGES[n].nom} · service du soir`;
     document.querySelectorAll('#etages button').forEach(x => x.classList.toggle('on', Number(x.dataset.etage) === n));
     cam.changerNiveau(ETAGES[n].sol, duree);
   };

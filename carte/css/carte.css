@@ -22,12 +22,9 @@ canvas#vue.survol{cursor:pointer}
 #calque{position:fixed;inset:0;pointer-events:none;overflow:hidden}
 
 /* ---- top bar */
-.barre{position:fixed;top:20px;left:20px;right:20px;display:flex;align-items:center;gap:12px;pointer-events:none}
+.barre{position:fixed;top:20px;left:20px;right:20px;display:flex;align-items:center;justify-content:flex-end;gap:12px;
+  pointer-events:none}
 .barre>*{pointer-events:auto}
-.marque{display:flex;flex-direction:column;background:var(--panneau);border-radius:12px;padding:9px 16px 10px;
-  box-shadow:var(--ombre);margin-right:auto}
-.marque .nom{font-weight:600;font-size:15px;letter-spacing:-.01em}
-.marque .sous{font-size:12px;color:var(--gris)}
 .groupe{display:flex;background:var(--panneau);border-radius:12px;padding:4px;box-shadow:var(--ombre);gap:2px}
 .groupe button{border:0;background:none;padding:8px 14px;border-radius:9px;font-weight:500;font-size:13px;
   color:var(--gris);cursor:pointer;transition:background .2s,color .2s}
@@ -39,7 +36,7 @@ canvas#vue.survol{cursor:pointer}
 
 /* ---- panels */
 .panneau{position:fixed;background:var(--panneau);border-radius:14px;box-shadow:var(--ombre)}
-.kpi{left:20px;top:92px;width:236px;padding:16px 18px 14px;display:flex;flex-direction:column;gap:12px}
+.kpi{left:20px;top:20px;width:236px;padding:16px 18px 14px;display:flex;flex-direction:column;gap:12px}
 .kpi .titre{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris)}
 .kpi .grand{display:flex;align-items:baseline;gap:6px}
 .kpi .grand b{font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1}
