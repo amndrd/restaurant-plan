@@ -8,6 +8,13 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (26/11/2026)
 
+**Au 1er, la gaine d'ascenseur devient une réserve (26/11, nuit).** La gaine (`GAINE`, et les bouts de murs 734 et 770) est retirée de `floor2.py`. À sa place, entre le mur des toilettes et la façade, il y a une réserve de 1,0 × 3,0 m (`RESERVE`, `reserve_est`). Elle est fermée par une cloison avec une porte en chêne qui ouvre sur le passage des toilettes, derrière le rideau. Dedans :
+- une étagère de 2 m le long de la façade, avec des cartons et des bouteilles ;
+- une étagère plus basse contre le mur des toilettes, avec des serviettes et des rouleaux ;
+- des caisses de vin au fond et un escabeau.
+
+La carte du 1er est réexportée. **À partir de maintenant, une fois une modification modélisée, on ne fait plus de rendus : seule la carte 3D est mise à jour.**
+
 **La cuisine ouverte, telle que choisie (26/11, nuit).** En attente de ta validation.
 
 - **Le prototype A est retenu** : la cuisine ouverte sur le bar par-dessus un muret, la retombée avec les verres et les bouteilles suspendus, le comptoir en lattes de chêne. B et C sortent du script (l'option `cuisine=` n'existe plus) ; leurs rendus restent dans `rendus/24-cuisine-et-bar/`.
@@ -18,7 +25,7 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 - **Vérifié :** il ne reste que des assemblages voulus.
 - **Les rendus** sont dans `rendus/25-cuisine-ouverte/`, avec tes captures (`avant-couloir`, `avant-portes`) et la carte (`node outils/carte_captures.mjs cuisine`). La page est `pages/19-cuisine-ouverte.png`.
 - **La carte est réexportée** (les deux étages et le rez-de-chaussée sous sa dalle), et `floor1-tables.json` est recopié dans `carte/donnees/`.
-- **Au 1er,** la boîte de l'ancienne « gaine d'ascenseur » n'a plus rien en dessous : à décider (réserve fermée ou ouverte sur la salle).
+- **Au 1er,** la boîte de l'ancienne « gaine d'ascenseur » est devenue une réserve (voir plus haut).
 
 **La cuisine et le bar du rez-de-chaussée (26/11, nuit).** Trois prototypes ; le A est choisi (voir ci-dessus).
 
