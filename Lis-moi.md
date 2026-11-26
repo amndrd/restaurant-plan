@@ -8,6 +8,16 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (26/11/2026)
 
+**Les endroits repris, un par un (26/11, soir).** En attente de ta validation. Pour le coin du 1er, tu as choisi la station de service (A, `angle=station`, par défaut).
+
+- **La tablette du balcon :** le garde-corps en verre court tout le long du vide ; la tablette en chêne en est le chapeau (1,02 - 1,08 m), sur des pieds fins en acier avec un repose-pieds ; la main courante part de son bout (`tablette_vide`, `TABLETTE_FIN` dans `floor2.py`).
+- **Les lumières au-dessus du vide :** les suspensions des tables du bas sous le vide descendent de longs câbles depuis le plafond du 1er (`dessous()`), coupés comme les murs sur la carte.
+- **Le bar omakase et sa cuisine :** huit petits murs du plan retirés, et les doublures du mur du fond ; le bar en hinoki et lattes de chêne, repose-pieds, vitrines à neta, bouteilles dans les casiers, trois suspensions ; la cuisine au bout du bar côté façade (`cuisine()`, `CUISINE_CLOISON`), la réserve derrière le fond du bar, la porte des toilettes (`wc()`, `MURS_WC`). L'escalier vers nulle part était déjà retiré : la carte recharge maintenant toujours ses modèles (en-tête `Cache-Control: no-cache`).
+- **Le comptoir du labo :** chêne à lattes, plateau de pierre, cloche, bocaux, batteur ; un plan de travail avec évier et étagères le long du mur (`labo`, `labo_machines`).
+- **Le jardin sec sous l'escalier** (`floor1.py`, `jardin`) : gravier ratissé en lignes et en cercles (`gravier-ratisse`), pierres polies (`rocher_lisse`, `PIERRES`), deux projecteurs.
+- **L'accueil** (`floor1.py`, `accueil`, `accueil_mobilier`) : bureau en arc à lattes de chêne et plateau de pierre, panneau de tasseaux avec niche et plaque, banc, tapis, tabouret, suspension, olivier.
+- **Les rendus** sont dans `rendus/21-reprises/` (avec tes captures `avant-1` à `avant-6`), la page est `pages/16-reprises.png`. Les modèles de la carte sont réexportés.
+
 **Le modèle repensé : prototypes.** En attente de ta validation. Le plan du client n'est plus suivi là où il n'avait pas de sens pour un restaurant de deux étages ; les plans des deux étages seront refaits d'après le modèle une fois celui-ci validé.
 
 - **Les changements** sont décrits dans `outils/blender/refonte.py` (les murs du rez-de-chaussée, partagés par les deux scripts), puis dans `floor1.py` et `floor2.py` :
@@ -235,7 +245,7 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 16-etage-prototypes-ile/ (les décors pour l'îlot, à la place du bloc),
                 17-etage-lierre-et-garde-corps/ (le lierre, le garde-corps, l'étage tel qu'il est),
                 18-batiment-entier/ (les deux étages raccordés, vus de la rue),
-                19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé)
+                19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé), 21-reprises/ (les endroits repris)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
