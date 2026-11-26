@@ -8,6 +8,19 @@ On travaille étage par étage, en commençant par **floor1**, le rez-de-chauss�
 
 ## Où en est-on (26/11/2026)
 
+**Les plans finaux des deux étages, tirés du modèle (26/11, nuit).** En attente de ta validation. Ce sont de vrais plans d'architecte, pas des captures du modèle. Ils serviront de feuilles dans le film du site : les plans se posent au sol, puis la maquette en sort.
+- **Comment ils sont faits :** `outils/plans/plan_final.py` lit le modèle coupé à 1,20 m (`modele/trace/rdc.json`, `etage1.json`, écrits par `floor1.py` / `floor2.py -- variante=detail mobilier=1 trace=…`). Il ne garde que ce qu'un architecte dessine :
+  - les murs et les poteaux coupés en noir, les tambours et les colonnes en gris foncé, les murets en contour ;
+  - les pavés de verre, les vitrages et leurs cadres en acier ;
+  - le mobilier et les équipements vus de dessus, en trait fin, peints du plus bas au plus haut ;
+  - pas de petits objets : bouteilles, verres, tasses, casseroles, saladiers, ustensiles, cartons, stock, lampes. Ils sont écartés par leur nom, leur matière, ou parce qu'ils sont petits, ronds, posés sur un plan de travail ;
+  - en tirets, ce qui est au-dessus du plan de coupe : la hotte, la retombée du bar, et le bord de la mezzanine sur le plan du rez-de-chaussée ;
+  - les portes ouvertes à 90° avec leur débattement (double pour la porte de la cuisine), et l'escalier avec sa ligne de coupe et sa ligne de foulée (19 × 17,6 cm) ;
+  - le vide du 1er avec sa croix, le jardin suspendu en trame végétale, les carreaux de la cuisine, le jardin sec ratissé ;
+  - la trame des poteaux (1-2, A-B), les cotes, chaque pièce avec sa surface calculée sur le modèle, les niveaux (±0,00 et +3,35), un cartouche (légende, surfaces, échelle graphique, planche A-101 / A-102).
+- **Le format :** A2 paysage au 1:50, tourné comme la vue du haut de la carte, avec le même cadrage pour les deux feuilles. Chaque plan est livré en SVG, en PNG 300 dpi (7016 × 4961) et en PDF dans `rendus/26-plans-finaux/` (`outils/.venv/bin/python outils/plans/plan_final.py [rdc] [etage1]`, il faut shapely).
+- **La carte** a maintenant le style Transparent par défaut, en tête du menu des styles.
+
 **Au 1er, la gaine d'ascenseur devient une réserve (26/11, nuit).** La gaine (`GAINE`, et les bouts de murs 734 et 770) est retirée de `floor2.py`. À sa place, entre le mur des toilettes et la façade, il y a une réserve de 1,0 × 3,0 m (`RESERVE`, `reserve_est`). Elle est fermée par une cloison avec une porte en chêne qui ouvre sur le passage des toilettes, derrière le rideau. Dedans :
 - une étagère de 2 m le long de la façade, avec des cartons et des bouteilles ;
 - une étagère plus basse contre le mur des toilettes, avec des serviettes et des rouleaux ;
@@ -290,7 +303,8 @@ rendus/         1-coque/, 2-styles-sur-la-coque/, 3-styles-blancs/ (les variante
                 19-carte-deux-etages/ (la carte avec le 1er étage), 20-refonte/ (le modèle repensé), 21-reprises/ (les endroits repris),
                 22-sans-espace/ (les colonnes et les murs sans fente), 23-cave-palier-carte/ (la cave, le palier, la légende),
                 24-cuisine-et-bar/ (la cuisine et le bar du rez-de-chaussée, trois prototypes),
-                25-cuisine-ouverte/ (la cuisine ouverte retenue, le poste de service, la carte)
+                25-cuisine-ouverte/ (la cuisine ouverte retenue, le poste de service, la carte),
+                26-plans-finaux/ (les plans d'architecte des deux étages, tirés du modèle : SVG, PNG, PDF)
 pages/          la page de chaque étape, en PNG
 recherche/      00-video-concept/, 01 … 10 (les images retenues), sources.json, planche.png, _tri/ (les planches de tri),
                 11-lair-archdaily/ (les 37 photos et 5 dessins du vrai restaurant, source.md),
