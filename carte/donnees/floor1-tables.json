@@ -314,13 +314,13 @@
    "nom": "Bar",
    "type": "bar",
    "centre_px": [
-    801.5,
+    887.0,
     716
    ],
    "places": 7,
    "assises": "tabourets",
    "centre_m": [
-    -0.296,
+    0.417,
     4.283
    ]
   }

@@ -1,6 +1,7 @@
 // Captures of the interactive map (carte/), for the step pages (step 7: the map as chosen; the interface is dark), at
 // Retina scale, plus a short video of the map being handled. Serves carte/ itself on a free port.
-// usage: node outils/carte_captures.mjs [video | etage]   (etage: the 1st floor's captures only, 25/11)
+// usage: node outils/carte_captures.mjs [video | etage | cuisine]   (etage: the 1st floor's captures only, 25/11;
+//        cuisine: the open kitchen's, 26/11)
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { spawn, execFileSync } from 'node:child_process';
@@ -11,7 +12,8 @@ const require = createRequire(process.env.PLAYWRIGHT_PKG || `${homedir()}/Deskto
 const { chromium } = require('playwright');
 
 const R = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DOS = { carte: path.join(R, 'rendus', '9-carte-finale'), etage: path.join(R, 'rendus', '19-carte-deux-etages') };
+const DOS = { carte: path.join(R, 'rendus', '9-carte-finale'), etage: path.join(R, 'rendus', '19-carte-deux-etages'),
+  cuisine: path.join(R, 'rendus', '25-cuisine-ouverte') };
 Object.values(DOS).forEach(d => fs.mkdirSync(d, { recursive: true }));
 const OUT = DOS.carte;
 const port = 8800 + Math.floor(Math.random() * 100);
@@ -32,6 +34,10 @@ const PLANS = [
   ['etage', 'etage-fiche-omakase', 'vitesse=0&heure=20:25&vue=3d&etage=1&fiche=100', '#fiche'],
   ['etage', 'etage-fil-de-fer', 'vitesse=0&heure=20:25&vue=3d&etage=1&style=fil-de-fer'],
   ['etage', 'rdc-3d', 'vitesse=0&heure=20:25&vue=3d'],
+  // the open kitchen as chosen (26/11 night); zoom: [world point (three.js, m), wheel steps] to close in on it
+  ['cuisine', 'carte-rdc-3d', 'vitesse=0&heure=20:25&vue=3d'],
+  ['cuisine', 'carte-rdc-dessus', 'vitesse=0&heure=20:25'],
+  ['cuisine', 'carte-rdc-cuisine', 'vitesse=0&heure=20:25&vue=3d', null, ['cuisine-comptoir-inox', 13]],
 ];
 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
@@ -39,10 +45,30 @@ const seul = process.argv[2];
 if (seul !== 'video') {
   const p = await b.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 });
   p.on('pageerror', e => console.log('[pageerror]', e.message));
-  for (const [dos, nom, q, el] of PLANS.filter(x => !seul || x[0] === seul)) {
+  for (const [dos, nom, q, el, zoom] of PLANS.filter(x => !seul || x[0] === seul)) {
     await p.goto(`${base}?${q}`);
     await p.waitForFunction(() => window.carte?.pret, null, { timeout: 60000 });
     await p.waitForTimeout(1800);
+    if (zoom) {               // wheel steps over the screen point of a world point
+      const [x, y] = await p.evaluate(w => { const C = window.carte, V = C.cam.cam.position.constructor;
+        let v = new V(...(Array.isArray(w) ? w : [0, 0, 0]));
+        if (!Array.isArray(w)) {          // an object's name: the centre of its box, from the scene
+          let o = null; C.s3.scene.traverse(x => { if (!o && x.name === w) o = x; });
+          const lo = new V(1e9, 1e9, 1e9), hi = new V(-1e9, -1e9, -1e9);
+          o.updateWorldMatrix(true, true);
+          o.traverse(m => { if (m.geometry) { m.geometry.computeBoundingBox(); const bb = m.geometry.boundingBox;
+            for (const c of [bb.min, bb.max]) { const q = c.clone().applyMatrix4(m.matrixWorld); lo.min(q); hi.max(q); } } });
+          v = lo.add(hi).multiplyScalar(0.5);
+        }
+        v.project(C.cam.cam); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; }, zoom[0]);
+      // the map zooms on the screen's centre: first drag the point there (left button pans), then zoom
+      await p.mouse.move(x, y); await p.mouse.down();
+      for (let k = 1; k <= 30; k++) { await p.mouse.move(x + (800 - x) * k / 30, y + (500 - y) * k / 30); await p.waitForTimeout(16); }
+      await p.mouse.up(); await p.waitForTimeout(400);
+      await p.mouse.move(800, 500);
+      for (let k = 0; k < zoom[1]; k++) { await p.mouse.wheel(0, -60); await p.waitForTimeout(60); }
+      await p.waitForTimeout(1200);
+    }
     await p.screenshot({ path: path.join(DOS[dos], `${nom}.png`) });
     if (el) {   // the element alone, with a margin of map around it
       const r = await p.locator(el).boundingBox(), m = 24;
