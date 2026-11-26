@@ -256,8 +256,11 @@ R_GC = R_ESC + 4
 A_GC = -math.degrees(math.acos(1.5 / R_GC))                  # where the ring meets the void's right side (x 1083.5)
 GARDE_CORPS = arc(1012, 1242, 71.5, -90, 0, 32) + arc(HX, HY, R_GC, A_GC, -40, 30)
 _jardin = [p_ for p_ in arc(1238, 2187, 62.5, -90, 0, 30) if math.hypot(p_[0] - HX, p_[1] - HY) >= R_GC]
-GARDE_CORPS_JARDIN = [(HX + R_GC * math.cos(math.atan2(_jardin[0][1] - HY, _jardin[0][0] - HX)),
-                       HY + R_GC * math.sin(math.atan2(_jardin[0][1] - HY, _jardin[0][0] - HX)))] + _jardin + \
+A_PALIER = math.atan2(_jardin[0][1] - HY, _jardin[0][0] - HX)    # where the stair's landing ends (-12 deg)
+# (26/11 evening) the parapet starts at the stair's core: it closes the landing's side on the void
+_u, _n = (math.cos(A_PALIER), math.sin(A_PALIER)), (math.sin(A_PALIER), -math.cos(A_PALIER))   # 3 px onto the landing
+GARDE_CORPS_JARDIN = [(HX + 43 * _u[0] + 3 * _n[0], HY + 43 * _u[1] + 3 * _n[1]),
+                      (HX + R_GC * _u[0] + 3 * _n[0], HY + R_GC * _u[1] + 3 * _n[1])] + _jardin + \
     [(1300.5, 2209), (1300.5, 2401)]     # on along the corner, now floor (26/11), to the street facade
 
 # ---- the whole building (25/11): the two floors are one building, not two models set one on the other.
@@ -1010,6 +1013,11 @@ def escalier_detail():
     sculpture = mesh_obj('sculpture-miroir', bm, 'Escalier', M_MIROIR)
     for o in (marches, garde, sculpture):
         couper(o, -1.0, 'haut')
+    # (26/11 evening) the landing, the 19th step: the last tread stopped 18 cm under the floor, at the edge of the
+    # opening, and the stair gave onto the void. The landing is at the floor's level, in the slab's thickness, from
+    # the last riser to the rock garden's parapet, which closes its side on the void; one steps off it to the east
+    ring('escalier-palier', cx, cy, R_ESC, r0, a0 + pas_a * (n - 1), math.degrees(A_PALIER) % 360, -DALLE, 0.0,
+         'Escalier', M_MARCHE, seg=360)
 
 
 # ---------------------------------------------------------------- the void over the drums: the three columns
@@ -1817,6 +1825,8 @@ PLANS = {
     'cuisine':      ((590, 420, 1.65), (430, 160, 0.90), 18),       # the kitchen corner, from its corner by the aisle
     'labo':         ((585, 1000, 1.60), (370, 960, 0.80), 22),      # the lab's counter
     'colonne-est':  ((1760, 1010, 0.80), (1440, 800, -0.20), 22),   # the right facade's column, glass blocks on it
+    'palier':       ((1310, 2060, 1.65), (1120, 2200, -0.30), 18),   # the stair's landing, from the arrival
+    'palier-haut':  ((1330, 1880, 1.80), (1082, 2172, -0.60), 20),   # the same, from the corner
     'colonne-1er':  ((1235, 1290, 1.60), (1462, 1560, 1.05), 20),   # the other column, from inside the 1st floor
 }
 
