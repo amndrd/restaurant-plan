@@ -640,26 +640,197 @@ def rocher(name, x, y, sx, sy, sz, seed, subdiv=2):
     return mesh_obj(name, bm, 'Jardin', M_ROCHER)
 
 
+def rocher_lisse(name, x, y, sx, sy, sz, seed):
+    """A water-worn stone (26/11 evening): a fine sphere under a slow, low noise, its base flattened, set on the
+    gravel; sx, sy, sz its size in metres."""
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=3, radius=1.0)
+    ph = [rnd.uniform(0, math.tau) for _ in range(5)]
+    for v in bm.verts:
+        d = v.co.normalized()
+        n = (0.12 * math.sin(2.1 * d.x + ph[0]) * math.cos(1.7 * d.y + ph[1]) + 0.08 * math.sin(3.3 * d.z + 1.9 * d.x + ph[2])
+             + 0.05 * math.sin(5.1 * d.y + ph[3]) + 0.03 * math.sin(7.3 * d.x - 4.1 * d.z + ph[4]))
+        v.co = d * (1 + n)
+        v.co.z = max(v.co.z, -0.30)
+    zmin = min(v.co.z for v in bm.verts); zmax = max(v.co.z for v in bm.verts)
+    rot = rnd.uniform(0, math.tau)
+    c, s_ = math.cos(rot), math.sin(rot)
+    o_ = P(x, y)
+    for v in bm.verts:
+        px_, py_ = v.co.x * sx / 2, v.co.y * sy / 2
+        v.co = Vector((o_.x + c * px_ - s_ * py_, o_.y + s_ * px_ + c * py_, 0.03 + (v.co.z - zmin) / (zmax - zmin) * sz))
+    for f in bm.faces:
+        f.smooth = True
+    return mesh_obj(name, bm, 'Jardin', M_ROCHER)
+
+
+# the garden's stones: three groups (a tall standing stone with two lower ones; a pair; one alone under the stair)
+PIERRES = [(905, 2296, 0.50, 0.40, 0.80), (958, 2318, 0.40, 0.34, 0.38), (878, 2338, 0.26, 0.22, 0.16),
+           (1222, 2328, 0.38, 0.30, 0.32), (1186, 2342, 0.20, 0.17, 0.12), (922, 2095, 0.36, 0.30, 0.46)]
+GROUPES = [((915, 2312), (0, 1, 2)), ((1208, 2333), (3, 4)), ((922, 2095), (5,))]
+SPOTS = [(990, 2262), (1166, 2296)]                     # two uplights in the gravel, on the stones
+
+
 def jardin():
+    """The rock garden under the stair (26/11 evening, reworked as a dry garden): the steel edging, the gravel raked
+    in straight lines, in rings round the groups of stones; water-worn stones; two uplights."""
     bord = [P(1273, 2368), P(855, 2368), P(855, 2040)] + [P(x, y) for x, y in GRAVIER_HAUT[1:]]
     sweep('bordure', bord, [(-0.05, 0.0, False), (-0.002, 0.0, False), (-0.002, 0.10, False), (-0.05, 0.10, False)],
           'Jardin', M_BORDURE, ref=P(1000, 2300))
-    for k, (x, y, sx, sy, sz, sub) in enumerate((
-            (900, 2290, 0.55, 0.42, 0.85, 1), (935, 2335, 0.45, 0.38, 0.34, 2), (884, 2338, 0.24, 0.2, 0.17, 1),
-            (922, 2088, 0.42, 0.34, 0.52, 1), (1232, 2338, 0.34, 0.3, 0.28, 2), (1196, 2352, 0.2, 0.17, 0.14, 1),
-            (880, 2152, 0.22, 0.2, 0.16, 2), (960, 2250, 0.18, 0.15, 0.12, 1))):
-        rocher(f'rocher-{k}', x, y, sx, sy, sz, seed=k + 3, subdiv=sub)
-
-
-# ---- the entry (plan zones 1, 2): the concierge desk and a console with a rounded corner
-def accueil():
+    for k, (x, y, sx, sy, sz) in enumerate(PIERRES):
+        rocher_lisse(f'rocher-{k}', x, y, sx, sy, sz, seed=k + 11)
+    # the raking: ridges 6 cm apart, 2 cm wide, 6 mm high, on the gravel (z 0.03), kept 9 px off its edges
+    pas, l_, h_ = 0.06 / PX, 0.02 / PX, 0.006
+    bords = list(zip(GRAVIER, GRAVIER[1:] + GRAVIER[:1]))
+    def d_bord(x, y):
+        m = 1e9
+        for (ax, ay), (bx, by) in bords:
+            vx, vy = bx - ax, by - ay
+            t = max(0.0, min(1.0, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)))
+            m = min(m, math.hypot(x - ax - t * vx, y - ay - t * vy))
+        return m
+    def dedans(x, y):
+        c = False
+        for (ax, ay), (bx, by) in bords:
+            if (ay > y) != (by > y) and x < ax + (y - ay) * (bx - ax) / (by - ay):
+                c = not c
+        return c
+    rayons = [max(sx, sy) / 2 * 1.25 / PX + 3 for _, _, sx, sy, _ in PIERRES]
+    def libre(x, y):
+        if not dedans(x, y) or d_bord(x, y) < 9:
+            return False
+        for (px_, py_, *_), r in zip(PIERRES, rayons):
+            if math.hypot(x - px_, y - py_) < r + 4:
+                return False
+        return all(math.hypot(x - a, y - b) > 9 for a, b in SPOTS)
+    zones = []                                           # the ring zones: the outer radius of each group's rings
+    for (gx, gy), ids in GROUPES:
+        r0 = max(math.hypot(PIERRES[i][0] - gx, PIERRES[i][1] - gy) + rayons[i] for i in ids) + 5
+        zones.append((gx, gy, r0, r0 + 4 * pas))
     bm = bmesh.new()
-    bm_box(bm, 618, 2051, 716, 2089, 0.0, 0.08)
-    bm_box(bm, 613, 2046, 721, 2094, 0.08, 1.01)
-    bm_box(bm, 611, 2044, 723, 2096, 1.01, 1.05)
-    prisme(bm, [(611, 1908), (722, 1908)] + [(702 + 20 * math.cos(math.radians(a)), 1955 + 20 * math.sin(math.radians(a)))
-                                             for a in range(0, 91, 10)] + [(611, 1975)], 0.0, 0.90)
-    mesh_obj('accueil', bm, 'Accueil', M_MEUBLE)
+    def crete(pts):
+        if len(pts) < 2:
+            return
+        rang = []
+        for i, (x, y) in enumerate(pts):
+            ax, ay = pts[max(i - 1, 0)]; bx, by = pts[min(i + 1, len(pts) - 1)]
+            n = math.hypot(bx - ax, by - ay) or 1.0
+            nx, ny = -(by - ay) / n * l_ / 2, (bx - ax) / n * l_ / 2
+            rang.append((bm.verts.new(P(x + nx, y + ny, 0.03)), bm.verts.new(P(x, y, 0.03 + h_)),
+                         bm.verts.new(P(x - nx, y - ny, 0.03))))
+        for A, B in zip(rang, rang[1:]):
+            bm.faces.new((A[0], B[0], B[1], A[1])).smooth = True
+            bm.faces.new((A[1], B[1], B[2], A[2])).smooth = True
+        for e in (rang[0], rang[-1]):
+            bm.faces.new(e)
+    def morceaux(points):
+        seg = []
+        for q in points:
+            if q is None:
+                crete(seg); seg = []
+            else:
+                seg.append(q)
+        crete(seg)
+    for gx, gy, r0, r1 in zones:                         # the rings round each group
+        r = r0
+        while r <= r1 + 0.1:
+            pts = []
+            for k in range(int(2 * math.pi * r / 2.5) + 1):
+                a = math.tau * k / int(2 * math.pi * r / 2.5)
+                x, y = gx + r * math.cos(a), gy + r * math.sin(a)
+                autre = any(math.hypot(x - zx, y - zy) < zr1 + pas * 0.5 for zx, zy, _, zr1 in zones if (zx, zy) != (gx, gy))
+                pts.append((x, y) if libre(x, y) and not autre else None)
+            morceaux(pts)
+            r += pas
+    y = 2046.0
+    while y < 2364:                                      # the straight lines, broken by the rings
+        pts = []
+        x = 857.0
+        while x < 1272:
+            dans_zone = any(math.hypot(x - zx, y - zy) < zr1 + pas * 0.5 for zx, zy, _, zr1 in zones)
+            pts.append((x, y) if libre(x, y) and not dans_zone else None)
+            x += 2.5
+        morceaux(pts)
+        y += pas
+    mesh_obj('gravier-ratisse', bm, 'Jardin', M_GRAVIER)
+    for k, (x, y) in enumerate(SPOTS):                   # the uplights, set on the gravel
+        bm = bmesh.new()
+        pts = [(x + 4.2 * math.cos(a), y + 4.2 * math.sin(a)) for a in (math.tau * i / 12 for i in range(12))]
+        prisme(bm, pts, 0.03, 0.10)
+        mesh_obj(f'jardin-spot-{k}', bm, 'Jardin', M_CADRE)
+
+
+# ---- the entry (plan zones 1, 2), redesigned (26/11 evening): the host's desk against the left wall, its front a
+#      shallow curve in vertical oak slats under a stone top at 1.05 m, a lower work top behind; on the wall behind it,
+#      an oak panel in battens with a lit niche and a brass plaque; a bench by the curtain; a runner from the door (the
+#      host's stool, a pendant and an olive tree come with the furniture, accueil_mobilier)
+ACCUEIL_BUREAU = (668, 2070, 712, 2210)                     # the desk: x from its back to its front, y its length
+
+
+def accueil():
+    x0, y0, x1, y1 = ACCUEIL_BUREAU
+    def avant(xf, n=16):                                    # the front: a shallow arc bulging towards the room
+        return [(xf + 10 * math.sin(math.pi * k / n), y0 + (y1 - y0) * k / n) for k in range(n + 1)]
+    bm = bmesh.new()
+    prisme(bm, [(x0 + 6, y0 + 6)] + [(x + 0, y) for x, y in avant(x1 - 6)][::1] + [(x0 + 6, y1 - 6)], 0.0, 0.10)
+    prisme(bm, [(x0, y0)] + avant(x1) + [(x0, y1)], 0.10, 1.00)
+    mesh_obj('accueil-bureau', bm, 'Accueil', M_MEUBLE)
+    bm = bmesh.new()                                        # slats on the curved front
+    for k in range(28):
+        t0, t1 = k / 28 + 0.004, (k + 1) / 28 - 0.012
+        ya, yb = y0 + (y1 - y0) * t0, y0 + (y1 - y0) * t1
+        xa, xb = x1 + 10 * math.sin(math.pi * t0), x1 + 10 * math.sin(math.pi * t1)
+        prisme(bm, [(xa, ya), (xb, yb), (xb + 2.5, yb), (xa + 2.5, ya)], 0.12, 0.98)
+    mesh_obj('accueil-lames', bm, 'Accueil', M_BOIS)
+    bm = bmesh.new()
+    prisme(bm, [(x0 - 2, y0 - 4)] + [(x + 4, y) for x, y in avant(x1)] + [(x0 - 2, y1 + 4)], 1.00, 1.05)
+    mesh_obj('accueil-plateau', bm, 'Accueil', M_PLATEAU)
+    # the wall panel behind: oak battens on wall 411 (x 608), a lit niche and a plaque
+    bm = bmesh.new()
+    y = 1992.0
+    while y < 2236:
+        if not (2118 < y < 2164):                           # the niche's width
+            bm_box(bm, 608, y, 612, y + 3.2, 0.0, 2.60)
+        y += 4.0
+    bm_box(bm, 608, 2118, 612, 2164, 0.0, 1.30)             # under the niche
+    bm_box(bm, 608, 2118, 612, 2164, 1.80, 2.60)            # over it
+    mesh_obj('accueil-panneau', bm, 'Accueil', M_BOIS)
+    bm = bmesh.new()
+    bm_box(bm, 608, 2120, 611, 2162, 1.30, 1.80)            # the niche's back, lit
+    mesh_obj('accueil-niche', bm, 'Accueil', M_MIROIR)
+    bm = bmesh.new()
+    bm_box(bm, 612, 2124, 613.5, 2158, 1.95, 2.15)          # the brass plaque, over the niche
+    mesh_obj('accueil-plaque', bm, 'Accueil', M_LAITON)
+    # the bench by the curtain: an oak slab on two stone blocks
+    bm = bmesh.new()
+    for ya in (2268, 2326):
+        bm_box(bm, 792, ya, 828, ya + 16, 0.0, 0.40)
+    mesh_obj('accueil-banc-pieds', bm, 'Accueil', M_PIERRE)
+    bm = bmesh.new()
+    bm_box(bm, 788, 2262, 830, 2348, 0.40, 0.45)
+    mesh_obj('accueil-banc', bm, 'Accueil', M_BOIS)
+    bm = bmesh.new()                                        # the runner, from the door to the room
+    bm_box(bm, 722, 1960, 786, 2392, 0.0, 0.008)
+    mesh_obj('accueil-tapis', bm, 'Accueil', M_RIDEAU)
+
+
+def accueil_mobilier():
+    """The host's stool behind the desk, a pendant over it, an olive tree in a stone pot by the door."""
+    x0, y0, x1, y1 = ACCUEIL_BUREAU
+    poser('accueil-tabouret', chaise(haute=True), x0 - 28, (y0 + y1) / 2 + 20, vers=(x1, (y0 + y1) / 2 + 20),
+          collection='Mobilier')
+    poser('suspension-accueil', suspension(2.10, 0.22), (x0 + x1) / 2, (y0 + y1) / 2, collection='Suspensions')
+    pc = Piece()
+    pc.cyl(0, 0, 0.24, 0.20, 0.0, 0.50, M_POT, 36)
+    pc.cyl(0, 0, 0.215, 0.215, 0.50, 0.505, M_TERRE, 36)
+    pc.cyl(0, 0, 0.03, 0.018, 0.505, 1.40, M_BOIS, 10)
+    rnd = random.Random(77)
+    for k in range(11):                                     # an olive tree: a light, wide crown
+        a = math.tau * k / 11 + rnd.uniform(-0.3, 0.3)
+        d = rnd.uniform(0.06, 0.22)
+        pc.bulle((d * math.cos(a), d * math.sin(a), 1.30 + rnd.uniform(0.0, 0.70)), rnd.uniform(0.10, 0.15), 770 + k, M_FEUILLE)
+    poser('accueil-olivier', pc, 650, 2335, collection='Mobilier')   # in the corner by the door, clear of the walls
 
 
 # ---- curtains (the wavy lines of the plan): heavy drapes hung from a ceiling track, down to 2 cm above the floor.
@@ -1137,6 +1308,7 @@ def build_mobilier():
     liste.append(dict(id=0, nom='Bar', type='bar', centre_px=[801.5, 716], places=len(TABOURETS_BAR), assises='tabourets'))
     for k, (x, y) in enumerate(JARDINIERES):
         poser(f'jardiniere-{k + 1}', jardiniere(k + 1), x, y, collection='Jardinieres')
+    accueil_mobilier()
     tablette_facade()
     repose_pieds()
     bm = bmesh.new(); bm_box(bm, 467, 2172, 593, 2243, 0.0, 0.80)       # the sideboard of the alcove
@@ -1399,6 +1571,9 @@ PLANS = {
     'tambour':   ((900, 860, 1.25), (400, 1010, 0.95), 30),                    # photo 31, drum 1, a standing table
     # step 6: the space between the bar and the room, seen from the room
     'zone':      ((560, 1330, 3.1), (900, 985, 0.30), 28),
+    # 26/11 evening: the dry garden under the stair, from the entry; the reception, from the door
+    'jardin-sec': ((848, 2120, 1.70), (1030, 2300, 0.0), 20),     # from the reception, between the curtains
+    'accueil':    ((800, 2370, 1.55), (650, 2120, 0.90), 20),
 }
 
 

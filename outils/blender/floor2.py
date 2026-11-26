@@ -249,9 +249,15 @@ FACADE_OUEST = [1211 + (2170 - 1211) * k / 7 for k in range(8)]      # floor1's 
 # the walls of the plan left out or cut (26/11): the inner layers of the left facade (15, 16), the outer band in
 # front of the right glass blocks (860), the walls of the south-east corner (1064, 1066) and the blind wall over the
 # entry (1068), which becomes glass blocks
-ETAGE_SANS = {16, 860, 1064, 1066, 1068}
+ETAGE_SANS = {16, 860, 1064, 1066, 1068,
+              9, 14, 10, 11,                  # inner layers inside the north wall (5)
+              17, 731, 732, 733, 741, 767, 768}   # (26/11 evening) the small walls round the omakase bar
 ETAGE_REMPLACE = {15: [(382, 751), (399, 751), (399, 841), (382, 841)]}
 ANGLE_SE = refonte.ANGLE_SE               # the corner pier, over the ground floor's
+# (26/11 evening) the omakase bar redrawn: the kitchen corner at its west end (x 396 - 600, y 140 - 434), open on the
+# chef's aisle, closed on the room by a glazed partition; the storeroom behind the bar's back; the toilets' door
+CUISINE_CLOISON = (396, 434, 584, 444)
+MURS_WC = [(1290, 140, 1300, 152), (1290, 236, 1300, 248)]           # the door between them, y 152 - 236
 # The lift shaft (4 on floor2.png) and the outer band of the right facade: drawn in dark grey on the plan, not in black,
 # so the vectorising missed them; measured on floor2.png. The shaft stands over the ground floor's room of the same
 # outline (floor1's wall 16), the band over floor1's (walls 17, 55, 288): the right facade reads on the two storeys.
@@ -506,6 +512,22 @@ def build_coque(top, bas=0.0):
     # the lift shaft and the outer band of the right facade, over the ground floor's (the whole building, 25/11)
     for k, (x0, y0, x1, y1) in enumerate(GAINE):
         box(f'mur-gaine-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
+    for k, (x0, y0, x1, y1) in enumerate(MURS_WC):
+        box(f'mur-wc-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
+    if top > 2.10:
+        box('mur-wc-linteau', 1290, 152, 1300, 236, max(bas, 2.10), top, 'Coque', M_MUR)
+    # the kitchen's partition: a low wall, steel-framed glass over it, a lintel
+    cx0, cy0, cx1, cy1 = CUISINE_CLOISON
+    for nom_, z0, z1, m_ in (('allege', 0.0, 0.95, M_MUR), ('linteau', 2.40, H, M_MUR)):
+        z0, z1 = max(z0, bas), min(z1, top)
+        if z1 - z0 > 0.002:
+            box(f'cuisine-cloison-{nom_}', cx0, cy0, cx1, cy1, z0, z1, 'Coque', m_)
+    z0, z1 = max(0.95, bas), min(2.40, top)
+    if z1 - z0 > 0.002:
+        for k, x in enumerate((cx0 + 2, (cx0 + cx1) / 2, cx1 - 2)):
+            box(f'cuisine-cloison-montant-{k}', x - 2, cy0, x + 2, cy1, z0, z1, 'Vitrages', M_CADRE)
+        for k, (xa, xb) in enumerate(((cx0 + 4, (cx0 + cx1) / 2 - 2), ((cx0 + cx1) / 2 + 2, cx1 - 4))):
+            box(f'cuisine-cloison-verre-{k}', xa, (cy0 + cy1) / 2 - 1.2, xb, (cy0 + cy1) / 2 + 1.2, z0, z1, 'Vitrages', M_VERRE)
     for k, (x0, y0, x1, y1) in enumerate(BANDE_EST):
         box(f'mur-est-{k}', x0, y0, x1, y1, bas, top, 'Coque', M_MUR)
     # ---- columns, on the ground floor's: the one standing in the void goes down through the slab's level to meet its
@@ -563,12 +585,16 @@ def build_coque(top, bas=0.0):
     #      (4 cm) at 1.06 m; one continuous line from the void's corner round to the stair's arrival, another from
     #      the arrival along the rock garden's opening
     if bas < 1.06:
-        bord = [p_ for p_ in GARDE_CORPS if p_[1] >= 1176] if ELEMENTS else [(459.5, 1173.5), (1012, 1173.5)] + GARDE_CORPS[1:]
+        # (26/11) the glass runs the whole edge of the void, along the ledge too: on its run the ledge (step 2) is the
+        # parapet's cap, the handrail takes over where it ends
+        bord = [(459.5, 1173.5), (1012, 1173.5)] + GARDE_CORPS[1:]
         for nom, pts in (('garde-corps-vide', bord), ('garde-corps-jardin', GARDE_CORPS_JARDIN)):
             chemin = [P(x, y) for x, y in pts]             # swept as one piece: smooth joints along the curves
             for suffixe, demi, z0, z1, m in (('-sabot', 0.025, 0.0, 0.08, M_CADRE), ('', 0.01, 0.08, 1.02, M_VERRE),
                                              ('-main-courante', 0.02, 1.02, 1.06, M_CADRE)):
                 z0, z1 = max(bas, z0), min(top, z1)
+                if ELEMENTS and nom == 'garde-corps-vide' and suffixe == '-main-courante':
+                    chemin = [P(TABLETTE_FIN, 1173.5)] + [P(x, y) for x, y in pts if x > TABLETTE_FIN + 2]
                 if z1 - z0 > 0.002:
                     sweep(nom + suffixe, chemin, [(-demi, z0, False), (demi, z0, False), (demi, z1, False), (-demi, z1, False)],
                           'Vitrages', m)
@@ -651,8 +677,49 @@ def bar_omakase():
     mesh_obj('omakase-comptoir', bm, 'Bar', M_MEUBLE)
     bm = bmesh.new()
     bm_box(bm, 584, 447, 1124, 518, 0.86, 0.90)           # the bartenders' steel worktop
-    bm_box(bm, 584, 518, 1177, 584, 1.03, 1.08)           # the guests' top, a small overhang on the stools' side
-    mesh_obj('omakase-plateaux', bm, 'Bar', M_COMPTOIR)
+    mesh_obj('omakase-plan-chef', bm, 'Bar', M_COMPTOIR)
+    bm = bmesh.new()
+    bm_box(bm, 584, 518, 1177, 584, 1.03, 1.08)           # the guests' top in hinoki, a small overhang on their side
+    mesh_obj('omakase-plateaux', bm, 'Bar', M_BOIS)
+    # (26/11 evening) dressed: the counter's front in vertical oak slats, a steel foot rail, glass neta cases on the
+    # guests' top by the chef, bottles in half the cubbies, a panel closing the back unit's end
+    bm = bmesh.new()
+    x = 586.0
+    while x < 1175:                                       # slats on the front (y 580 - 583)
+        bm_box(bm, x, 580, x + 2.2, 583, 0.12, 1.02); x += 5.0
+    y = 520.0
+    while y < 578:                                        # and on the return's end (x 1177 - 1180)
+        bm_box(bm, 1177, y, 1180, y + 2.2, 0.12, 1.02); y += 5.0
+    mesh_obj('omakase-lames', bm, 'Bar', M_BOIS)
+    bm = bmesh.new()
+    for x in (600, 760, 920, 1080, 1165):                 # the foot rail on its brackets
+        bm_box(bm, x - 1, 583, x + 1, 588, 0.20, 0.23)
+    bm_box(bm, 595, 586, 1170, 589, 0.20, 0.23)
+    mesh_obj('omakase-repose-pieds', bm, 'Bar', M_ACIER)
+    bm = bmesh.new()
+    vb = bmesh.new()
+    for xa, xb in ((612, 762), (776, 926), (940, 1090)):  # the neta cases: a steel base and top frame, glass between
+        bm_box(bm, xa, 519, xb, 537, 1.08, 1.095)
+        bm_box(bm, xa, 519, xb, 537, 1.285, 1.30)
+        vb_ = bm_box(vb, xa + 1, 520, xb - 1, 536, 1.095, 1.285)
+    mesh_obj('omakase-vitrines-cadre', bm, 'Bar', M_ACIER)
+    mesh_obj('omakase-vitrines', vb, 'Bar', M_VERRE)
+    bm = bmesh.new()
+    rnd = random.Random(5)
+    for k in range(24):
+        xc = x0 + (x1 - x0) * (k + 0.5) / 24
+        for za, zb in zip(zs, zs[1:]):
+            if rnd.random() < 0.55:
+                c = Vector((xc + rnd.uniform(-2, 2), 280))
+                h = min(zb - za - 0.06, rnd.uniform(0.24, 0.30))
+                r = rnd.uniform(0.032, 0.040) / PX
+                pts = [c + Vector((math.cos(a), math.sin(a))) * r for a in (math.tau * i / 8 for i in range(8))]
+                prisme(bm, [(p_.x, p_.y) for p_ in pts], za + 0.011, za + 0.011 + h * 0.65)
+                pts = [c + Vector((math.cos(a), math.sin(a))) * r * 0.35 for a in (math.tau * i / 8 for i in range(8))]
+                prisme(bm, [(p_.x, p_.y) for p_ in pts], za + 0.011 + h * 0.65, za + 0.011 + h)
+    mesh_obj('omakase-bouteilles', bm, 'Bar', M_COMPTOIR)
+    bm = bmesh.new(); bm_box(bm, x1, 257, x1 + 6, 330, 0.0, H - 0.002)
+    mesh_obj('omakase-joue', bm, 'Bar', M_MEUBLE)
 
 
 # ---- the banquettes of the two half drums (as floor1's booths, photos 17, 20, 23): along the shell from one return
@@ -686,28 +753,69 @@ def banquettes():
 # ---- the ledge over the void (plan: y 1114.6 - 1172, from the lab wall to a rounded end): a counter at the height of
 #      the bar tops, its body on the void side (it is the guard there, 1.08 m), the top overhanging 0.24 m on the
 #      stools' side for the knees, a recessed plinth
+TABLETTE_FIN = 1019.25                   # where the ledge's rounded end stops, on the parapet's line
+
+
 def tablette_vide():
-    dessus = [(459.5, 1114.6), (1012, 1114.6)] + arc(1012, 1172, 57.4, -90, 0, 12)[1:] + [(459.5, 1172)]
-    corps = [(459.5, 1143.5), (1012, 1143.5)] + arc(1012, 1172, 28.5, -90, 0, 8)[1:] + [(459.5, 1172)]
-    socle = [(459.5, 1147.5), (1012, 1147.5)] + arc(1012, 1170, 22.5, -90, 0, 8)[1:] + [(459.5, 1170)]
+    """The ledge over the void (26/11, reworked: it did not go with the glass parapet): one with the parapet now. The
+    glass runs under it, its oak top (0.30 m deep, rounded end) is the parapet's cap at 1.02 - 1.08 m, carried on the
+    room side by slender steel legs, with a foot rail between them for the stools; the handrail starts at its end."""
+    yv, prof = 1173.5, 36                               # the glass's line; the top's depth (0.30 m)
+    yf = yv - prof
+    dessus = [(459.5, yf), (1000, yf)] + arc(1000, yf + 19.25, 19.25, -90, 90, 12)[1:] + [(459.5, yv + 2.5)]
     bm = bmesh.new()
-    prisme(bm, socle, 0.0, 0.10)
-    prisme(bm, corps, 0.10, 1.03)
-    mesh_obj('tablette-vide', bm, 'Bar', M_MEUBLE)
+    prisme(bm, dessus, 1.02, 1.08)
+    mesh_obj('tablette-vide-plateau', bm, 'Bar', M_BOIS)
+    pieds = [470 + (985 - 470) * k / 4 for k in range(5)]
     bm = bmesh.new()
-    prisme(bm, dessus, 1.03, 1.08)
-    mesh_obj('tablette-vide-plateau', bm, 'Bar', M_COMPTOIR)
+    for x in pieds:                                     # legs, 2 cm square, under the top's front edge
+        bm_box(bm, x - 1.2, yf + 3, x + 1.2, yf + 5.4, 0.0, 1.02)
+    for xa, xb in zip(pieds, pieds[1:]):                # the foot rail, from leg to leg
+        bm_box(bm, xa + 1.2, yf + 3, xb - 1.2, yf + 5.4, 0.22, 0.245)
+    mesh_obj('tablette-vide', bm, 'Bar', M_ACIER)
 
 
-# ---- the counter of the lab (plan zone 2, x 400 - 471, y 872 - 1080): a base unit and its worktop, the pass to the room
+# ---- the lab (plan zone 2), redesigned (26/11 evening: the counter looked hasty): its counter facing the room, an
+#      oak body in vertical slats on a recessed plinth, a stone top with a rounded overhang; behind it, along the
+#      left facade, the lab's work counter (sink, steel top) under two open shelves
 def labo():
     bm = bmesh.new()
-    bm_box(bm, 406, 878, 471, 1074, 0.0, 0.10)
-    bm_box(bm, 400, 872, 471, 1080, 0.10, 0.86)
+    bm_box(bm, 410, 880, 462, 1066, 0.0, 0.10)                 # the plinth, recessed
+    bm_box(bm, 404, 874, 466, 1072, 0.10, 0.88)                # the body (clear of wall 936 at y 1080)
     mesh_obj('labo-comptoir', bm, 'Bar', M_MEUBLE)
     bm = bmesh.new()
-    bm_box(bm, 400, 872, 471, 1080, 0.86, 0.90)
+    y = 876.0
+    while y < 1070:                                            # slats on its face to the room (x 466 - 469)
+        bm_box(bm, 466, y, 469, y + 2.2, 0.12, 0.86); y += 5.0
+    x = 406.0
+    while x < 465:                                             # and on its two ends
+        for ya, yb in ((871, 874), (1072, 1075)):
+            bm_box(bm, x, ya, x + 2.2, yb, 0.12, 0.86)
+        x += 5.0
+    mesh_obj('labo-lames', bm, 'Bar', M_BOIS)
+    bm = bmesh.new()
+    pts = [(400, 868), (466, 868)] + arc(466, 874, 6, -90, 0, 4)[1:] + [(472, 1072)] + arc(466, 1072, 6, 0, 90, 4)[1:] + \
+        [(400, 1078)]
+    prisme(bm, pts, 0.88, 0.92)                                # the stone top, rounded at the room's corners
     mesh_obj('labo-plan', bm, 'Bar', M_COMPTOIR)
+    # the work counter along the facade's pier and the lab's wall
+    bm = bmesh.new()
+    bm_box(bm, 238, 866, 292, 1160, 0.0, 0.10)
+    bm_box(bm, 234, 862, 296, 1164, 0.10, 0.86)
+    mesh_obj('labo-arriere', bm, 'Bar', M_MEUBLE)
+    bm = bmesh.new()
+    bm_box(bm, 233, 860, 298, 1166, 0.86, 0.90)
+    mesh_obj('labo-arriere-plan', bm, 'Bar', M_ACIER)
+    bm = bmesh.new()
+    bm_box(bm, 246, 960, 286, 1010, 0.894, 0.901)              # the sink's basin, dark in the steel
+    mesh_obj('labo-evier', bm, 'Bar', M_COMPTOIR)
+    bm = bmesh.new()
+    pts = [(240 + 3 * math.cos(a), 985 + 3 * math.sin(a)) for a in (math.tau * k / 8 for k in range(8))]
+    prisme(bm, pts, 0.90, 1.22)                                # the tap
+    bm_box(bm, 238, 983.5, 258, 986.5, 1.19, 1.22)
+    for z in (1.40, 1.78):                                     # two open shelves on the wall
+        bm_box(bm, 233, 870, 262, 1156, z, z + 0.025)
+    mesh_obj('labo-etageres', bm, 'Bar', M_ACIER)
 
 
 # ---- curtains (the wavy lines of the plan), as floor1's: heavy drapes hung from a ceiling track, 2 cm over the floor.
@@ -763,10 +871,8 @@ def tringle(name, p0, p1):
 
 
 def rideaux():
-    rideau('rideau-palier', (427, 287), (570, 287), amp=3.5, onde=0.20, graine=11)
-    tringle('tringle-palier', (424, 287), (573, 287))
-    rideau('rideau-passage', (1180, 556.5), (1292, 608.5), amp=4.0, onde=0.16, graine=13)
-    tringle('tringle-passage', (1177, 555), (1295, 610))
+    rideau('rideau-passage', (1188, 560.2), (1292, 608.5), amp=4.0, onde=0.16, graine=13)   # clear of the bar's end
+    tringle('tringle-passage', (1185, 558.8), (1295, 610))
 
 
 # ---- the spiral stair of floor1 (photos 2, 3, 4, 28, 30), built as there and moved down by the height of the ground
@@ -1058,7 +1164,7 @@ def reserve():
     """The omakase bar's storeroom (26/11), behind its back panel, where the plan's stair up was: steel shelving along
     the back wall, 2.2 m high, sake and wine bottles laid on its shelves, a few crates on the floor."""
     x0, y0, x1, y1 = ESCALIER_HAUT
-    xa, xb, ya, yb = 574, 816, y0 + 1, y0 + 56          # the shelving: 2 m long, 0.46 m deep
+    xa, xb, ya, yb = 612, 1088, y0 + 1, y0 + 56         # the shelving, behind the bar's back (26/11 evening): 4 m
     bm = bmesh.new()
     for x in (xa, (xa + xb) / 2, xb - 3):                # the uprights
         bm_box(bm, x, ya, x + 3, yb, 0.0, 2.20)
@@ -1088,10 +1194,73 @@ def reserve():
             x += 2 * r + rnd.uniform(1.0, 3.0)
     mesh_obj('reserve-bouteilles', bm, 'Bar', M_COMPTOIR)
     bm = bmesh.new()
-    for k, (cx_, cy_) in enumerate(((610, y0 + 80), (660, y0 + 82), (612, y0 + 80))):
+    for k, (cx_, cy_) in enumerate(((660, y0 + 80), (710, y0 + 82), (662, y0 + 80))):
         h0 = 0.0 if k < 2 else 0.30
         bm_box(bm, cx_ - 22, cy_ - 15, cx_ + 22, cy_ + 15, h0, h0 + 0.30)      # crates
     mesh_obj('reserve-caisses', bm, 'Bar', M_MEUBLE)
+
+
+def cuisine():
+    """The kitchen corner (26/11 evening), at the omakase bar's west end, behind its glazed partition: the cooking
+    line along the back wall under its hood (two induction plates, a plancha, a stockpot), the prep counter and its
+    sink along the left facade, a fridge column; open on the chef's aisle and the storeroom."""
+    bm = bmesh.new()
+    bm_box(bm, 408, 145, 596, 190, 0.0, 0.10)                  # the cooking line, on a recessed plinth
+    bm_box(bm, 404, 141, 596, 196, 0.10, 0.88)
+    bm_box(bm, 400, 214, 452, 352, 0.10, 0.88)                 # the prep counter
+    bm_box(bm, 404, 218, 452, 348, 0.0, 0.10)
+    mesh_obj('cuisine-meubles', bm, 'Bar', M_ACIER)
+    bm = bmesh.new()
+    bm_box(bm, 402, 141, 598, 198, 0.88, 0.92)                 # the steel tops
+    bm_box(bm, 398, 212, 454, 354, 0.88, 0.92)
+    bm_box(bm, 400, 141, 598, 144, 0.92, 1.20)                 # the upstand along the back wall
+    mesh_obj('cuisine-plans', bm, 'Bar', M_ACIER)
+    bm = bmesh.new()
+    for xa in (420, 476):                                      # two induction plates
+        bm_box(bm, xa, 152, xa + 46, 188, 0.92, 0.926)
+    bm_box(bm, 412, 250, 446, 300, 0.914, 0.921)               # the sink's basin
+    mesh_obj('cuisine-plaques', bm, 'Bar', M_COMPTOIR)
+    bm = bmesh.new()
+    bm_box(bm, 534, 148, 590, 190, 0.92, 0.955)                # the plancha
+    pts = [(443 + 13 * math.cos(a), 170 + 13 * math.sin(a)) for a in (math.tau * k / 16 for k in range(16))]
+    prisme(bm, pts, 0.926, 1.14)                               # a stockpot on the first plate
+    pts = [(402 + 3 * math.cos(a), 275 + 3 * math.sin(a)) for a in (math.tau * k / 8 for k in range(8))]
+    prisme(bm, pts, 0.92, 1.24)                                # the tap
+    bm_box(bm, 400, 273.5, 420, 276.5, 1.21, 1.24)
+    bm_box(bm, 400, 358, 452, 430, 0.0, 2.00)                  # the fridge column
+    bm_box(bm, 452, 368, 455, 370, 0.95, 1.65)                 # its handle
+    bm_box(bm, 404, 141, 596, 212, 1.95, 2.40)                 # the hood
+    bm_box(bm, 480, 141, 520, 166, 2.40, H - 0.002)            # its duct to the ceiling
+    mesh_obj('cuisine-equipements', bm, 'Bar', M_ACIER)
+    bm = bmesh.new()
+    bm_box(bm, 397, 216, 410, 346, 1.45, 1.475)                # a shelf over the prep counter, its jars
+    mesh_obj('cuisine-etagere', bm, 'Bar', M_ACIER)
+    bm = bmesh.new()
+    for k in range(6):
+        c = (403.5, 228 + 21 * k)
+        pts = [(c[0] + 4.5 * math.cos(a), c[1] + 4.5 * math.sin(a)) for a in (math.tau * i / 10 for i in range(10))]
+        prisme(bm, pts, 1.476, 1.476 + (0.14 if k % 2 else 0.18))
+    mesh_obj('cuisine-bocaux', bm, 'Bar', M_VERRE)
+
+
+def wc():
+    """The 1st floor's toilets (plan zone 5), behind the curtain of the passage: their door (closed), a wall-hung
+    bowl against the right wall, a basin and its mirror on the back wall."""
+    bm = bmesh.new()
+    bm_box(bm, 1293, 153, 1297, 235, 0.01, 2.09)               # the door leaf
+    mesh_obj('wc-porte', bm, 'Mobilier', M_MEUBLE)
+    bm = bmesh.new()
+    bm_box(bm, 1288, 220, 1290, 230, 1.00, 1.02)               # the handle and its rose, room side
+    bm_box(bm, 1290, 222, 1293, 228, 0.99, 1.03)
+    mesh_obj('wc-poignee', bm, 'Mobilier', M_ACIER)
+    bm = bmesh.new()
+    bm_box(bm, 1376, 174, 1427, 214, 0.36, 0.42)               # the bowl, wall hung
+    bm_box(bm, 1392, 178, 1427, 210, 0.20, 0.36)
+    bm_box(bm, 1330, 141, 1372, 168, 0.80, 0.88)               # the basin on the back wall
+    mesh_obj('wc-sanitaires', bm, 'Mobilier', M_MIROIR)
+    bm = bmesh.new()
+    bm_box(bm, 1328, 140, 1374, 141, 1.05, 1.75)               # the mirror
+    mesh_obj('wc-miroir', bm, 'Mobilier', M_MIROIR)
 
 
 def build_elements():
@@ -1100,7 +1269,7 @@ def build_elements():
     for c in ('Bar', 'Banquettes', 'Rideaux', 'Vide', 'Ile'):
         coll(c)
     avant = set(bpy.data.objects)
-    bar_omakase(); banquettes(); tablette_vide(); labo(); rideaux(); escalier_detail(); reserve()
+    bar_omakase(); banquettes(); tablette_vide(); labo(); rideaux(); escalier_detail(); reserve(); cuisine(); wc()
     vide_colonnes()
     bac_lierre(); lierre()
     return [o for o in bpy.data.objects if o not in avant]
@@ -1113,10 +1282,12 @@ def build_elements():
 SOUS_DALLE = -DALLE - 0.002
 
 
-def dessous():
+def dessous(cut=None, m_ghost=None):
+    """(cut, m_ghost: the map's cut, for the pendants of the void, which rise above the slab)"""
     import re
     chemin = RACINE / 'carte' / 'modele' / 'floor1-entier.glb'
     avant, avant_m = set(bpy.data.objects), set(bpy.data.materials)
+    vide_suspendus = []
     bpy.ops.import_scene.gltf(filepath=str(chemin))
     for o in [o for o in bpy.data.objects if o not in avant]:
         for c in list(o.users_collection):
@@ -1130,6 +1301,16 @@ def dessous():
         o.data = o.data.copy()
         o.data.transform(o.matrix_world); o.matrix_world.identity()
         o.data.transform(Matrix.Translation((0, 0, -H_RDC)))
+        # (26/11) the pendants of the tables under the void hung from nothing, their cords stopping at the level of
+        # the slab: in the double height, they hang on long cables from the mezzanine's ceiling (the roof)
+        if o.get('role') == 'suspension':
+            c = sum((v.co for v in o.data.vertices), Vector()) / len(o.data.vertices)
+            if dans((c.x / PX + CX, -c.y / PX + CY), VIDE):
+                for v in o.data.vertices:
+                    if v.co.z > -0.03:
+                        v.co.z = H - 0.002
+                vide_suspendus.append(o)
+                continue
         haut = -1.0 if o.get('role') == 'escalier' else SOUS_DALLE
         if max(v.co.z for v in o.data.vertices) > haut:
             couper(o, haut, 'bas')
@@ -1146,6 +1327,8 @@ def dessous():
     for m in set(bpy.data.materials) - avant_m:
         if m.users == 0:
             bpy.data.materials.remove(m)
+    if cut is not None:                                 # the cables above the map's cut, see-through, as the walls'
+        separer(vide_suspendus, cut, m_ghost)
 
 
 # ---------------------------------------------------------------- step 3: the furniture (as floor1's step 4)
@@ -1348,11 +1531,24 @@ def tablette_facade():
 
 
 def labo_machines():
-    """On the lab counter (plan zone 2): a machine, a blender, a bowl (the symbols of the plan)."""
-    pc = Piece(); pc.boite(-0.17, -0.15, 0.17, 0.15, 0.0, 0.40, M_ACIER); poser('labo-machine', pc, 432, 900, collection='Mobilier', z=0.90)
-    pc = Piece(); pc.cyl(0, 0, 0.07, 0.07, 0.0, 0.18, M_ACIER, 20); pc.cyl(0, 0, 0.06, 0.07, 0.18, 0.38, M_PAVE, 20)
-    poser('labo-mixeur', pc, 425, 991.5, collection='Mobilier', z=0.90)
-    pc = Piece(); pc.cyl(0, 0, 0.07, 0.11, 0.0, 0.10, M_ACIER, 28); poser('labo-bol', pc, 433, 1050, collection='Mobilier', z=0.90)
+    """On the lab's counter (26/11 evening): a glass cloche on an oak board, three jars of ferments, a stand mixer,
+    a scale; on the work counter's shelves, jars and bowls."""
+    pc = Piece(); pc.boite(-0.14, -0.22, 0.14, 0.22, 0.0, 0.02, M_BOIS)
+    pc.cyl(0, 0, 0.12, 0.12, 0.02, 0.16, M_PAVE, 24); pc.cyl(0, 0, 0.012, 0.012, 0.16, 0.20, M_PAVE, 8)
+    poser('labo-cloche', pc, 436, 905, collection='Mobilier', z=0.92)
+    pc = Piece()
+    for k, dy in enumerate((-0.11, 0.0, 0.11)):
+        pc.cyl(0, dy, 0.045, 0.045, 0.0, 0.17 + 0.03 * (k % 2), M_PAVE, 16)
+        pc.cyl(0, dy, 0.047, 0.047, 0.17 + 0.03 * (k % 2), 0.19 + 0.03 * (k % 2), M_BOIS, 16)
+    poser('labo-bocaux', pc, 434, 972, collection='Mobilier', z=0.92)
+    pc = Piece(); pc.boite(-0.10, -0.14, 0.10, 0.14, 0.0, 0.05, M_ACIER); pc.boite(-0.05, 0.06, 0.05, 0.14, 0.05, 0.34, M_ACIER)
+    pc.boite(-0.05, -0.12, 0.05, 0.14, 0.34, 0.42, M_ACIER); pc.cyl(0, -0.02, 0.07, 0.09, 0.05, 0.22, M_ACIER, 20)
+    poser('labo-batteur', pc, 434, 1040, collection='Mobilier', z=0.92)
+    pc = Piece()
+    for k in range(5):                                         # jars on the shelves
+        for z in (1.425, 1.805):
+            pc.cyl(-0.05 + 0.05 * (k % 2), -1.00 + 0.48 * k, 0.05, 0.05, z - 1.40, z - 1.40 + 0.16, M_PAVE, 14)
+    poser('labo-pots', pc, 248, 1010, collection='Mobilier', z=1.40)
 
 
 def angle_se():
@@ -1431,6 +1627,8 @@ def build_mobilier():
             poser(f'chaise-{tid:02d}-{k + 1}', chaise(haute=True), 1245, y, vers=(cx, y), collection='Assises')
         liste.append(dict(id=tid, nom=nom, type='table haute', centre_px=[cx, cy], taille_m=[round(W, 2), round(L, 2)],
                           places=len(ys), assises='tabourets', zone='F'))
+    for k, x in enumerate((700, 850, 1000)):                   # (26/11 evening) three pendants over the omakase bar
+        poser(f'suspension-omakase-{k + 1}', suspension(1.85, 0.18), x, 551, collection='Suspensions')
     for k, x in enumerate(TABOURETS_OMAKASE):
         poser(f'tabouret-omakase-{k + 1}', chaise(haute=True), x, 615, vers=(x, 540), collection='Assises')
     liste.append(dict(id=100, nom='Bar omakase', type='bar', centre_px=[880.5, 549], places=6, assises='tabourets'))
@@ -1549,6 +1747,12 @@ PLANS = {
     'reserve':      ((560, 235, 2.60), (760, 165, 0.60), 18),       # the omakase bar's storeroom
     'rdc-entree':   ((720, 2090, -1.75), (780, 2400, -2.25), 20),   # the shopfront, from the concierge
     'vestiaire':    ((1180, 2385, -1.65), (1400, 2330, -2.30), 18), # the cloakroom, from the foot of the stair
+    # the reworked places (26/11 evening)
+    'tablette':     ((1150, 1075, 1.65), (975, 1175, 0.90), 24),    # the ledge, one with the glass parapet
+    'vide-lumieres': ((1150, 1960, -1.85), (760, 1450, 1.60), 18),  # the pendants of the void on their long cables, from below
+    'bar':          ((850, 790, 1.60), (850, 400, 1.05), 22),       # the omakase bar
+    'cuisine':      ((590, 420, 1.65), (430, 160, 0.90), 18),       # the kitchen corner, from its corner by the aisle
+    'labo':         ((585, 1000, 1.60), (370, 960, 0.80), 22),      # the lab's counter
 }
 
 
@@ -1760,7 +1964,7 @@ else:
             nouveaux += build_mobilier()
         if V['cut'] is not None:
             separer(nouveaux, V['cut'], m_ghost if V['ghost'] else None)
-    dessous()
+    dessous(V['cut'], m_ghost if V['ghost'] else None)
 
     # materials: white, as floor1's variants
     a = V['alpha']
