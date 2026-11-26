@@ -34,6 +34,8 @@ canvas#vue.survol{cursor:pointer}
 .groupe button.on{background:var(--inv);color:var(--inv-tx)}
 .groupe button:not(.on):not(:disabled):hover{background:var(--sub);color:var(--texte)}
 .groupe button:disabled{color:var(--gris-clair);opacity:.6;cursor:default}
+.groupe button.attente{animation:attente 1s ease-in-out infinite}
+@keyframes attente{50%{opacity:.45}}
 
 /* ---- panels */
 .panneau{position:fixed;background:var(--panneau);border-radius:14px;box-shadow:var(--ombre)}

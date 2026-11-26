@@ -81,13 +81,13 @@ async function demarrer() {
     valeurs[cle] = r.options.some(o => o[0] === v) ? v : r.options[0][0];
   }
 
-  // ---- the floors, each with its model, its tables, its service and its markers; the 1st floor loads on demand
-  const etats = [];
+  // ---- the floors, each with its model, its tables, its service and its markers. (26/11) The 1st floor loads in the
+  //      background once the ground floor is on show: the "1er" button shows it at once, with no loading screen
+  const etats = [], charges = [];
   const chargement = document.getElementById('chargement');
-  async function preparer(n) {
-    if (etats[n]) return etats[n];
+  const preparer = n => (charges[n] ??= charger(n));
+  async function charger(n) {
     const e = ETAGES[n];
-    if (n) { chargement.textContent = `Chargement du ${e.nom.toLowerCase()}…`; chargement.classList.remove('fini'); }
     const modeles = await s3.chargerEtage(n, e.fichiers);
     const tables = (await (await fetch(e.tables, { cache: 'no-cache' })).json()).tables;
     const G = groupes(modeles, tables);
@@ -96,7 +96,6 @@ async function demarrer() {
     const num = new Numeros(G, calque);
     sys.regler(valeurs.systeme); num.regler(valeurs.numeros);
     sys.montrer(false); num.montrer(false);
-    chargement.classList.add('fini');
     return (etats[n] = { G, service, sys, num });
   }
   const e0 = await preparer(0);
@@ -118,8 +117,13 @@ async function demarrer() {
   ui.surFermer = () => { choix.visible = false; };
 
   // ---- showing a floor: its model (the 1st floor over the ground floor), its markers, its service in the panels
+  let demande = 0;
   const activer = async (n, duree = 900) => {
+    const d = ++demande, b = document.querySelector(`#etages button[data-etage="${n}"]`);
+    if (!etats[n]) b.classList.add('attente');          // clicked before the end of the background loading
     const et = await preparer(n);
+    b.classList.remove('attente');
+    if (d !== demande) return;                           // another floor was asked for meanwhile
     actif = n;
     etats.forEach((x, k) => { if (x) { x.sys.montrer(k === n); x.num.montrer(k === n); } });
     s3.montrerEtage(n);
@@ -205,6 +209,11 @@ async function demarrer() {
   ui.maj();
   requestAnimationFrame(boucle);
   chargement.classList.add('fini');
+  // the other floor, in the background, once the first frames are drawn
+  setTimeout(() => {
+    const n = actif ? 0 : 1;
+    preparer(n).then(() => { if (actif !== n) s3.prechauffer(n, cam.cam); }).catch(err => console.error(err));
+  }, 400);
   window.carte = { s3, cam, etats, activer, get actif() { return actif; }, ui, choisir, reglages, legende, hhmm,
     get service() { return etats[actif].service; }, get G() { return etats[actif].G; }, pret: true };
 }

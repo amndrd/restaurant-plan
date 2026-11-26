@@ -161,10 +161,39 @@ void main() {
       e.groupe.visible = n === this.actif;
       for (const [cle, racine] of Object.entries(e.modeles)) {
         racine.visible = cle === 'dessous' || (cle === 'entier') === entier;
-        if (racine.visible && e.groupe.visible) racine.traverse(o => { if (o.isMesh) this._habiller(o, style); });
+        if (racine.visible && e.groupe.visible) this._habillerRacine(racine, style);
       }
     });
     this.composite.uniforms.encre.value.set(style === 'fil-de-fer' ? 0x5a5a5a : 0x4d4d4d);
+  }
+
+  // a model dressed for a style keeps its dress until the style changes (showing a floor again costs nothing)
+  _habillerRacine(racine, style) {
+    if (racine.userData.habit === style) return;
+    racine.traverse(o => { if (o.isMesh) this._habiller(o, style); });
+    racine.userData.habit = style;
+  }
+
+  // (26/11) a floor loaded in the background, made ready to show at once: dressed for the current style, and drawn
+  // once off screen so that its geometry and its shaders are on the graphics card before the first click
+  prechauffer(n, cam) {
+    const e = this.etages[n];
+    if (!e || n === this.actif) return;
+    const entier = this.style === 'transparent' || this.style === 'fil-de-fer';
+    const actifs = this.etages.map(x => x && x.groupe.visible);
+    this.etages.forEach((x, k) => { if (x) x.groupe.visible = k === n; });
+    for (const [cle, racine] of Object.entries(e.modeles)) {
+      racine.visible = cle === 'dessous' || (cle === 'entier') === entier;
+      if (racine.visible) this._habillerRacine(racine, this.style);
+    }
+    const r = this.renderer, rt = new THREE.WebGLRenderTarget(64, 40, { type: THREE.HalfFloatType });
+    const masques = cam.layers.mask;
+    cam.layers.enableAll();
+    r.compile(this.scene, cam);
+    r.setRenderTarget(rt); r.render(this.scene, cam); r.setRenderTarget(null);
+    cam.layers.mask = masques;
+    rt.dispose();
+    this.etages.forEach((x, k) => { if (x) x.groupe.visible = actifs[k]; });
   }
 
   _habiller(o, style) {
