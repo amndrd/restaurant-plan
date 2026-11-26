@@ -89,10 +89,9 @@ if (seul === 'video' || seul === undefined) {
   await p.click('.r3-menu[data-cle="systeme"] .r3-b'); await p.waitForTimeout(700);
   await p.click('.r3-menu[data-cle="systeme"] .r3-pop button[data-v="C"]'); await p.waitForTimeout(800);
   await p.click('#fiche .fermer'); await p.waitForTimeout(400);
-  await p.click('#legende-b'); await p.waitForTimeout(800);
-  await p.hover('.l1-c[data-e="servie"]'); await p.waitForTimeout(1300);
-  await p.hover('.l1-c[data-e="commandee"]'); await p.waitForTimeout(1300);
-  await p.click('#legende-b'); await p.waitForTimeout(600);
+  await p.hover('.l-e[data-e="servie"]'); await p.waitForTimeout(1300);
+  await p.hover('.l-e[data-e="commandee"]'); await p.waitForTimeout(1300);
+  await p.mouse.move(870, 560); await p.waitForTimeout(600);
   await p.click('#outils button[data-action="recentrer"]'); await p.waitForTimeout(1200);
   await p.click('#vues button[data-vue="dessus"]'); await p.waitForTimeout(2200);
   await p.waitForTimeout(1200);

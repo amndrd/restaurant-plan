@@ -97,30 +97,16 @@ canvas#vue.survol{cursor:pointer}
 /* ---- bottom: the legend (left) and the command bar (right) */
 .pied{position:fixed;left:20px;bottom:20px;display:flex;align-items:center;gap:8px;pointer-events:none}
 .pied>*{pointer-events:auto}
-.legende-b{display:flex;align-items:center;gap:9px;height:46px;border:0;border-radius:12px;background:var(--panneau);
-  box-shadow:var(--ombre);padding:0 15px 0 13px;font-size:13px;font-weight:500;cursor:pointer;color:var(--texte)}
-.legende-b .points{display:grid;grid-template-columns:repeat(2,7px);gap:3px}
-.legende-b .points i{width:7px;height:7px;border-radius:2px;display:block}
-.legende-b .fl{width:10px;height:10px;color:var(--gris);transition:transform .3s;margin-left:2px}
-.legende-b.on{background:var(--inv);color:var(--inv-tx)}
-.legende-b.on .fl{transform:rotate(180deg);color:var(--inv-tx)}
-.legende{position:absolute;left:0;bottom:calc(100% + 10px);width:262px;display:flex;flex-direction:column;gap:1px;padding:6px;
-  background:var(--panneau);border-radius:14px;box-shadow:var(--ombre-pop);transform-origin:left bottom;
-  transition:opacity .22s,transform .3s cubic-bezier(.2,.8,.2,1)}
-.legende.ferme{opacity:0;transform:translateY(8px) scale(.98);pointer-events:none}
-.legende .l-titre{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gris);padding:6px 8px 4px}
-.legende .l-aide{font-size:11px;color:var(--gris-clair);padding:6px 8px 4px;border-top:1px solid var(--trait);margin-top:4px}
-.l1-c{display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;padding:7px 8px;border-radius:8px;font-size:13px;
-  color:var(--texte);cursor:pointer;transition:background .15s,opacity .2s;white-space:nowrap;text-align:left}
-.l1-c span{flex:1}
-.l1-c i{width:10px;height:10px;border-radius:3px;display:block}
-.l1-c b{font-size:11px;font-weight:600;min-width:20px;height:18px;border-radius:9px;background:var(--sub);display:grid;place-items:center;
-  padding:0 5px;font-variant-numeric:tabular-nums;color:var(--texte)}
-.l1-c:hover:not(.on){background:color-mix(in srgb,var(--inv) 9%,transparent)}
-.l1-c.on{background:var(--inv);color:var(--inv-tx)}
-.l1-c.on b{background:rgba(127,127,127,.3);color:var(--inv-tx)}
-.l1-c.vide{opacity:.45}
-.l1-c[data-e="alerte"]:not(.vide) b{background:var(--alerte);color:#fff}
+/* the legend (26/11, the user's model): a card, the six states in two columns */
+.legende{display:grid;grid-template-columns:auto auto;column-gap:22px;row-gap:2px;padding:14px 18px 14px 14px;
+  background:var(--panneau);border-radius:16px;box-shadow:var(--ombre)}
+.l-e{display:flex;align-items:center;gap:11px;border:0;background:none;padding:5px 8px;border-radius:8px;font-size:14px;
+  color:var(--texte);cursor:pointer;white-space:nowrap;text-align:left;transition:background .15s}
+.l-e i{width:13px;height:13px;border-radius:3.5px;display:block;flex:none}
+.l-e .tri{width:13px;height:13px;flex:none}
+.l-e:hover:not(.on){background:var(--sub)}
+.l-e.on{background:var(--inv);color:var(--inv-tx)}
+@media (max-width:1000px){.pied{bottom:92px}}     /* narrow screens: above the command bar, not under it */
 
 /* the command bar (R3, light by default): the three settings and the clock; menus open upwards */
 .r3{position:fixed;right:20px;bottom:20px;display:flex;align-items:center;gap:2px;background:var(--panneau);color:var(--texte);
