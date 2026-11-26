@@ -43,7 +43,7 @@ function groupes(modeles, tables) {
       const ud = o.userData;
       const mb = /^banquette-(\d+)-coussin/.exec(ud.noeud || '');
       if (mb && BANQUETTES[mb[1]] && G.has(BANQUETTES[mb[1]])) { G.get(BANQUETTES[mb[1]]).banquette[cle].push(o); return; }
-      const idBar = ud.bar ?? (ud.noeud === 'bar-plateaux' ? 0 : undefined);
+      const idBar = ud.bar ?? (ud.noeud === 'bar-comptoir' ? 0 : undefined);   // (26/11) the ground floor's counter
       if (idBar !== undefined && cle === 'fantome' && G.has(idBar)) {   // a counter: where its bar's label stands
         G.get(idBar).boite.expandByObject(o); G.get(idBar).boitePlateau.expandByObject(o); return;
       }
