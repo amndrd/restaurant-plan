@@ -26,6 +26,8 @@ ECH = int(ARGS.get('ech', 100))
 OUT = Path(ARGS.get('out', RACINE / 'rendus' / '1-coque'))
 
 DATA = json.loads((RACINE / 'modele' / 'floor1-murs.json').read_text())
+sys.path.insert(0, str(ICI))
+import refonte                            # the reworked building (26/11): walls, cloakroom, shopfront
 PX = 1 / DATA['echelle_px_par_m']        # metres per plan pixel (120 px = 1 m, see analyse/)
 CX, CY = 837, 1230                       # plan pixel placed at the world origin
 H = 3.35                                 # ground floor storey height (floor to the mezzanine slab), from the section
@@ -232,9 +234,10 @@ def build_sols():
 
 
 def build_coque(cut, top, bas):
-    # ---- walls (vectorised from the plan, see outils/vectoriser.py)
-    for k, mu in enumerate(DATA['murs']):
-        o = extrude_loops(f"mur-{mu['id']}-{k}", [mu['contour']] + mu['trous'], bas, top, 'Coque', M_MUR)
+    # ---- walls (vectorised from the plan, see outils/vectoriser.py), reworked where the plan made no sense (26/11,
+    #      outils/blender/refonte.py): the band hiding the right glass blocks and the box past the right facade gone
+    for k, (nom, boucles) in enumerate(refonte.murs_rdc(DATA)):
+        o = extrude_loops(f"mur-{nom}-{k}", boucles, bas, top, 'Coque', M_MUR)
 
     # ---- columns: two in the street facades (dia 1.1 m), two on the inner grid (dia 0.8 m)
     for p in DATA['poteaux']:
@@ -268,12 +271,21 @@ def build_coque(cut, top, bas):
     facade('facade-droite', 1452, 870, 1450)
     facade('facade-droite-b', 1452, 1583, 2230)
     facade('facade-droite-haut', 1452, 737, 740)
+    # ---- the street front (26/11): glass blocks from the shopfront to the corner pier, in front of the rock garden,
+    #      the stair and the cloakroom; the shopfront and its double door (devanture)
+    m = refonte.MONTANTS_SUD
+    travees = [(a + 3, b - 3) for a, b in zip(m, m[1:]) if b - a > 20]      # not between the two by wall 440
     if ELEMENTS and bas == 0.0:
-        paves('entree', 'x', 2406.5, [(1068 + 3, 1308 - 3)], bas, top)
+        paves('entree', 'x', 2406.5, travees, bas, top)
     else:
-        box('entree-verre', 1068, 2404, 1308, 2409, bas, top, 'Vitrages', M_VERRE)
+        for k, (u0, u1) in enumerate(travees):
+            box(f'entree-verre-{k}', u0, 2404, u1, 2409, bas, top, 'Vitrages', M_VERRE)
+    for k, x in enumerate(m[1:]):
+        box(f'entree-montant-{k}', x - 3, 2401.5, x + 3, 2411.5, max(bas, 0.06 if ELEMENTS else bas), top, 'Vitrages', M_CADRE)
     if bas == 0.0:
-        box('entree-cadre', 1068, 2402, 1308, 2411, 0.0, 0.06, 'Vitrages', M_CADRE)
+        box('entree-cadre', 861, 2402, m[-1] + 3, 2411, 0.0, 0.06, 'Vitrages', M_CADRE)
+    facade('facade-droite-vestiaire', 1452, 2279, 2394)                   # the cloakroom's side, to the corner pier
+    devanture(cut, top, bas)
 
     # ---- booth drums: a tall dark cylinder. Low part (0 - 2.2 m) = half shell open to the room,
     #      with short straight returns; high part (2.2 - 3.0 m) = a full ring hung over the booth (photo 24).
@@ -396,6 +408,39 @@ def blocs(bm, axe, d0, d1, u0, u1, z0, z1, pas_u=0.2, pas_z=0.2, bas=0.0, top=99
                 bm_box(bm, d0, a, d1, b, za, zb)
             else:
                 bm_box(bm, a, d0, b, d1, za, zb)
+
+
+def devanture(cut, top, bas):
+    """The shopfront of the entry (26/11, where the plan left the street front open): steel posts, a fixed pane each
+    side, a glazed double door up to a transom at 2.40 m, glass over it; long pull handles inside and out."""
+    d0, d1 = refonte.DEVANTURE
+    p0, p1 = refonte.PORTE
+    def b(name, x0, y0, x1, y1, z0, z1, m, coll_='Vitrages'):
+        z0, z1 = max(z0, bas), min(z1, top)
+        if z1 - z0 > 0.002:
+            box(name, x0, y0, x1, y1, z0, z1, coll_, m)
+    for k, x in enumerate((d0 + 3, p0, p1, d1 - 3)):                       # the posts, on the sill, under the head
+        b(f'devanture-montant-{k}', x - 3, 2401.5, x + 3, 2411.5, 0.03, H - 0.08, M_CADRE)
+    b('devanture-seuil', d0, 2401.5, d1, 2411.5, 0.0, 0.03, M_CADRE)
+    b('devanture-tete', d0, 2401.5, d1, 2411.5, H - 0.08, H, M_CADRE)
+    for k, (x0, x1) in enumerate(((d0 + 6, p0 - 3), (p0 + 3, p1 - 3), (p1 + 3, d1 - 6))):   # between the posts
+        b(f'devanture-imposte-{k}', x0, 2401.5, x1, 2411.5, 2.40, 2.46, M_CADRE)
+        b(f'devanture-vitre-haute-{k}', x0, 2405.3, x1, 2407.7, 2.46, H - 0.08, M_VERRE)
+    for k, (x0, x1) in enumerate(((d0 + 6, p0 - 3), (p1 + 3, d1 - 6))):  # the fixed panes
+        b(f'devanture-vitre-{k}', x0, 2405.3, x1, 2407.7, 0.03, 2.40, M_VERRE)
+    milieu = (p0 + p1) / 2
+    for k, (x0, x1) in enumerate(((p0 + 3, milieu - 0.5), (milieu + 0.5, p1 - 3))):   # the two leaves
+        b(f'porte-{k}-cadre-bas', x0, 2404, x1, 2409, 0.03, 0.15, M_CADRE)
+        b(f'porte-{k}-cadre-haut', x0, 2404, x1, 2409, 2.34, 2.395, M_CADRE)
+        b(f'porte-{k}-montant-a', x0, 2404, x0 + 4, 2409, 0.15, 2.34, M_CADRE)
+        b(f'porte-{k}-montant-b', x1 - 4, 2404, x1, 2409, 0.15, 2.34, M_CADRE)
+        b(f'porte-{k}-vitre', x0 + 4, 2405.3, x1 - 4, 2407.7, 0.15, 2.34, M_VERRE)
+        xp = x1 - 9 if k == 0 else x0 + 9                                   # the pulls, by the meeting stiles
+        for cote, (ya, yb), (sa, sb) in (('dedans', (2399.5, 2401), (2401, 2404)),
+                                          ('dehors', (2412, 2413.5), (2409, 2412))):
+            b(f'porte-{k}-poignee-{cote}', xp - 1, ya, xp + 1, yb, 0.85, 1.75, M_CADRE)
+            for z in (0.90, 1.70):                                          # the two standoffs of each pull
+                b(f'porte-{k}-poignee-{cote}-pied-{z:.2f}', xp - 0.8, sa, xp + 0.8, sb, z - 0.012, z + 0.012, M_CADRE)
 
 
 def paves(name, axe, c, travees, bas, top, ep=4.0):
@@ -688,8 +733,31 @@ def build_elements():
         if c not in bpy.data.collections:
             sc.collection.children.link(bpy.data.collections.new(c))
     avant = set(bpy.data.objects)
-    bar(); banquettes(); escalier_detail(); jardin(); accueil(); rideaux()
+    bar(); banquettes(); escalier_detail(); jardin(); accueil(); rideaux(); vestiaire()
     return [o for o in bpy.data.objects if o not in avant]
+
+
+def vestiaire():
+    """The cloakroom of the entry (26/11, in the corner past the stair): a hat shelf and a hanging rail along the
+    corner pier, coats on it."""
+    x0, y0, x1, y1 = refonte.VESTIAIRE
+    bm = bmesh.new()
+    bm_box(bm, x1 - 44, y0 + 4, x1 - 2, y1 - 6, 1.86, 1.90)                     # the shelf
+    for y in (y0 + 6, y1 - 8):                                                 # its brackets
+        bm_box(bm, x1 - 42, y - 1, x1 - 2, y + 1, 1.78, 1.86)
+    mesh_obj('vestiaire-tablette', bm, 'Accueil', M_MEUBLE)
+    tringle_ = bmesh.new()
+    bm_box(tringle_, x1 - 35, y0 + 8, x1 - 33, y1 - 10, 1.72, 1.74)
+    mesh_obj('vestiaire-tringle', tringle_, 'Accueil', M_CADRE)
+    rnd = random.Random(17)
+    bm = bmesh.new()
+    y = y0 + 16
+    while y < y1 - 18:                                                         # coats, 8 to 11 cm apart
+        h = rnd.uniform(0.85, 1.05); w = rnd.uniform(0.36, 0.42) / PX / 2; e = rnd.uniform(0.07, 0.10) / PX / 2
+        cx_ = x1 - 34 + rnd.uniform(-1.5, 1.5)
+        bm_box(bm, cx_ - w, y - e, cx_ + w, y + e, 1.70 - h, 1.70)
+        y += rnd.uniform(0.08, 0.11) / PX + 2 * e
+    mesh_obj('vestiaire-manteaux', bm, 'Accueil', M_RIDEAU)
 
 
 def couper(o, z, garder):
